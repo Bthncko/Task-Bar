@@ -41,17 +41,28 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* 7.7: Windows'ta "Animasyon efektleri" kapalıysa tüm süreler sıfır. Animasyonlar
-   tek karede son hâline gelir (animationend yine tetiklenir: kaybolan öğeler silinir).
-   Büyütme ayrıca kapatılır (lib/motion.ts). */
+/* 7.7 / 7.9: hareket azaltılınca tüm süreler sıfır. Animasyonlar tek karede son
+   hâline gelir (animationend yine tetiklenir: kaybolan öğeler silinir). Büyütme
+   ayrıca kapatılır (lib/motion.ts). Ayar (`data-motion`, lib/theme.ts):
+   "system" Windows'un "Animasyon efektleri"ni izler, "reduce" her zaman, "full" hiç. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  :root:not([data-motion="full"]) *,
+  :root:not([data-motion="full"]) *::before,
+  :root:not([data-motion="full"]) *::after {
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0ms !important;
     transition-delay: 0ms !important;
   }
+}
+
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
 }

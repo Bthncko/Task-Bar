@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use std::time::Duration;
 
-use tauri::{AppHandle, State, WebviewWindow};
+use tauri::{AppHandle, Manager, State, WebviewWindow};
 
 use crate::config::{Config, ConfigStore};
 use crate::services::apps::{AppItem, AppsService};
@@ -78,6 +78,12 @@ pub fn hide_popup(app: AppHandle, seq: Option<u64>) -> CmdResult {
     popup::hide(&app, seq).map_err(Into::into)
 }
 
+/// Windows vurgu rengi ("#rrggbb"); tema `accent: "auto"` iken kullanılır (7.9).
+#[tauri::command]
+pub fn get_system_accent(accent: State<crate::services::accent::AccentService>) -> Option<String> {
+    accent.get()
+}
+
 // --- cam çubuk (7.2) ---------------------------------------------------------
 
 #[tauri::command]
@@ -148,7 +154,16 @@ pub fn set_config(app: AppHandle, config: State<ConfigStore>, value: Config) -> 
     let before = config.get();
     let hide_after = value.hide_windows_taskbar;
     let fx_after = value.minimize_to_dock;
+    let scale_after = value.theme.ui_scale();
     config.update(|c| *c = value).map_err(String::from)?;
+    if before.theme.ui_scale() != scale_after {
+        crate::win::placement::set_ui_scale(scale_after);
+        if let Some(dock) = app.get_webview_window("dock")
+            && let Ok(hwnd) = dock.hwnd()
+        {
+            crate::win::appbar::post_reposition(hwnd);
+        }
+    }
     if before.hide_windows_taskbar != hide_after {
         crate::apply_hide_taskbar(&app, hide_after);
     }

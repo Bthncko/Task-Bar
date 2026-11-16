@@ -15,6 +15,7 @@
 //! bölgenin içinde olduğundan girişi sayfa kendisi algılar; imleç yoklamaya gerek yok.
 
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::Graphics::Gdi::{
@@ -32,6 +33,18 @@ use crate::error::AppResult;
 pub const BAR_HEIGHT: f64 = 64.0;
 /// Büyütülen ikonların taştığı ek pay (bölüm 3.2) → `--magnify-pad`.
 pub const MAGNIFY_PAD: f64 = 44.0;
+
+/// Kullanıcının boyut ayarı (7.9, `theme.scale`): sayfa CSS `zoom` ile aynı
+/// çarpanla büyür, ayrılan şerit ve pay da. f64 bitleri olarak saklanır.
+static UI_SCALE: AtomicU64 = AtomicU64::new(0x3FF0_0000_0000_0000); // 1.0
+
+pub fn set_ui_scale(scale: f64) {
+    UI_SCALE.store(scale.to_bits(), Ordering::SeqCst);
+}
+
+fn ui_scale() -> f64 {
+    f64::from_bits(UI_SCALE.load(Ordering::SeqCst))
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Edge {
@@ -61,7 +74,7 @@ static GEOMETRY: Mutex<Geometry> = Mutex::new(Geometry {
 /// başka bir appbar'ın değişmesi) ve pencereyi yerleştirir.
 pub fn reposition(hwnd: HWND) -> AppResult<()> {
     let monitor = primary_monitor_rect();
-    let scale = scale(hwnd);
+    let scale = scale(hwnd) * ui_scale();
     let thickness = (BAR_HEIGHT * scale).round() as i32;
     let pad = (MAGNIFY_PAD * scale).round() as i32;
     let reserved =

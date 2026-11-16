@@ -113,7 +113,8 @@ pub fn remove() {
     }
 }
 
-fn post_reposition(hwnd: HWND) {
+/// Yerleşimi pencerenin kendi iş parçacığında yeniden yap (ör. boyut ayarı değişti).
+pub fn post_reposition(hwnd: HWND) {
     unsafe {
         let _ = PostMessageW(Some(hwnd), DEFERRED_REPOSITION, WPARAM(0), LPARAM(0));
     }

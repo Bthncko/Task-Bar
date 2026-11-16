@@ -47,9 +47,32 @@ impl Default for Config {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Theme {
+    /// "#rrggbb" ya da "auto" (Windows vurgu rengi, 7.9).
     pub accent: String,
     pub opacity: f64,
     pub radius: f64,
+    /// "wallpaper" (bulanık duvar kâğıdı camı) | "flat" (düz yarı saydam).
+    pub glass: String,
+    /// Tüm ölçüleri çarpar (0.85–1.25); ayrılan şerit de büyür.
+    pub scale: f64,
+    /// "inter" | "system" (Segoe UI).
+    pub font: String,
+    /// "system" (Windows'un animasyon ayarı) | "reduce" | "full".
+    pub reduce_motion: String,
+}
+
+/// Ölçek ayarının sınırları (ayarlar kaydırıcısıyla aynı).
+pub const SCALE_MIN: f64 = 0.85;
+pub const SCALE_MAX: f64 = 1.25;
+
+impl Theme {
+    pub fn ui_scale(&self) -> f64 {
+        if self.scale.is_finite() {
+            self.scale.clamp(SCALE_MIN, SCALE_MAX)
+        } else {
+            1.0
+        }
+    }
 }
 
 impl Default for Theme {
@@ -60,6 +83,10 @@ impl Default for Theme {
             accent: "#3b9eff".into(),
             opacity: 0.85,
             radius: 16.0,
+            glass: "wallpaper".into(),
+            scale: 1.0,
+            font: "inter".into(),
+            reduce_motion: "system".into(),
         }
     }
 }

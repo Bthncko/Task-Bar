@@ -9,7 +9,8 @@ import {
 import { listen } from "@tauri-apps/api/event";
 import { commands, events, report, type PopupOpen } from "../lib/ipc";
 import { startConfigSync, useConfig } from "../lib/store";
-import { applyTheme } from "../lib/theme";
+import { applyTheme, uiScale } from "../lib/theme";
+import { useService } from "../lib/useService";
 import { registry } from "../widgets/registry";
 import { PopupCloseProvider } from "../widgets/ui/popupClose";
 import styles from "./PopupWindow.module.css";
@@ -27,7 +28,13 @@ type Phase = "pending" | "open" | "closing";
 
 startConfigSync();
 
-const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** Hareket ayarı (7.9, `data-motion`): "system" ise Windows'unki. */
+const reducedMotion = () => {
+  const setting = document.documentElement.dataset.motion;
+  if (setting === "reduce") return true;
+  if (setting === "full") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+};
 
 /**
  * Tek popup penceresi (bölüm 3.4, 7.6). Rust hangi widget'ın panelini istediğini
@@ -37,6 +44,7 @@ const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)"
  */
 export function PopupWindow() {
   const config = useConfig();
+  const systemAccent = useService(commands.getSystemAccent, events.accent);
   const [open, setOpen] = useState<PopupOpen | null>(null);
   const [phase, setPhase] = useState<Phase>("pending");
   const [originX, setOriginX] = useState<number | null>(null);
@@ -86,12 +94,15 @@ export function PopupWindow() {
   }, [close]);
 
   useEffect(() => {
-    if (config) applyTheme(config.theme);
-  }, [config?.theme]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (config) applyTheme(config.theme, { systemAccent });
+  }, [config?.theme, systemAccent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const widget = open ? registry[open.widgetId] : undefined;
   const Popup = widget?.Popup;
   const size = widget?.popupSize ?? DEFAULT_SIZE;
+  // Boyut ayarı (7.9): panel CSS zoom ile büyür; gölge payı (16 px) büyümez,
+  // Rust'taki SHADOW_PAD ile eşit kalsın diye zoom yalnızca panelde.
+  const zoom = config ? uiScale(config.theme) : 1;
 
   // DOM güncellendi → Rust'a "göster" de; her açılışta bir kez. Gösterildiğinde
   // açılış animasyonu başlar (pencere gizliyken kare üretilmeyebilir).
@@ -100,7 +111,7 @@ export function PopupWindow() {
     const seq = open.seq;
     announced.current = seq;
     commands
-      .popupReady(seq, size.width, size.height)
+      .popupReady(seq, size.width * zoom, size.height * zoom)
       .then((placed) => {
         if (!placed || current.current?.seq !== seq) return;
         setOriginX(placed.originX);
@@ -113,7 +124,9 @@ export function PopupWindow() {
   const widgetConfig = config.widgets[open.widgetId] ?? widget.defaultConfig;
 
   // Panel tıklanan widget'tan doğru büyür (dock altta: panelin alt kenarı).
-  const origin = originX === null ? "50%" : `${Math.min(Math.max(originX, 0), size.width)}px`;
+  // Rust ekran pikseli verir; panelin içi zoom'suz CSS pikseli.
+  const origin =
+    originX === null ? "50%" : `${Math.min(Math.max(originX / zoom, 0), size.width)}px`;
 
   return (
     <div
@@ -128,7 +141,7 @@ export function PopupWindow() {
         key={open.seq}
         className={styles.panel}
         data-phase={phase}
-        style={{ transformOrigin: `${origin} 100%` } as CSSProperties}
+        style={{ transformOrigin: `${origin} 100%`, zoom } as CSSProperties}
       >
         <PopupCloseProvider value={close}>
           <Popup config={widgetConfig} />

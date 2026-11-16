@@ -78,6 +78,7 @@ export function Slider({
   step = 1,
   label,
   format = String,
+  disabled = false,
   onChange,
 }: {
   value: number;
@@ -86,13 +87,15 @@ export function Slider({
   step?: number;
   label: string;
   format?: (v: number) => string;
+  disabled?: boolean;
   onChange: (value: number) => void;
 }) {
   const fill = ((value - min) / (max - min)) * 100;
   return (
-    <div className={styles.slider}>
+    <div className={styles.slider} data-disabled={disabled || undefined}>
       <input
         type="range"
+        disabled={disabled}
         min={min}
         max={max}
         step={step}

@@ -20,7 +20,17 @@ export type Config = {
   hideWindowsTaskbar: boolean;
   /** Küçültülen pencere dock ikonuna girer / dock'tan açılınca çıkar. */
   minimizeToDock: boolean;
-  theme: { accent: string; opacity: number; radius: number };
+  theme: {
+    /** "#rrggbb" ya da "auto" (Windows vurgu rengi). */
+    accent: string;
+    opacity: number;
+    radius: number;
+    glass: "wallpaper" | "flat";
+    /** 0.85–1.25: dock ve paneller CSS zoom ile, ayrılan şerit Rust'ta. */
+    scale: number;
+    font: "inter" | "system";
+    reduceMotion: "system" | "reduce" | "full";
+  };
   layout: { left: WidgetRef[]; center: WidgetRef[]; right: WidgetRef[] };
   widgets: {
     apps: { pinned: PinnedApp[]; magnify: number };
@@ -77,6 +87,8 @@ export const events = {
   power: "power://changed",
   radios: "radios://changed",
   backdrop: "backdrop://changed",
+  /** Windows vurgu rengi değişti ("#rrggbb" | null). */
+  accent: "accent://changed",
   /** Tam ekran uygulama açıldı (true) / kapandı (false). */
   fullscreen: "fullscreen://changed",
   /** Yalnızca popup penceresine: hangi panel çizilecek. */
@@ -121,6 +133,7 @@ export const commands = {
   /** Dock'un boş yerine sağ tık: tepsi menüsü. */
   showDockMenu: () => invoke<void>("show_dock_menu"),
   getBackdrop: () => invoke<Backdrop>("get_backdrop"),
+  getSystemAccent: () => invoke<string | null>("get_system_accent"),
   getAutostart: () => invoke<AutostartState>("get_autostart"),
   setAutostart: (enabled: boolean) => invoke<AutostartState>("set_autostart", { enabled }),
 

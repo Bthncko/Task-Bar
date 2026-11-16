@@ -39,6 +39,7 @@ windows = { version = "0.62", features = [
   "Foundation_Collections",
   "Media_Control",
   "Networking_Connectivity",
+  "UI_ViewManagement",
   "Storage_Streams",
   "Web_Http",
   "Web_Http_Filters",

@@ -13,7 +13,9 @@ export function Glass({ image }: { image: string | null }) {
   // Önceki görüntü, yenisi belirene kadar altta kalır.
   const [layers, setLayers] = useState({ current: image, previous: null as string | null });
   if (layers.current !== image) {
-    setLayers({ current: image, previous: layers.current });
+    // Görüntü kalktıysa (düz cam, 7.9) eskisi de hemen gider: onu silen
+    // animationend yalnızca yeni katmanda tetiklenir.
+    setLayers({ current: image, previous: image ? layers.current : null });
   }
 
   return (

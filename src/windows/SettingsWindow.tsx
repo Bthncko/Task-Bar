@@ -2,6 +2,7 @@ import { useEffect, useState, type FC } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { commands, events, report, type Config } from "../lib/ipc";
 import { startConfigSync, useConfig } from "../lib/store";
+import { useService } from "../lib/useService";
 import { applyTheme } from "../lib/theme";
 import { Appearance } from "./settings/Appearance";
 import { Apps } from "./settings/Apps";
@@ -26,10 +27,11 @@ const PAGES: { id: string; label: string; Page: FC<{ config: Config }> }[] = [
 export function SettingsWindow() {
   const config = useConfig();
   const [active, setActive] = useState(PAGES[0].id);
+  const systemAccent = useService(commands.getSystemAccent, events.accent);
 
   useEffect(() => {
-    if (config) applyTheme(config.theme);
-  }, [config?.theme]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (config) applyTheme(config.theme, { systemAccent });
+  }, [config?.theme, systemAccent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Başka yerden belirli bir bölüm istenebilir (ör. hava panelindeki "Değiştir").
   useEffect(() => {

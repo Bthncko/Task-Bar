@@ -264,6 +264,10 @@
   background: #fff;
 }
 
+.slider[data-disabled] {
+  opacity: 0.4;
+}
+
 .sliderValue {
   width: 44px;
   font-size: 13px;
@@ -312,6 +316,28 @@
   box-shadow:
     0 0 0 2px var(--window),
     0 0 0 4px #fff;
+}
+
+/* Windows vurgu rengi: içinde küçük pencere işareti. */
+.swatchAuto {
+  position: relative;
+}
+
+.swatchAuto::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 2px;
+  background:
+    linear-gradient(var(--window) 0 0) center / 1.5px 100% no-repeat,
+    linear-gradient(var(--window) 0 0) center / 100% 1.5px no-repeat;
+  opacity: 0.55;
+}
+
+.swatchDivider {
+  width: 1px;
+  height: 16px;
+  background: var(--hairline);
 }
 
 .customColor {

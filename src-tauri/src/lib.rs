@@ -64,6 +64,7 @@ pub fn run() {
             commands::fetch_ics,
             commands::open_settings,
             commands::take_settings_page,
+            commands::get_system_accent,
             commands::show_dock_menu,
             commands::get_backdrop,
             commands::set_app_icon_rects,
@@ -115,6 +116,7 @@ pub fn run() {
             config.attach(app.handle().clone());
             let hide_taskbar = config.get().hide_windows_taskbar;
             let minimize_to_dock = config.get().minimize_to_dock;
+            win::placement::set_ui_scale(config.get().theme.ui_scale());
             app.manage(config);
 
             let (wake_tx, wake_rx) = mpsc::channel();
@@ -126,6 +128,7 @@ pub fn run() {
             services::power::spawn(app.handle());
             services::radios::spawn(app.handle());
             services::backdrop::spawn(app.handle());
+            services::accent::spawn(app.handle());
 
             let dock = app
                 .get_webview_window("dock")

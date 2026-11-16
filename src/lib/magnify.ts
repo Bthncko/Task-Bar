@@ -113,8 +113,10 @@ export function createMagnifier(container: HTMLElement, opts: MagnifyOptions): M
       write();
     },
     move(clientX) {
-      // Grup sola yaslı: kabın sol kenarı büyümeyle kaymaz.
-      const x = clientX - container.getBoundingClientRect().left;
+      // Grup sola yaslı: kabın sol kenarı büyümeyle kaymaz. İmleç ve dikdörtgen
+      // ekran (zoom'lu) pikseli; ikon ölçüleri CSS pikseli → boyut ayarına böl (7.9).
+      const zoom = container.currentCSSZoom || 1;
+      const x = (clientX - container.getBoundingClientRect().left) / zoom;
       const f = focusForCursor(x, slots.length, opts);
       const step = opts.base + opts.gap;
       for (let i = 0; i < slots.length; i++) {

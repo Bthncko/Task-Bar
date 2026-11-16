@@ -65,14 +65,18 @@ startConfigSync();
 export function DockWindow() {
   useExpandOnHover();
   const config = useConfig();
-  const backdrop = useService(commands.getBackdrop, events.backdrop) ?? null;
+  const service = useService(commands.getBackdrop, events.backdrop) ?? null;
+  // Düz zemin (7.9): duvar kâğıdı şeridi kullanılmaz; çubuk mat ve opak (DockWindow.module.css).
+  const flat = config?.theme.glass === "flat";
+  const backdrop = flat ? null : service;
   const luma = backdrop?.luma;
+  const systemAccent = useService(commands.getSystemAccent, events.accent);
 
   const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
-    if (config) applyTheme(config.theme, luma);
-  }, [config?.theme, luma]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (config) applyTheme(config.theme, { luma, systemAccent, zoomDocument: true });
+  }, [config?.theme, luma, systemAccent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tam ekrana girerken çubuk aşağı kayar; Rust dock'u ancak sonra arkaya alır.
   useEffect(() => {
@@ -83,7 +87,12 @@ export function DockWindow() {
   }, []);
 
   return (
-    <div className={styles.root} data-edge={DOCK_EDGE} data-fullscreen={fullscreen || undefined}>
+    <div
+      className={styles.root}
+      data-edge={DOCK_EDGE}
+      data-glass={flat ? "flat" : undefined}
+      data-fullscreen={fullscreen || undefined}
+    >
       <div
         className={styles.bar}
         data-hit
@@ -161,7 +170,8 @@ function WidgetSlot({
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || (!entering && !leaving)) return;
-    const width = el.getBoundingClientRect().width;
+    // Düzen pikseli (zoom'suz): animasyon CSS genişliği yazıyor (7.9).
+    const width = el.offsetWidth;
     // Boş widget (ör. müzik çalmıyor) ya da animasyonlar kapalı: hemen.
     if (width === 0 || reduced) {
       if (leaving) gone.current();

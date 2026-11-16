@@ -98,7 +98,8 @@ function useIconSize(group: React.RefObject<HTMLDivElement | null>, count: numbe
       const gap = parseFloat(getComputedStyle(section).columnGap) || 0;
       const others = [...section.children]
         .filter((c) => c !== widget)
-        .map((c) => c.getBoundingClientRect().width)
+        // Düzen pikseli (zoom'suz): clientWidth ile aynı birimde (7.9).
+        .map((c) => (c as HTMLElement).offsetWidth)
         .filter((w) => w > 0)
         .reduce((sum, w) => sum + w + gap, 0);
       const room = section.clientWidth - others;
@@ -163,13 +164,20 @@ export function AppsBar({ config }: { config: AppsConfig }) {
     const group = groupRef.current;
     if (!group) return;
     const send = () => {
+      // Dikdörtgen ekran (zoom'lu) pikseli; ikon ölçüleri CSS pikseli → çarp (7.9).
       const r = group.getBoundingClientRect();
+      const z = group.currentCSSZoom || 1;
       commands
         .setAppIconRects(
           idsKey
             .split("|")
             .filter(Boolean)
-            .map((id, i) => ({ id, x: r.left + i * (icon + GAP), y: r.top, size: icon })),
+            .map((id, i) => ({
+              id,
+              x: r.left + i * (icon + GAP) * z,
+              y: r.top,
+              size: icon * z,
+            })),
         )
         .catch(report("set_app_icon_rects"));
     };
