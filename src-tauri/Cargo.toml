@@ -66,6 +66,7 @@ windows = { version = "0.62", features = [
   "Win32_UI_Shell_PropertiesSystem",
   "Win32_UI_WindowsAndMessaging",
 ] }
+tauri-plugin-updater = "2"
 
 
 # Geliştirmede resim çözme/bulanıklaştırma optimizasyonsuz çok yavaş (4K JPEG saniyeler);

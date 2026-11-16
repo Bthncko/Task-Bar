@@ -20,6 +20,8 @@ export type Config = {
   hideWindowsTaskbar: boolean;
   /** Küçültülen pencere dock ikonuna girer / dock'tan açılınca çıkar. */
   minimizeToDock: boolean;
+  /** Yeni sürüm çıkınca kendiliğinden indirip kur. */
+  autoUpdate: boolean;
   theme: {
     /** "#rrggbb" ya da "auto" (Windows vurgu rengi). */
     accent: string;
@@ -96,6 +98,15 @@ export type QueueItem = {
 
 export type SpotifyQueue = { current: QueueItem | null; items: QueueItem[] };
 
+export type UpdateStatus =
+  | { state: "idle" | "checking" | "upToDate" }
+  | { state: "available"; version: string }
+  | { state: "downloading"; version: string; percent: number }
+  | { state: "installing"; version: string }
+  | { state: "error"; message: string };
+
+export type UpdateInfo = { current: string; status: UpdateStatus };
+
 // --- olaylar ------------------------------------------------------------------
 
 export const events = {
@@ -119,6 +130,8 @@ export const events = {
   settingsPage: "settings://page",
   /** Spotify bağlandı / bağlantı kesildi ya da düştü (SpotifyStatus). */
   spotify: "spotify://changed",
+  /** Güncelleme durumu (UpdateInfo). */
+  update: "update://status",
 } as const;
 
 export type PopupOpen = { widgetId: string; seq: number };
@@ -185,6 +198,10 @@ export const commands = {
   spotifyQueue: () => invoke<SpotifyQueue>("spotify_queue"),
   /** Kuyruktaki `count`. öğeye geç (1 = sıradaki). */
   spotifySkip: (count: number) => invoke<void>("spotify_skip", { count }),
+
+  getUpdateInfo: () => invoke<UpdateInfo>("get_update_info"),
+  /** Sonuç `events.update` ile gelir; yeni sürüm varsa kurulur (uygulama yeniden açılır). */
+  checkUpdate: () => invoke<void>("check_update"),
 
   getAudio: () => invoke<AudioState>("get_audio"),
   /** v: 0–1 */

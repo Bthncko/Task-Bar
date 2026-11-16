@@ -11,4 +11,5 @@ pub mod power;
 pub mod radios;
 pub mod runner;
 pub mod spotify;
+pub mod updater;
 pub mod windows_list;

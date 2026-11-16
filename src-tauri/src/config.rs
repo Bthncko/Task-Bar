@@ -25,6 +25,8 @@ pub struct Config {
     pub hide_windows_taskbar: bool,
     /// Küçültülen pencere dock'taki ikonuna girer, dock'tan açılınca çıkar (macOS tarzı).
     pub minimize_to_dock: bool,
+    /// Yeni sürüm çıkınca kendiliğinden indirip kur (services/updater.rs).
+    pub auto_update: bool,
     pub theme: Theme,
     pub layout: Layout,
     pub widgets: Widgets,
@@ -37,6 +39,7 @@ impl Default for Config {
             position: "bottom".into(),
             hide_windows_taskbar: false,
             minimize_to_dock: true,
+            auto_update: true,
             theme: Theme::default(),
             layout: Layout::default(),
             widgets: Widgets::default(),
@@ -194,6 +197,8 @@ pub struct CalendarConfig {
 
 pub struct ConfigStore {
     path: PathBuf,
+    /// Açılışta config.json yoktu: bu bilgisayarda ilk çalıştırma.
+    first_run: bool,
     current: Mutex<Config>,
     app: OnceLock<AppHandle>,
 }
@@ -201,6 +206,7 @@ pub struct ConfigStore {
 impl ConfigStore {
     pub fn load(dir: PathBuf) -> Self {
         let path = dir.join("config.json");
+        let first_run = !path.exists();
         let config = match fs::read_to_string(&path) {
             Ok(text) => match serde_json::from_str(&text) {
                 Ok(config) => config,
@@ -215,6 +221,7 @@ impl ConfigStore {
         };
         Self {
             path,
+            first_run,
             current: Mutex::new(config),
             app: OnceLock::new(),
         }
@@ -223,6 +230,10 @@ impl ConfigStore {
     /// Değişiklik olaylarını yayınlayabilmek için uygulamaya bağla.
     pub fn attach(&self, app: AppHandle) {
         let _ = self.app.set(app);
+    }
+
+    pub fn is_first_run(&self) -> bool {
+        self.first_run
     }
 
     pub fn get(&self) -> Config {

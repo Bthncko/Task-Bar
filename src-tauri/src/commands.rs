@@ -11,6 +11,7 @@ use crate::services::media::{MediaCmd, MediaService, MediaState};
 use crate::services::power::{PowerService, PowerState};
 use crate::services::radios::{RadiosService, RadiosState, SetRadio};
 use crate::services::spotify::{Queue, Spotify, SpotifyStatus};
+use crate::services::updater::{self, UpdateInfo, Updater};
 use crate::services::{ics, launcher};
 use crate::win::{placement, popup};
 
@@ -182,6 +183,19 @@ async fn blocking<T: Send + 'static>(
         .await
         .map_err(|e| e.to_string())?
         .map_err(Into::into)
+}
+
+// --- güncelleme ----------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_update_info(app: AppHandle, updater: State<Updater>) -> UpdateInfo {
+    updater.info(&app)
+}
+
+/// "Şimdi denetle": sonuç `update://status` olaylarıyla gelir.
+#[tauri::command]
+pub fn check_update(app: AppHandle) {
+    std::thread::spawn(move || updater::check_now(&app));
 }
 
 // --- config ----------------------------------------------------------------

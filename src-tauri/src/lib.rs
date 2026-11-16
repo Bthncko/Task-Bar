@@ -70,6 +70,8 @@ pub fn run() {
             commands::spotify_disconnect,
             commands::spotify_queue,
             commands::spotify_skip,
+            commands::get_update_info,
+            commands::check_update,
             commands::show_dock_menu,
             commands::get_backdrop,
             commands::set_app_icon_rects,
@@ -115,15 +117,20 @@ pub fn run() {
         .setup(|app| {
             app.handle()
                 .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))?;
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
 
             let config_dir = app.path().app_config_dir()?;
             let config = ConfigStore::load(config_dir.clone());
             config.attach(app.handle().clone());
             let hide_taskbar = config.get().hide_windows_taskbar;
             let minimize_to_dock = config.get().minimize_to_dock;
+            let first_run = config.is_first_run();
             win::placement::set_ui_scale(config.get().theme.ui_scale());
             app.manage(config);
             app.manage(services::spotify::Spotify::load(config_dir.clone()));
+            app.manage(services::updater::Updater::new());
+            services::updater::spawn(app.handle());
 
             let (wake_tx, wake_rx) = mpsc::channel();
             app.manage(AppsService::new(wake_tx));
@@ -150,6 +157,15 @@ pub fn run() {
 
             // Önceki çökmeden kalan gizli çubuğu da burada onarır.
             win::taskbar::init(config_dir, hide_taskbar);
+
+            // Bu bilgisayarda ilk kez açıldı (kurulumdan sonra): açılışta başlasın.
+            if first_run
+                && AUTOSTART_AVAILABLE
+                && !autostart_enabled(app.handle())
+                && let Err(e) = set_autostart(app.handle(), true)
+            {
+                eprintln!("açılışta başlatma açılamadı: {e}");
+            }
 
             create_tray(app.handle(), hide_taskbar)?;
             Ok(())
