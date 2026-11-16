@@ -8,10 +8,10 @@
   left: 50%;
   top: 50%;
   transform: translate(-60%, -50%);
-  color: #ffd84d;
+  color: var(--warn);
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.9));
 }
 
 .low {
-  color: #ff7a6b;
+  color: var(--danger);
 }

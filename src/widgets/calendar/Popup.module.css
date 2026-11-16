@@ -58,7 +58,7 @@
 
 .arrow:hover,
 .todayButton:hover {
-  background: var(--surface-hover);
+  background: var(--tile-hover);
 }
 
 /* --- ızgara ----------------------------------------------------------------- */
@@ -73,7 +73,7 @@
   height: 22px;
   font-size: 11px;
   text-align: center;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .cell {
@@ -92,11 +92,11 @@
 }
 
 .cell:hover {
-  background: var(--surface-hover);
+  background: var(--tile-hover);
 }
 
 .cell[data-outside] {
-  color: var(--text-dim);
+  color: var(--text-2);
   opacity: 0.55;
 }
 
@@ -106,12 +106,12 @@
 
 .cell[data-today] {
   background: var(--accent);
-  color: #0b1220;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
 .cell[data-today] .dot {
-  background: #0b1220 !important;
+  background: var(--on-accent) !important;
 }
 
 .num {
@@ -139,7 +139,7 @@
   flex-direction: column;
   gap: 6px;
   padding-top: 10px;
-  border-top: 1px solid var(--bar-border);
+  border-top: 1px solid var(--hairline);
 }
 
 .eventsHead {
@@ -168,7 +168,7 @@
   min-height: 28px;
   padding: 4px 8px 4px 0;
   border-radius: 6px;
-  background: var(--surface);
+  background: var(--panel-inset);
   font-size: 12px;
 }
 
@@ -178,7 +178,7 @@
 }
 
 .time {
-  color: var(--text-dim);
+  color: var(--text-2);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -193,11 +193,11 @@
   margin: 0;
   font-size: 12px;
   line-height: 1.45;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .error {
   margin: 0;
   font-size: 11px;
-  color: #ff8a8a;
+  color: var(--danger);
 }

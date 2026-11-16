@@ -5,8 +5,8 @@ import { useService } from "../../lib/useService";
 import type { AppsConfig } from "./index";
 import styles from "./Bar.module.css";
 
-const ICON = 40;
-const GAP = 8;
+const ICON = 40; // tokens.css → --icon-size
+const GAP = 6; // tokens.css → --icon-gap
 
 export function AppsBar({ config }: { config: AppsConfig }) {
   const apps = useService(commands.getApps, events.apps) ?? [];

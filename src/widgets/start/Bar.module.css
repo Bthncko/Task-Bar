@@ -3,9 +3,9 @@
   height: var(--icon-size);
   display: grid;
   place-items: center;
-  border-radius: var(--icon-radius);
+  border-radius: var(--r-tile);
   color: var(--accent);
-  transition: background-color 120ms ease;
+  transition: background-color var(--t-fast) ease;
 }
 
 .start svg {
@@ -13,9 +13,9 @@
 }
 
 .start:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--tile-hover);
 }
 
 .start:active {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--tile-press);
 }

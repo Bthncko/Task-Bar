@@ -1,14 +1,16 @@
-/* Pencere tam panel boyutunda; köşeler şeffaf. */
+/* Pencere tam panel boyutunda; köşeler şeffaf. (Gölge payı ve kapanış animasyonu 7.6.) */
 .panel {
   width: 100%;
   height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--popup-bg);
-  border: 1px solid var(--bar-border);
-  border-radius: var(--radius);
-  animation: enter 140ms ease-out;
+  background: var(--panel);
+  border-radius: var(--r-panel);
+  box-shadow:
+    inset 0 0 0 1px var(--hairline),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  animation: enter 140ms var(--ease-out);
 }
 
 @keyframes enter {

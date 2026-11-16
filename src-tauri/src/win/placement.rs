@@ -27,10 +27,11 @@ use windows::Win32::UI::WindowsAndMessaging::{SWP_NOACTIVATE, SWP_NOZORDER, SetW
 use super::appbar;
 use crate::error::AppResult;
 
-/// Mantıksal piksel. `src/styles/tokens.css` ile aynı tutulmalı.
-pub const BAR_HEIGHT: f64 = 56.0;
-/// Büyütülen ikonların taştığı ek pay (bölüm 3.2).
-pub const MAGNIFY_PAD: f64 = 40.0;
+/// Ayrılan şerit (mantıksal piksel): 4 üst pay + 52 çubuk + 8 alt boşluk.
+/// `src/styles/tokens.css` → `--bar-height` ile aynı tutulmalı.
+pub const BAR_HEIGHT: f64 = 64.0;
+/// Büyütülen ikonların taştığı ek pay (bölüm 3.2) → `--magnify-pad`.
+pub const MAGNIFY_PAD: f64 = 44.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Edge {

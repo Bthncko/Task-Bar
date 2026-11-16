@@ -5,7 +5,7 @@
   inset: 0;
   display: grid;
   grid-template-columns: 200px 1fr;
-  background: #15171d;
+  background: var(--window);
   color: var(--text);
 }
 
@@ -21,8 +21,8 @@
   flex-direction: column;
   gap: 2px;
   padding: 20px 12px;
-  background: #101217;
-  border-right: 1px solid var(--bar-border);
+  background: var(--window-sidebar);
+  border-right: 1px solid var(--hairline);
 }
 
 .appTitle {
@@ -38,19 +38,19 @@
   text-align: left;
   border-radius: 8px;
   font-size: 14px;
-  color: var(--text-dim);
+  color: var(--text-2);
   transition:
     background-color 120ms ease,
     color 120ms ease;
 }
 
 .navItem:hover {
-  background: var(--surface);
+  background: var(--panel-inset);
   color: var(--text);
 }
 
 .navItem[aria-current="page"] {
-  background: var(--surface-hover);
+  background: var(--tile-hover);
   color: var(--text);
 }
 
@@ -96,7 +96,7 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .footnote {
@@ -106,8 +106,8 @@
 .card {
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--bar-border);
+  background: var(--panel-inset);
+  border: 1px solid var(--hairline);
   border-radius: 10px;
 }
 
@@ -115,7 +115,7 @@
   margin: 0;
   padding: 14px 16px;
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .row {
@@ -128,7 +128,7 @@
 
 .row + .row,
 .card > * + .row {
-  border-top: 1px solid var(--bar-border);
+  border-top: 1px solid var(--hairline);
 }
 
 .rowText {
@@ -145,7 +145,7 @@
 
 .rowHint {
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .rowControl {
@@ -163,13 +163,13 @@
   height: 32px;
   padding: 0 14px;
   border-radius: 8px;
-  background: var(--surface-hover);
+  background: var(--tile-hover);
   font-size: 13px;
   transition: background-color 120ms ease;
 }
 
 .button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--tile-press);
 }
 
 .button:disabled {
@@ -178,7 +178,7 @@
 
 .primary {
   background: var(--accent);
-  color: #0b1220;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -192,8 +192,8 @@
   height: 34px;
   padding: 0 12px;
   border-radius: 8px;
-  border: 1px solid var(--bar-border);
-  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--hairline);
+  background: var(--field);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -205,7 +205,7 @@
 }
 
 .input::placeholder {
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 /* Anahtar */
@@ -214,7 +214,7 @@
   width: 40px;
   height: 22px;
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--tile-press);
   transition: background-color 150ms ease;
 }
 
@@ -253,11 +253,7 @@
   height: 4px;
   appearance: none;
   border-radius: 2px;
-  background: linear-gradient(
-    to right,
-    var(--accent) var(--fill),
-    rgba(255, 255, 255, 0.18) var(--fill)
-  );
+  background: linear-gradient(to right, var(--accent) var(--fill), var(--tile-press) var(--fill));
 }
 
 .slider input::-webkit-slider-thumb {
@@ -273,7 +269,7 @@
   font-size: 13px;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 /* Bölmeli seçim */
@@ -281,7 +277,7 @@
   display: inline-flex;
   padding: 2px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--field);
 }
 
 .segment {
@@ -290,11 +286,11 @@
   padding: 0 12px;
   border-radius: 6px;
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .segment[aria-checked="true"] {
-  background: var(--surface-hover);
+  background: var(--tile-hover);
   color: var(--text);
 }
 
@@ -309,12 +305,12 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 0 0 1px var(--field);
 }
 
 .swatch[aria-pressed="true"] {
   box-shadow:
-    0 0 0 2px #15171d,
+    0 0 0 2px var(--window),
     0 0 0 4px #fff;
 }
 
@@ -351,7 +347,7 @@
   margin: 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .listTitle:empty {
@@ -367,7 +363,7 @@
   flex-direction: column;
   gap: 4px;
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--panel-inset);
   border: 1px dashed transparent;
   transition: border-color 120ms ease;
 }
@@ -383,7 +379,7 @@
   height: 36px;
   padding: 0 6px 0 8px;
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--tile);
   font-size: 13px;
   cursor: grab;
 }
@@ -393,7 +389,7 @@
 }
 
 .grip {
-  color: var(--text-dim);
+  color: var(--text-2);
   font-size: 12px;
 }
 
@@ -416,11 +412,11 @@
   border-radius: 6px;
   font-size: 16px;
   line-height: 1;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .itemAction:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--tile-hover);
   color: var(--text);
 }
 
@@ -435,7 +431,7 @@
   padding: 10px 6px;
   font-size: 12px;
   text-align: center;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 /* --- hava durumu araması -------------------------------------------------------------- */
@@ -449,7 +445,7 @@
   margin: 6px 0 0;
   padding: 4px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--field);
 }
 
 .result {
@@ -464,12 +460,12 @@
 }
 
 .result:hover {
-  background: var(--surface-hover);
+  background: var(--tile-hover);
 }
 
 .resultMeta {
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -478,7 +474,7 @@
 .resultNote {
   padding: 7px 10px;
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 /* --- takvim ------------------------------------------------------------------------ */
@@ -499,7 +495,7 @@
 }
 
 .urlItem + .urlItem {
-  border-top: 1px solid var(--bar-border);
+  border-top: 1px solid var(--hairline);
 }
 
 .urlText {
@@ -522,21 +518,21 @@
 .status {
   margin: 0;
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .status[data-kind="ok"] {
-  color: #7ee0a1;
+  color: var(--ok);
 }
 
 .status[data-kind="error"] {
-  color: #ff8a8a;
+  color: var(--danger);
 }
 
 .help {
   font-size: 13px;
   line-height: 1.55;
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .help ol {

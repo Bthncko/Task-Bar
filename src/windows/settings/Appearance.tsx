@@ -5,10 +5,11 @@ import styles from "./Settings.module.css";
 
 type Theme = Config["theme"];
 
-// src-tauri/src/config.rs → Theme::default ile aynı.
-const DEFAULT_THEME: Theme = { accent: "#6aa8ff", opacity: 0.6, radius: 14 };
+// src-tauri/src/config.rs → Theme::default ve tokens.css ile aynı.
+const DEFAULT_THEME: Theme = { accent: "#3b9eff", opacity: 0.55, radius: 16 };
 
 const SWATCHES = [
+  "#3b9eff",
   "#6aa8ff",
   "#8b7cff",
   "#ff7ab6",

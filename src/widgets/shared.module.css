@@ -1,10 +1,10 @@
-/* Küçük widget'ların ortak parçaları. */
+/* Küçük widget'ların ortak parçaları. (7.3'te widgets/ui bileşenlerine taşınacak.) */
 
 .item {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: var(--icon-size);
+  height: var(--tile-h);
   white-space: nowrap;
 }
 
@@ -19,16 +19,16 @@
   border-radius: 8px;
   color: var(--text);
   transition:
-    background-color 120ms ease,
-    opacity 120ms ease;
+    background-color var(--t-fast) ease,
+    opacity var(--t-fast) ease;
 }
 
 .iconButton:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--tile-hover);
 }
 
 .iconButton:active {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--tile-press);
 }
 
 .iconButton:disabled {
@@ -36,10 +36,10 @@
 }
 
 .dim {
-  color: var(--text-dim);
+  color: var(--text-2);
 }
 
 .value {
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
 }

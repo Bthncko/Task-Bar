@@ -1,28 +1,73 @@
-/* Tasarım değişkenleri. Aşama 6'da tema config'ten buraya yazılacak. */
+/* Tasarım değişkenleri (PLAN-ASAMA-7.md, bölüm C). Bileşenler sabit renk/ölçü
+   yazmaz, yalnızca bunları kullanır. Tema (config.theme) lib/theme.ts ile yazılır. */
 :root {
-  /* Ölçüler (mantıksal piksel) — src-tauri/src/win/placement.rs ile aynı tutulmalı */
-  --bar-height: 56px;
-  --bar-inset: 4px;
+  /* Ölçü — src-tauri/src/win/placement.rs ile aynı tutulmalı */
+  --bar-height: 64px; /* ayrılan şerit: 4 üst pay + 52 çubuk + 8 alt boşluk */
+  --bar-visual: 52px;
+  --bar-gap-edge: 8px;
+  --bar-gap-side: 12px;
+  --bar-pad: 6px;
+  --tile-h: 40px;
   --icon-size: 40px;
-  --icon-gap: 8px;
-  --magnify-pad: 40px;
+  --icon-gap: 6px; /* widgets/apps/Bar.tsx → GAP ile aynı */
+  --group-gap: 8px;
+  --magnify-pad: 44px;
+
+  /* Yüzeyler */
+  --glass-tint: 18 20 28; /* rgb üçlüsü */
+  --glass-alpha: 0.55; /* Rust parlaklığa göre günceller (7.2) */
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.22);
+  --tile: rgba(255, 255, 255, 0.06);
+  --tile-hover: rgba(255, 255, 255, 0.1);
+  --tile-press: rgba(255, 255, 255, 0.14);
+  --panel: rgba(27, 28, 32, 0.98);
+  --panel-inset: rgba(255, 255, 255, 0.045);
+  --hairline: rgba(255, 255, 255, 0.07);
+
+  /* Metin */
+  --text: rgba(255, 255, 255, 0.94);
+  --text-2: rgba(255, 255, 255, 0.62);
+  --text-3: rgba(255, 255, 255, 0.38);
 
   /* Renk */
-  --bar-bg: rgba(18, 20, 26, 0.62);
-  --bar-border: rgba(255, 255, 255, 0.09);
-  /* Paneller okunsun diye bardan daha opak (cam efekti Aşama 7). */
-  --popup-bg: rgba(22, 24, 31, 0.96);
-  --surface: rgba(255, 255, 255, 0.05);
-  --surface-hover: rgba(255, 255, 255, 0.09);
-  --text: rgba(255, 255, 255, 0.92);
-  --text-dim: rgba(255, 255, 255, 0.58);
-  --accent: #6aa8ff;
-  --dot: rgba(255, 255, 255, 0.55);
-  --dot-active: #ffffff;
+  --accent: #3b9eff;
+  --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
+  --danger: #ff5a52;
+  --ok: #34d17b;
+  --warn: #ffb340;
 
   /* Biçim */
-  --radius: 14px;
-  --icon-radius: 10px;
+  --r-bar: 16px;
+  --r-tile: 10px;
+  --r-pill: 999px;
+  --r-panel: 16px;
+  --r-inset: 12px;
 
-  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  /* Yazı */
+  --font: "Inter Variable", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --fs-xs: 10.5px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --fs-xl: 20px;
+  --fs-2xl: 28px;
+  --tracking-tight: -0.02em;
+
+  /* Hareket */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-fast: 120ms;
+  --t-med: 200ms;
+  --t-slow: 400ms;
+
+  /* Gölge */
+  --shadow-bar: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-panel: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+
+  /* Bölüm C'ye eklenenler: ayarlar penceresi opak (cam yok) ve vurgu üstü metin. */
+  --window: #17181c;
+  --window-sidebar: #111215;
+  --on-accent: #0b1220;
+  --field: rgba(0, 0, 0, 0.25);
 }

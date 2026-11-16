@@ -14,7 +14,7 @@
   background: linear-gradient(
     to right,
     var(--accent) 0 var(--fill),
-    rgba(255, 255, 255, 0.18) var(--fill) 100%
+    var(--tile-press) var(--fill) 100%
   );
 }
 
@@ -37,5 +37,5 @@
 .percent {
   min-width: 2ch;
   text-align: right;
-  color: var(--text-dim);
+  color: var(--text-2);
 }

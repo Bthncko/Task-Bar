@@ -52,9 +52,10 @@ pub struct Theme {
 impl Default for Theme {
     fn default() -> Self {
         Self {
-            accent: "#6aa8ff".into(),
-            opacity: 0.6,
-            radius: 14.0,
+            // tokens.css ile aynı: --accent, --glass-alpha, --r-bar
+            accent: "#3b9eff".into(),
+            opacity: 0.55,
+            radius: 16.0,
         }
     }
 }

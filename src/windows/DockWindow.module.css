@@ -4,25 +4,28 @@
   height: 100%;
 }
 
-/* Yarı saydam yuvarlak çubuk. Gerçek cam efekti Aşama 7'de (window-vibrancy). */
+/* Yüzen çubuk: ekran kenarından --bar-gap-edge, yanlardan --bar-gap-side boşluk.
+   Cam (duvar kâğıdı) arka planı 7.2'de; şimdilik yarı saydam düz renk. */
 .bar {
   position: absolute;
-  left: 6px;
-  right: 6px;
-  top: var(--bar-inset);
-  height: calc(var(--bar-height) - 2 * var(--bar-inset));
-  padding: var(--bar-inset) 10px;
+  left: var(--bar-gap-side);
+  right: var(--bar-gap-side);
+  top: var(--bar-gap-edge);
+  height: var(--bar-visual);
+  padding: var(--bar-pad) 10px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: start;
-  background: var(--bar-bg);
-  border: 1px solid var(--bar-border);
-  border-radius: var(--radius);
+  background: rgb(var(--glass-tint) / var(--glass-alpha));
+  border-radius: var(--r-bar);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 0 0 1px var(--glass-border);
 }
 
 .root[data-edge="bottom"] .bar {
   top: auto;
-  bottom: var(--bar-inset);
+  bottom: var(--bar-gap-edge);
 }
 
 .section {

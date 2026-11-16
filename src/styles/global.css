@@ -21,6 +21,10 @@ body {
   user-select: none;
   -webkit-user-select: none;
   cursor: default;
+  /* Plan istiyor; Chromium bunu yalnızca macOS'ta uygular, Windows'ta etkisiz. */
+  -webkit-font-smoothing: antialiased;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
 
 button {

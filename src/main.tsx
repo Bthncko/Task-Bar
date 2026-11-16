@@ -1,6 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+// Inter Variable (SIL OFL 1.1), uygulamaya gömülü; ağdan çekilmez.
+import "@fontsource-variable/inter";
 import "./styles/tokens.css";
 import "./styles/global.css";
 import { DockWindow } from "./windows/DockWindow";
