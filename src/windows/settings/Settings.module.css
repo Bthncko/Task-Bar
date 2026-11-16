@@ -569,3 +569,35 @@
 .help p {
   margin: 6px 0 0;
 }
+
+/* --- müzik (Spotify) ---------------------------------------------------------------- */
+
+.inlineLink {
+  padding: 0;
+  font-size: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.inlineLink:hover {
+  filter: brightness(1.15);
+}
+
+.copyRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 2px;
+}
+
+.code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--field);
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  color: var(--text);
+  user-select: all;
+  -webkit-user-select: all;
+}

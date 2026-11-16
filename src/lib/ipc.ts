@@ -77,6 +77,25 @@ export type RadiosState = {
   signal: number | null;
 };
 
+export type SpotifyStatus = {
+  clientId: string;
+  connected: boolean;
+  /** Bağlı hesabın görünen adı. */
+  account: string | null;
+  /** Spotify panelinde kayıtlı olması gereken yönlendirme adresi. */
+  redirectUri: string;
+};
+
+export type QueueItem = {
+  uri: string;
+  title: string;
+  artist: string;
+  image: string | null;
+  durationMs: number;
+};
+
+export type SpotifyQueue = { current: QueueItem | null; items: QueueItem[] };
+
 // --- olaylar ------------------------------------------------------------------
 
 export const events = {
@@ -98,6 +117,8 @@ export const events = {
   popupClose: "popup://close",
   /** Açık ayarlar penceresi: bu bölüme geç. */
   settingsPage: "settings://page",
+  /** Spotify bağlandı / bağlantı kesildi ya da düştü (SpotifyStatus). */
+  spotify: "spotify://changed",
 } as const;
 
 export type PopupOpen = { widgetId: string; seq: number };
@@ -109,7 +130,7 @@ export type PopupPlaced = { originX: number } | null;
 export const commands = {
   /** Büyütme sırasında görünür bölgeyi açar / bara daraltır (3.2). */
   setDockExpanded: (expanded: boolean) => invoke<void>("set_dock_expanded", { expanded }),
-  openSystemSettings: (page: "wifi" | "bluetooth" | "sound" | "battery") =>
+  openSystemSettings: (page: "wifi" | "bluetooth" | "sound" | "battery" | "spotify-dashboard") =>
     invoke<void>("open_system_settings", { page }),
   /** Windows'un hızlı ayarlar paneli; "wifi" doğrudan ağ listesini açar. */
   openQuickSettings: (panel: "wifi" | "bluetooth" | "battery") =>
@@ -156,6 +177,14 @@ export const commands = {
   mediaToggle: () => invoke<void>("media_toggle"),
   mediaNext: () => invoke<void>("media_next"),
   mediaPrev: () => invoke<void>("media_prev"),
+
+  spotifyStatus: () => invoke<SpotifyStatus>("spotify_status"),
+  /** Tarayıcıda Spotify onayını bekler (en çok 3 dk). */
+  spotifyConnect: (clientId: string) => invoke<SpotifyStatus>("spotify_connect", { clientId }),
+  spotifyDisconnect: () => invoke<SpotifyStatus>("spotify_disconnect"),
+  spotifyQueue: () => invoke<SpotifyQueue>("spotify_queue"),
+  /** Kuyruktaki `count`. öğeye geç (1 = sıradaki). */
+  spotifySkip: (count: number) => invoke<void>("spotify_skip", { count }),
 
   getAudio: () => invoke<AudioState>("get_audio"),
   /** v: 0–1 */

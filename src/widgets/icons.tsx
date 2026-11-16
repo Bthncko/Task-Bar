@@ -26,6 +26,15 @@ function Svg({ size = 18, className, children }: IconProps & { children: ReactNo
 
 // --- müzik ---------------------------------------------------------------------
 
+/** Kapaksız şarkı. */
+export const MusicIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9 18V6l10-2v12" />
+    <circle cx="6.5" cy="18" r="2.5" />
+    <circle cx="16.5" cy="16" r="2.5" />
+  </Svg>
+);
+
 export const PlayIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M8 5.5v13l10-6.5z" fill="currentColor" stroke="none" />

@@ -1,14 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { commands, events, report, type MediaState } from "../../lib/ipc";
 import { useService } from "../../lib/useService";
-import { readableTint, rgbCss, vivid } from "../../lib/color";
+import { togglePopup } from "../../lib/popup";
 import { NextIcon, PauseIcon, PlayIcon, PrevIcon } from "../icons";
-import { dominantColor } from "./averageColor";
+import { useCoverTint } from "./useCoverTint";
 import { IconButton, Tile } from "../ui";
 import styles from "./Bar.module.css";
 
-/** Kapak yokken / rengi hesaplanırken: koyu, nötr mavi-gri. */
-const FALLBACK = "rgb(58 62 76)";
 /** Kayan yazı hızı (px/sn). */
 const MARQUEE_SPEED = 30;
 
@@ -43,30 +41,20 @@ function useCrossfade(label: string) {
 export function MediaBar() {
   const live = useService(commands.getMedia, events.media);
   const [media, leaving, gone] = useLingering(live);
-  // Hangi kapak için hesaplandığıyla birlikte tut: kapak değişince eski ton kullanılmaz.
-  const [computed, setComputed] = useState<{ art: string; tint: string } | null>(null);
-  const artwork = media?.artwork ?? null;
-  const tint = computed && computed.art === artwork ? computed.tint : null;
-
-  useEffect(() => {
-    if (!artwork) return;
-    let alive = true;
-    dominantColor(artwork).then((c) => {
-      if (alive && c) setComputed({ art: artwork, tint: rgbCss(readableTint(vivid(c))) });
-    });
-    return () => {
-      alive = false;
-    };
-  }, [artwork]);
+  const tint = useCoverTint(media?.artwork ?? null);
 
   if (!media) return null;
 
   return (
     <Tile
       variant="tinted"
-      color={tint ?? FALLBACK}
+      color={tint}
       className={styles.card}
       data-leaving={leaving || undefined}
+      // Kontrollerin dışına tıklama: müzik paneli (sıradakiler).
+      onClick={(e) => {
+        if (!(e.target as Element).closest("button")) togglePopup("media", e.currentTarget);
+      }}
       onAnimationEnd={(e) => {
         if (leaving && e.target === e.currentTarget) gone();
       }}

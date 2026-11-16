@@ -8,6 +8,7 @@ import { Appearance } from "./settings/Appearance";
 import { Apps } from "./settings/Apps";
 import { Calendar } from "./settings/Calendar";
 import { General } from "./settings/General";
+import { Music } from "./settings/Music";
 import { Weather } from "./settings/Weather";
 import { Widgets } from "./settings/Widgets";
 import styles from "./settings/Settings.module.css";
@@ -20,6 +21,7 @@ const PAGES: { id: string; label: string; Page: FC<{ config: Config }> }[] = [
   { id: "apps", label: "Uygulamalar", Page: Apps },
   { id: "weather", label: "Hava durumu", Page: Weather },
   { id: "calendar", label: "Saat ve takvim", Page: Calendar },
+  { id: "music", label: "Müzik", Page: Music },
   { id: "general", label: "Genel", Page: General },
 ];
 

@@ -65,6 +65,11 @@ pub fn run() {
             commands::open_settings,
             commands::take_settings_page,
             commands::get_system_accent,
+            commands::spotify_status,
+            commands::spotify_connect,
+            commands::spotify_disconnect,
+            commands::spotify_queue,
+            commands::spotify_skip,
             commands::show_dock_menu,
             commands::get_backdrop,
             commands::set_app_icon_rects,
@@ -118,6 +123,7 @@ pub fn run() {
             let minimize_to_dock = config.get().minimize_to_dock;
             win::placement::set_ui_scale(config.get().theme.ui_scale());
             app.manage(config);
+            app.manage(services::spotify::Spotify::load(config_dir.clone()));
 
             let (wake_tx, wake_rx) = mpsc::channel();
             app.manage(AppsService::new(wake_tx));

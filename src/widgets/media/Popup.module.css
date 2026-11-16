@@ -1,0 +1,305 @@
+/* Müzik paneli: başlık, şu an çalan (kapak renginde), sıradakiler. */
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px 14px 10px 16px;
+  gap: 12px;
+}
+
+/* --- şu an çalan ------------------------------------------------------------ */
+
+.now {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border-radius: var(--r-inset);
+  /* Karodaki gibi kapak rengi; altta biraz koyulaşır. */
+  background: linear-gradient(
+    160deg,
+    var(--tile-color),
+    color-mix(in srgb, var(--tile-color) 70%, black)
+  );
+  transition: --tile-color var(--t-slow) ease;
+}
+
+.nowCover {
+  flex: none;
+  width: 76px;
+  height: 76px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.nowBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.nowText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nowTitle {
+  font-size: var(--fs-md);
+  font-weight: 650;
+  line-height: 1.3;
+  /* Uzun adlar iki satırda kesilir. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.nowArtist {
+  font-size: var(--fs-sm);
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -4px;
+}
+
+.control {
+  width: 30px;
+  height: 30px;
+  color: #fff;
+}
+
+.control:disabled {
+  opacity: 0.35;
+}
+
+.play {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* --- sıradakiler -------------------------------------------------------------- */
+
+.queue {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -6px;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 6px;
+  border-radius: 8px;
+  text-align: left;
+  transition:
+    background-color var(--t-fast) ease,
+    opacity var(--t-med) ease;
+}
+
+.row:hover {
+  background: var(--tile-hover);
+}
+
+.row:active {
+  background: var(--tile-press);
+}
+
+/* Geçiş sürerken: atlanacaklar soluk, hedef vurgulu. */
+.row[data-state="skipped"] {
+  opacity: 0.35;
+}
+
+.row[data-state="next"] {
+  background: var(--accent-soft);
+}
+
+.rowCover {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 36px;
+}
+
+.cover {
+  width: 100%;
+  height: 100%;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
+.coverEmpty {
+  display: grid;
+  place-items: center;
+  background: var(--tile);
+  color: var(--text-3);
+}
+
+/* Üstüne gelince kapağın üstünde oynat simgesi. */
+.rowPlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  opacity: 0;
+  transition: opacity var(--t-fast) ease;
+}
+
+.row:hover .rowPlay,
+.row[data-state="next"] .rowPlay {
+  opacity: 1;
+}
+
+.row[data-state="next"] .rowPlay {
+  animation: pulse 900ms ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  to {
+    opacity: 0.4;
+  }
+}
+
+.rowText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rowTitle,
+.rowArtist {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowTitle {
+  font-size: var(--fs-md);
+}
+
+.rowArtist {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.rowTime {
+  flex: none;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+
+/* Yüklenirken: soluk satır iskeletleri. */
+.skeleton {
+  height: 40px;
+  margin: 4px 6px 8px;
+  border-radius: 8px;
+  background: var(--tile);
+  animation: breathe 1.2s ease-in-out calc(var(--i) * 80ms) infinite alternate;
+}
+
+@keyframes breathe {
+  to {
+    opacity: 0.4;
+  }
+}
+
+/* --- durumlar ------------------------------------------------------------------ */
+
+.note {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--text-2);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--warn);
+}
+
+.error span {
+  flex: 1;
+}
+
+.connect {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.connect p {
+  margin: 0;
+}
+
+.primary {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  background: #1ed760;
+  color: #0b1a10;
+  font-size: var(--fs-md);
+  font-weight: 650;
+  transition: filter var(--t-fast) ease;
+}
+
+.primary:hover {
+  filter: brightness(1.08);
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-3);
+  font-size: var(--fs-md);
+}
+
+.empty p {
+  margin: 0;
+  color: var(--text-2);
+}

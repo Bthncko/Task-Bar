@@ -10,6 +10,7 @@ use crate::services::backdrop::{Backdrop, BackdropService};
 use crate::services::media::{MediaCmd, MediaService, MediaState};
 use crate::services::power::{PowerService, PowerState};
 use crate::services::radios::{RadiosService, RadiosState, SetRadio};
+use crate::services::spotify::{Queue, Spotify, SpotifyStatus};
 use crate::services::{ics, launcher};
 use crate::win::{placement, popup};
 
@@ -33,6 +34,8 @@ pub fn open_system_settings(page: String) -> CmdResult {
         "bluetooth" => "ms-settings:bluetooth",
         "sound" => "ms-settings:sound",
         "battery" => "ms-settings:batterysaver",
+        // Dış bağlantılar da yalnızca bilinen adreslerle (frontend keyfi URL açtıramaz).
+        "spotify-dashboard" => "https://developer.spotify.com/dashboard",
         _ => return Err(format!("bilinmeyen sayfa: {page}")),
     };
     launcher::open_uri(uri).map_err(Into::into)
@@ -137,6 +140,45 @@ pub fn set_autostart(app: AppHandle, enabled: bool) -> CmdResult<AutostartState>
 #[tauri::command]
 pub async fn fetch_ics(url: String) -> CmdResult<String> {
     tauri::async_runtime::spawn_blocking(move || ics::fetch(&url))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(Into::into)
+}
+
+// --- Spotify (müzik paneli) -------------------------------------------------------
+
+#[tauri::command]
+pub fn spotify_status(spotify: State<Spotify>) -> SpotifyStatus {
+    spotify.status()
+}
+
+/// Tarayıcıda onay ister; kullanıcı onaylayana kadar (en çok 3 dk) bekler.
+#[tauri::command]
+pub async fn spotify_connect(app: AppHandle, client_id: String) -> CmdResult<SpotifyStatus> {
+    blocking(move || app.state::<Spotify>().connect(&app, &client_id)).await
+}
+
+#[tauri::command]
+pub async fn spotify_disconnect(app: AppHandle) -> CmdResult<SpotifyStatus> {
+    blocking(move || app.state::<Spotify>().disconnect(&app)).await
+}
+
+#[tauri::command]
+pub async fn spotify_queue(app: AppHandle) -> CmdResult<Queue> {
+    blocking(move || app.state::<Spotify>().queue(&app)).await
+}
+
+/// Kuyruktaki `count`. öğeye geç (1 = sıradaki).
+#[tauri::command]
+pub async fn spotify_skip(app: AppHandle, count: u32) -> CmdResult {
+    blocking(move || app.state::<Spotify>().skip(&app, count)).await
+}
+
+/// Ağ beklemesi ana iş parçacığında olmasın.
+async fn blocking<T: Send + 'static>(
+    f: impl FnOnce() -> crate::error::AppResult<T> + Send + 'static,
+) -> CmdResult<T> {
+    tauri::async_runtime::spawn_blocking(f)
         .await
         .map_err(|e| e.to_string())?
         .map_err(Into::into)

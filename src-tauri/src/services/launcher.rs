@@ -34,34 +34,6 @@ pub fn launch_target(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn web_app_launches_by_aumid_not_browser() {
-        let edge = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
-        assert_eq!(
-            launch_target(Some(edge), Some("Facebook.InstagramBeta_x!App"), true),
-            Some(LaunchTarget::Aumid("Facebook.InstagramBeta_x!App".into()))
-        );
-    }
-
-    #[test]
-    fn falls_back_to_exe_when_aumid_unknown() {
-        let code = r"C:\Code\Code.exe";
-        assert_eq!(
-            launch_target(Some(code), Some("Some.Window.Id"), false),
-            Some(LaunchTarget::Exe(code.into()))
-        );
-        assert_eq!(
-            launch_target(Some(code), None, false),
-            Some(LaunchTarget::Exe(code.into()))
-        );
-        assert_eq!(launch_target(None, Some("x"), false), None);
-    }
-}
-
 pub fn launch(target: &LaunchTarget) -> AppResult<()> {
     let (file, params) = match target {
         LaunchTarget::Exe(path) => (path.clone(), String::new()),
@@ -135,5 +107,33 @@ pub fn open_start() -> AppResult<()> {
         Ok(())
     } else {
         Err(AppError::Win32("SendInput başarısız".into()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn web_app_launches_by_aumid_not_browser() {
+        let edge = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
+        assert_eq!(
+            launch_target(Some(edge), Some("Facebook.InstagramBeta_x!App"), true),
+            Some(LaunchTarget::Aumid("Facebook.InstagramBeta_x!App".into()))
+        );
+    }
+
+    #[test]
+    fn falls_back_to_exe_when_aumid_unknown() {
+        let code = r"C:\Code\Code.exe";
+        assert_eq!(
+            launch_target(Some(code), Some("Some.Window.Id"), false),
+            Some(LaunchTarget::Exe(code.into()))
+        );
+        assert_eq!(
+            launch_target(Some(code), None, false),
+            Some(LaunchTarget::Exe(code.into()))
+        );
+        assert_eq!(launch_target(None, Some("x"), false), None);
     }
 }

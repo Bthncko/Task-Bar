@@ -11,6 +11,11 @@
   animation: appear 250ms var(--ease-out);
 }
 
+/* Karo tıklanınca müzik paneli açılır; kontrollerin üstündeyken karo tepki vermez. */
+.card:hover:not(:has(button:hover)) {
+  filter: brightness(1.08);
+}
+
 .card[data-leaving] {
   pointer-events: none;
   animation: disappear 250ms var(--ease-out) forwards;
