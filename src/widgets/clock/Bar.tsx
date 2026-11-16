@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { togglePopup } from "../../lib/popup";
+import { Tile } from "../ui";
 import styles from "./Bar.module.css";
 
 const timeFmt = new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" });
@@ -23,16 +24,16 @@ export function ClockBar() {
   }, [now]);
 
   return (
-    <button
-      type="button"
+    <Tile
+      as="button"
+      variant="plain"
       className={styles.clock}
-      data-hit
       title={now.toLocaleString("tr-TR")}
       aria-label={`${now.toLocaleString("tr-TR")} — takvimi aç`}
       onClick={(e) => togglePopup("clock", e.currentTarget)}
     >
       <span className={styles.time}>{timeFmt.format(now)}</span>
       <span className={styles.date}>{dateFmt.format(now)}</span>
-    </button>
+    </Tile>
   );
 }

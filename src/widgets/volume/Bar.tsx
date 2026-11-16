@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { commands, events, report } from "../../lib/ipc";
 import { useService } from "../../lib/useService";
 import { SpeakerIcon } from "../icons";
-import shared from "../shared.module.css";
+import { Dim, IconButton, Tile, Value } from "../ui";
 import styles from "./Bar.module.css";
 
 const WHEEL_STEP = 2;
@@ -43,28 +43,28 @@ export function VolumeBar() {
   if (audio === undefined) return null;
   if (audio === null) {
     return (
-      <div className={shared.item} title="Ses aygıtı yok">
-        <span className={shared.dim}>
+      <Tile variant="soft" title="Ses aygıtı yok">
+        <Dim>
           <SpeakerIcon level={0} muted />
-        </span>
-      </div>
+        </Dim>
+      </Tile>
     );
   }
 
   const value = local ?? audio.volume;
   const shown = audio.muted ? 0 : value;
 
+  // (7.5'te iki satır: aygıt adı + Meter.)
   return (
-    <div
-      className={shared.item}
+    <Tile
+      variant="soft"
+      className={styles.tile}
       title={`${audio.device} — %${audio.volume}${audio.muted ? " (sessiz)" : ""}`}
       onWheel={(e) =>
         push(Math.min(100, Math.max(0, value + (e.deltaY < 0 ? WHEEL_STEP : -WHEEL_STEP))))
       }
     >
-      <button
-        type="button"
-        className={shared.iconButton}
+      <IconButton
         aria-label={audio.muted ? "Sesi aç" : "Sesi kapat"}
         onClick={() => commands.setMute(!audio.muted).catch(report("set_mute"))}
         onContextMenu={(e) => {
@@ -73,7 +73,7 @@ export function VolumeBar() {
         }}
       >
         <SpeakerIcon level={shown} muted={audio.muted || value === 0} />
-      </button>
+      </IconButton>
       <input
         className={styles.slider}
         type="range"
@@ -85,7 +85,9 @@ export function VolumeBar() {
         style={{ "--fill": `${shown}%` } as React.CSSProperties}
         onChange={(e) => push(Number(e.currentTarget.value))}
       />
-      <span className={`${shared.value} ${styles.percent}`}>{shown}</span>
-    </div>
+      <span className={styles.percent}>
+        <Value dim>{shown}</Value>
+      </span>
+    </Tile>
   );
 }

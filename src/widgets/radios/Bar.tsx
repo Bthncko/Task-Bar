@@ -1,7 +1,7 @@
 import { commands, events, report } from "../../lib/ipc";
 import { useService } from "../../lib/useService";
 import { BluetoothIcon, WifiIcon } from "../icons";
-import shared from "../shared.module.css";
+import { Dim, IconButton, Tile } from "../ui";
 
 const EMPTY = { wifi: null, bluetooth: null, ssid: null, signal: null };
 
@@ -31,36 +31,41 @@ export function RadiosBar() {
           ? `Wi-Fi: ${radios.ssid}`
           : "Wi-Fi açık, bağlı değil";
 
+  // (7.5'te iki Pill olacak: aç/kapat │ ayarlar.)
   return (
-    <div className={shared.item}>
+    <Tile variant="plain">
       {wifi && (
-        <button
-          type="button"
-          className={shared.iconButton}
+        <IconButton
           title={`${wifiTitle} (sağ tık: ayarlar)`}
           aria-label={wifiTitle}
           onClick={openPanel("wifi")}
           onContextMenu={openSettings("wifi")}
         >
-          <span className={wifi.on ? undefined : shared.dim}>
-            <WifiIcon bars={radios.ssid ? (radios.signal ?? 5) : 0} off={!wifi.on} />
-          </span>
-        </button>
+          {wifi.on ? (
+            <WifiIcon bars={radios.ssid ? (radios.signal ?? 5) : 0} off={false} />
+          ) : (
+            <Dim>
+              <WifiIcon bars={0} off />
+            </Dim>
+          )}
+        </IconButton>
       )}
       {bluetooth && (
-        <button
-          type="button"
-          className={shared.iconButton}
+        <IconButton
           title={`Bluetooth ${bluetooth.disabled ? "donanımdan kapalı" : bluetooth.on ? "açık" : "kapalı"} (sağ tık: ayarlar)`}
           aria-label="Bluetooth"
           onClick={openPanel("bluetooth")}
           onContextMenu={openSettings("bluetooth")}
         >
-          <span className={bluetooth.on ? undefined : shared.dim}>
-            <BluetoothIcon off={!bluetooth.on} />
-          </span>
-        </button>
+          {bluetooth.on ? (
+            <BluetoothIcon off={false} />
+          ) : (
+            <Dim>
+              <BluetoothIcon off />
+            </Dim>
+          )}
+        </IconButton>
       )}
-    </div>
+    </Tile>
   );
 }

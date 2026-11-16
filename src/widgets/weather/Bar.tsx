@@ -4,7 +4,7 @@ import { WeatherIcon } from "../icons";
 import { cachedCurrent, fetchCurrent, type CurrentWeather } from "./api";
 import { describeWeather } from "./wmo";
 import type { WeatherConfig } from "./index";
-import shared from "../shared.module.css";
+import { Tile, Value } from "../ui";
 
 const REFRESH_MS = 20 * 60 * 1000;
 const RETRY_MS = 2 * 60 * 1000;
@@ -57,20 +57,16 @@ export function WeatherBar({ config }: { config: WeatherConfig }) {
   ].join("\n");
 
   return (
-    <div className={shared.item}>
-      <button
-        type="button"
-        className={shared.iconButton}
-        title={title}
-        aria-label={`Hava durumu: ${title}`}
-        data-stale={stale || undefined}
-        onClick={(e) => togglePopup("weather", e.currentTarget)}
-      >
-        <WeatherIcon kind={kind} night={!weather.isDay} size={20} />
-        <span className={shared.value} style={stale ? { opacity: 0.6 } : undefined}>
-          {Math.round(weather.temperature)}°
-        </span>
-      </button>
-    </div>
+    <Tile
+      as="button"
+      variant="plain"
+      title={title}
+      aria-label={`Hava durumu: ${title}`}
+      data-stale={stale || undefined}
+      onClick={(e) => togglePopup("weather", e.currentTarget)}
+    >
+      <WeatherIcon kind={kind} night={!weather.isDay} size={20} />
+      <Value dim={stale}>{Math.round(weather.temperature)}°</Value>
+    </Tile>
   );
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-// Dock genelinde kullanılan çizgi ikonlar (24×24, currentColor).
+// Dock genelinde kullanılan çizgi ikonlar: hepsi 24×24 ızgarada, çizgi 1.6 (7.3), currentColor.
+// Eksik ikon gerekirse tek set: Lucide (ISC). Şimdilik hepsi elle çizildi.
 
 type IconProps = { size?: number; className?: string };
 
@@ -12,7 +13,7 @@ function Svg({ size = 18, className, children }: IconProps & { children: ReactNo
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.8}
+      strokeWidth={1.6}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}

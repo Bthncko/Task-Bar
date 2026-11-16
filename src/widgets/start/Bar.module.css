@@ -1,21 +1,11 @@
+/* Kare karo: ikon boyutunda, ortalı. (7.4'te koyu karo.) */
 .start {
   width: var(--icon-size);
-  height: var(--icon-size);
-  display: grid;
-  place-items: center;
-  border-radius: var(--r-tile);
+  padding: 0;
+  justify-content: center;
   color: var(--accent);
-  transition: background-color var(--t-fast) ease;
 }
 
 .start svg {
   fill: currentColor;
-}
-
-.start:hover {
-  background: var(--tile-hover);
-}
-
-.start:active {
-  background: var(--tile-press);
 }

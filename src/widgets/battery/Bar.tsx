@@ -1,7 +1,7 @@
 import { commands, events, report } from "../../lib/ipc";
 import { useService } from "../../lib/useService";
 import { BatteryIcon, BoltIcon } from "../icons";
-import shared from "../shared.module.css";
+import { Tile, Value } from "../ui";
 import styles from "./Bar.module.css";
 
 export function BatteryBar() {
@@ -13,9 +13,10 @@ export function BatteryBar() {
   const state = power.charging ? "şarj oluyor" : power.plugged ? "prizde" : "pilde";
 
   return (
-    <button
-      type="button"
-      className={`${shared.iconButton} ${low ? styles.low : ""}`}
+    <Tile
+      as="button"
+      variant="plain"
+      className={low ? styles.low : undefined}
       title={`Pil %${power.percent} — ${state} (sağ tık: ayarlar)`}
       aria-label={`Pil yüzde ${power.percent}, ${state}`}
       onClick={() => commands.openQuickSettings("battery").catch(report("open_quick_settings"))}
@@ -28,7 +29,7 @@ export function BatteryBar() {
         <BatteryIcon percent={power.percent} />
         {power.charging && <BoltIcon size={11} className={styles.bolt} />}
       </span>
-      <span className={shared.value}>{power.percent}</span>
-    </button>
+      <Value>{power.percent}</Value>
+    </Tile>
   );
 }
