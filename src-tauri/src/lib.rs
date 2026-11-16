@@ -63,6 +63,7 @@ pub fn run() {
             commands::hide_popup,
             commands::fetch_ics,
             commands::open_settings,
+            commands::take_settings_page,
             commands::show_dock_menu,
             commands::get_backdrop,
             commands::set_app_icon_rects,

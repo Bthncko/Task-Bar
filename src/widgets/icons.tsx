@@ -95,6 +95,18 @@ export const ChevronIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const ChevronLeftIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M14.5 6.5L9 12l5.5 5.5" />
+  </Svg>
+);
+
+export const CloseIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+  </Svg>
+);
+
 /** Enerji tasarrufu. */
 export const LeafIcon = (p: IconProps) => (
   <Svg {...p}>

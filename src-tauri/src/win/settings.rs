@@ -6,12 +6,37 @@
 //! - HTML5 sürükle-bırak (widget sıralama) için WebView2'nin dosya bırakma
 //!   işleyicisi kapatılmalı: `disable_drag_drop_handler`.
 
-use tauri::{AppHandle, Manager, Theme, WebviewUrl, WebviewWindowBuilder};
+use std::sync::Mutex;
+
+use tauri::{AppHandle, Emitter, Manager, Theme, WebviewUrl, WebviewWindowBuilder};
 
 use super::{focus, hwnd_to_id};
 use crate::error::AppResult;
 
 pub const LABEL: &str = "settings";
+/// Açık ayarlar penceresine: şu bölüme geç.
+const PAGE_EVENT: &str = "settings://page";
+
+/// Yeni oluşturulan pencerenin ilk bölümü: sayfa yüklenince `take_page` ile alır
+/// (olay o sırada henüz dinlenmiyor olabilir).
+static PENDING_PAGE: Mutex<Option<String>> = Mutex::new(None);
+
+pub fn take_page() -> Option<String> {
+    PENDING_PAGE.lock().unwrap().take()
+}
+
+/// `open`, belirli bir bölümle (ör. "weather"). Aynı kısıtlar geçerli.
+pub fn open_page(app: &AppHandle, page: Option<String>) -> AppResult<()> {
+    let existed = app.get_webview_window(LABEL).is_some();
+    if !existed {
+        *PENDING_PAGE.lock().unwrap() = page.clone();
+    }
+    open(app)?;
+    if existed && let Some(page) = page {
+        app.emit_to(LABEL, PAGE_EVENT, page)?;
+    }
+    Ok(())
+}
 
 /// Ana iş parçacığında, eşzamanlı bir işleyicinin içinden çağırmayın (yukarıya bakın).
 pub fn open(app: &AppHandle) -> AppResult<()> {

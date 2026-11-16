@@ -7,10 +7,10 @@ use crate::config::{Config, ConfigStore};
 use crate::services::apps::{AppItem, AppsService};
 use crate::services::audio::{AudioCmd, AudioService, AudioState};
 use crate::services::backdrop::{Backdrop, BackdropService};
-use crate::services::{ics, launcher};
 use crate::services::media::{MediaCmd, MediaService, MediaState};
 use crate::services::power::{PowerService, PowerState};
 use crate::services::radios::{RadiosService, RadiosState, SetRadio};
+use crate::services::{ics, launcher};
 use crate::win::{placement, popup};
 
 type CmdResult<T = ()> = Result<T, String>;
@@ -41,10 +41,13 @@ pub fn open_system_settings(page: String) -> CmdResult {
 /// Windows görev çubuğundaki gibi sistem panelini açar.
 /// Hızlı ayarlar adresi bu makinede görev çubuğu gizliyken denendi, sağ altta açılıyor.
 /// `ms-availablenetworks:` Microsoft'un ms-settings listesinde Wi-Fi ağları paneli olarak geçiyor.
+/// `.../bluetooth` belgelenmemiş (kullanıcı paylaşımlarından); hızlı ayarları Bluetooth
+/// listesinde açar. Kullanıcı denedi diye işaretlenene kadar şüpheli say.
 #[tauri::command]
 pub fn open_quick_settings(panel: String) -> CmdResult {
     let uri = match panel.as_str() {
         "wifi" => "ms-availablenetworks:",
+        "bluetooth" => "ms-actioncenter:controlcenter/bluetooth",
         _ => "ms-actioncenter:controlcenter/&showFooter=true",
     };
     launcher::open_uri(uri).map_err(Into::into)
@@ -60,13 +63,19 @@ pub fn show_popup(app: AppHandle, widget_id: String, anchor: popup::Anchor) -> C
 
 /// Popup sayfası paneli çizdi; şimdi konumlanıp gösterilebilir.
 #[tauri::command]
-pub fn popup_ready(app: AppHandle, seq: u64, width: f64, height: f64) -> CmdResult {
+pub fn popup_ready(
+    app: AppHandle,
+    seq: u64,
+    width: f64,
+    height: f64,
+) -> CmdResult<Option<popup::Placed>> {
     popup::ready(&app, seq, width, height).map_err(Into::into)
 }
 
+/// Kapanış animasyonu bitti. `seq` verilirse yalnızca o açılışı kapatır.
 #[tauri::command]
-pub fn hide_popup(app: AppHandle) -> CmdResult {
-    popup::hide(&app).map_err(Into::into)
+pub fn hide_popup(app: AppHandle, seq: Option<u64>) -> CmdResult {
+    popup::hide(&app, seq).map_err(Into::into)
 }
 
 // --- cam çubuk (7.2) ---------------------------------------------------------
@@ -80,8 +89,14 @@ pub fn get_backdrop(backdrop: State<BackdropService>) -> Option<Backdrop> {
 
 /// Pencere oluşturma Windows'ta eşzamanlı komutta kilitlenir → async.
 #[tauri::command]
-pub async fn open_settings(app: AppHandle) -> CmdResult {
-    crate::win::settings::open(&app).map_err(Into::into)
+pub async fn open_settings(app: AppHandle, page: Option<String>) -> CmdResult {
+    crate::win::settings::open_page(&app, page).map_err(Into::into)
+}
+
+/// Ayarlar sayfası yeni açıldıysa hangi bölümle başlayacağı (bir kez).
+#[tauri::command]
+pub fn take_settings_page() -> Option<String> {
+    crate::win::settings::take_page()
 }
 
 #[tauri::command]

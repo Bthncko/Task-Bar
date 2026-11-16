@@ -14,6 +14,6 @@ export const weatherWidget: WidgetDefinition<WeatherConfig> = {
   name: "Hava durumu",
   Bar: WeatherBar,
   Popup: WeatherPopup,
-  popupSize: { width: 340, height: 440 },
+  popupSize: { width: 340, height: 500 },
   defaultConfig: { lat: 41.01, lon: 28.98, city: "İstanbul", unit: "C" },
 };

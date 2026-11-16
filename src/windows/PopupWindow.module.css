@@ -1,4 +1,10 @@
-/* Pencere tam panel boyutunda; köşeler şeffaf. (Gölge payı ve kapanış animasyonu 7.6.) */
+/* Pencere panelden her yönde 16 px büyük (gölge payı; popup.rs → SHADOW_PAD). */
+.root {
+  position: fixed;
+  inset: 0;
+  padding: 16px;
+}
+
 .panel {
   width: 100%;
   height: 100%;
@@ -9,19 +15,63 @@
   border-radius: var(--r-panel);
   box-shadow:
     inset 0 0 0 1px var(--hairline),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  animation: enter 140ms var(--ease-out);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 6px 12px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Çizildi ama Rust henüz göstermedi. */
+.panel[data-phase="pending"] {
+  opacity: 0;
+}
+
+.panel[data-phase="open"] {
+  animation: enter 180ms var(--ease-out);
+}
+
+.panel[data-phase="closing"] {
+  pointer-events: none;
+  animation: exit 120ms ease-in forwards;
 }
 
 @keyframes enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+@keyframes exit {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .panel {
+  .panel[data-phase="open"],
+  .panel[data-phase="closing"] {
     animation: none;
   }
+}
+
+/* İnce kaydırma çubuğu, yalnızca üzerine gelince görünür. */
+.panel :global(*)::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.panel :global(*)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel :global(*)::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: transparent;
+}
+
+.panel :global(*):hover::-webkit-scrollbar-thumb {
+  background-color: var(--tile-press);
 }

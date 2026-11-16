@@ -11,16 +11,20 @@ import {
 } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useConfig } from "../../lib/store";
+import { ChevronIcon, ChevronLeftIcon } from "../icons";
+import { IconButton } from "../ui";
+import { LinkButton, PanelHeader } from "../ui/panel";
 import { eventsBetween, useIcsSources, type CalEvent } from "./ics";
 import styles from "./Popup.module.css";
 
-// Ay görünümü (bölüm 6.4): hafta Pazartesi başlar, bugün vurgulu.
-// Saat widget'ına tıklayınca açılır.
+// Takvim paneli (7.6): solda ay ızgarası, sağda seçilen günün etkinlikleri.
+// Hafta Pazartesi başlar. Saat widget'ına tıklayınca açılır. ICS salt okunur.
 
 const WEEK = { weekStartsOn: 1 as const, locale: tr };
 const CELLS = 42; // her ay 6 satır: panel yüksekliği sabit kalsın
 const NO_URLS: string[] = [];
 const WHEEL_GAP_MS = 250;
+const MAX_DOTS = 3;
 
 /** Abonelik başına renk (ilki vurgu rengi). */
 const SOURCE_COLORS = ["var(--accent)", "#ffb86b", "#7ee0a1", "#d79bff", "#ff7a90"];
@@ -43,19 +47,21 @@ function groupByDay(events: CalEvent[], from: Date, to: Date) {
   return map;
 }
 
-function timeLabel(ev: CalEvent, day: Date) {
-  if (ev.allDay) return "Tüm gün";
+/** Saat sütunu: [başlangıç, bitiş] — gün dışına taşan uç ok ile. */
+function timeColumn(ev: CalEvent, day: Date): [string, string | null] {
+  if (ev.allDay) return ["Tüm gün", null];
+  const nextDay = addDays(startOfDay(day), 1);
   const startsToday = isSameDay(ev.start, day);
-  const endsToday =
-    isSameDay(ev.end, day) || ev.end.getTime() === addDays(startOfDay(day), 1).getTime();
-  if (startsToday && endsToday) {
-    return ev.end > ev.start
-      ? `${format(ev.start, "HH:mm")}–${format(ev.end, "HH:mm")}`
-      : format(ev.start, "HH:mm");
-  }
-  if (startsToday) return `${format(ev.start, "HH:mm")}’den`;
-  if (endsToday) return `${format(ev.end, "HH:mm")}’e kadar`;
-  return "Tüm gün";
+  const endsToday = ev.end <= nextDay;
+  if (!startsToday && !endsToday) return ["Tüm gün", null];
+  const start = startsToday ? format(ev.start, "HH:mm") : "←";
+  if (ev.end <= ev.start) return [start, null];
+  const end = endsToday
+    ? ev.end.getTime() === nextDay.getTime()
+      ? "24:00"
+      : format(ev.end, "HH:mm")
+    : "→";
+  return [start, end];
 }
 
 export function CalendarPopup() {
@@ -63,9 +69,12 @@ export function CalendarPopup() {
   const urls = config?.widgets.calendar?.icsUrls ?? NO_URLS;
   const { sources, loading, failed } = useIcsSources(urls);
 
-  const [today] = useState(() => startOfDay(new Date()));
+  const [now] = useState(() => new Date());
+  const today = useMemo(() => startOfDay(now), [now]);
   const [month, setMonth] = useState(() => startOfMonth(today));
   const [selected, setSelected] = useState(today);
+  /** Son ay değişiminin yönü: ızgara o yönden kayarak gelir. */
+  const [dir, setDir] = useState(0);
 
   const gridStart = useMemo(() => startOfWeek(month, WEEK), [month]);
   const gridEnd = useMemo(() => addDays(gridStart, CELLS), [gridStart]);
@@ -82,7 +91,10 @@ export function CalendarPopup() {
   const dayEvents = byDay.get(dayKey(selected)) ?? [];
 
   const lastWheel = useRef(0);
-  const goMonth = (delta: number) => setMonth((m) => addMonths(m, delta));
+  const goMonth = (delta: number) => {
+    setDir(delta);
+    setMonth((m) => addMonths(m, delta));
+  };
   const onWheel = (e: React.WheelEvent) => {
     // Dokunmatik yüzey çok sayıda olay yollar: aralıklı tek adım.
     if (e.timeStamp - lastWheel.current < WHEEL_GAP_MS || e.deltaY === 0) return;
@@ -90,113 +102,129 @@ export function CalendarPopup() {
     goMonth(e.deltaY > 0 ? 1 : -1);
   };
   const goToday = () => {
+    if (!isSameMonth(month, today)) setDir(month < today ? 1 : -1);
     setMonth(startOfMonth(today));
     setSelected(today);
   };
   const pick = (d: Date) => {
     setSelected(d);
-    if (!isSameMonth(d, month)) setMonth(startOfMonth(d));
+    if (!isSameMonth(d, month)) {
+      setDir(d < month ? -1 : 1);
+      setMonth(startOfMonth(d));
+    }
   };
 
-  const selectedLabel = isSameDay(selected, today)
-    ? "Bugün"
-    : format(selected, "d MMMM EEEE", { locale: tr });
+  const isToday = isSameDay(selected, today);
+  const selectedLabel = isToday ? "Bugün" : format(selected, "d MMMM EEEE", { locale: tr });
 
   return (
     <div className={styles.root}>
-      <header className={styles.header}>
-        <span className={styles.weekday}>{format(today, "EEEE", { locale: tr })}</span>
-        <span className={styles.today}>{format(today, "d MMMM yyyy", { locale: tr })}</span>
-      </header>
+      <PanelHeader
+        title={<span className={styles.month}>{format(month, "LLLL yyyy", { locale: tr })}</span>}
+        actions={
+          <>
+            {(!isSameMonth(month, today) || !isToday) && (
+              <LinkButton onClick={goToday}>Bugün</LinkButton>
+            )}
+            <IconButton aria-label="Önceki ay" onClick={() => goMonth(-1)}>
+              <ChevronLeftIcon size={16} />
+            </IconButton>
+            <IconButton aria-label="Sonraki ay" onClick={() => goMonth(1)}>
+              <ChevronIcon size={16} />
+            </IconButton>
+          </>
+        }
+      />
 
-      <div className={styles.nav}>
-        <span className={styles.month}>{format(month, "LLLL yyyy", { locale: tr })}</span>
-        {!isSameMonth(month, today) && (
-          <button type="button" className={styles.todayButton} onClick={goToday}>
-            Bugün
-          </button>
-        )}
-        <button
-          type="button"
-          className={styles.arrow}
-          aria-label="Önceki ay"
-          onClick={() => goMonth(-1)}
-        >
-          ‹
-        </button>
-        <button
-          type="button"
-          className={styles.arrow}
-          aria-label="Sonraki ay"
-          onClick={() => goMonth(1)}
-        >
-          ›
-        </button>
-      </div>
-
-      <div
-        className={styles.grid}
-        // Tekerlekle ay değiştir.
-        onWheel={onWheel}
-      >
-        {days.slice(0, 7).map((d) => (
-          <span key={`h${d.getDay()}`} className={styles.weekHead}>
-            {format(d, "EEEEEE", { locale: tr })}
-          </span>
-        ))}
-        {days.map((d) => {
-          const events = byDay.get(dayKey(d)) ?? [];
-          const colors = [...new Set(events.map((e) => e.source))].slice(0, 3);
-          return (
-            <button
-              key={d.getTime()}
-              type="button"
-              className={styles.cell}
-              data-outside={!isSameMonth(d, month) || undefined}
-              data-today={isSameDay(d, today) || undefined}
-              data-selected={isSameDay(d, selected) || undefined}
-              aria-label={format(d, "d MMMM yyyy", { locale: tr })}
-              onClick={() => pick(d)}
-            >
-              <span className={styles.num}>{format(d, "d")}</span>
-              <span className={styles.dots}>
-                {colors.map((s) => (
-                  <span key={s} className={styles.dot} style={{ background: colorOf(s) }} />
-                ))}
+      <div className={styles.body}>
+        <div className={styles.calendar} onWheel={onWheel}>
+          <div className={styles.weekHeads}>
+            {days.slice(0, 7).map((d) => (
+              <span key={`h${d.getDay()}`} className={styles.weekHead}>
+                {format(d, "EEEEEE", { locale: tr })}
               </span>
-            </button>
-          );
-        })}
-      </div>
-
-      <section className={styles.events}>
-        <h3 className={styles.eventsHead}>{selectedLabel}</h3>
-        {urls.length === 0 ? (
-          <p className={styles.note}>
-            Takvim bağlı değil. Google Takvim'in “iCal biçiminde gizli adres”ini ayarlara ekleyince
-            etkinlikler burada görünür.
-          </p>
-        ) : dayEvents.length > 0 ? (
-          <ul className={styles.list}>
-            {dayEvents.map((ev) => (
-              <li key={ev.key} className={styles.event}>
-                <span className={styles.bar} style={{ background: colorOf(ev.source) }} />
-                <span className={styles.time}>{timeLabel(ev, selected)}</span>
-                <span className={styles.title} title={ev.location || ev.title}>
-                  {ev.title}
-                </span>
-              </li>
             ))}
-          </ul>
-        ) : (
-          <p className={styles.note}>{loading ? "Yükleniyor…" : "Etkinlik yok"}</p>
-        )}
-        {failed > 0 && (
-          <p className={styles.error}>
-            {failed === urls.length ? "Takvim yüklenemedi" : `${failed} takvim yüklenemedi`}
-          </p>
-        )}
-      </section>
+          </div>
+          <div className={styles.gridClip}>
+            <div key={dayKey(month)} className={styles.grid} data-dir={dir || undefined}>
+              {days.map((d) => {
+                const events = byDay.get(dayKey(d)) ?? [];
+                const colors = [...new Set(events.map((e) => e.source))];
+                return (
+                  <button
+                    key={d.getTime()}
+                    type="button"
+                    className={styles.cell}
+                    data-outside={!isSameMonth(d, month) || undefined}
+                    data-today={isSameDay(d, today) || undefined}
+                    data-selected={isSameDay(d, selected) || undefined}
+                    aria-label={`${format(d, "d MMMM yyyy", { locale: tr })}${events.length ? `, ${events.length} etkinlik` : ""}`}
+                    onClick={() => pick(d)}
+                  >
+                    <span className={styles.num}>{format(d, "d")}</span>
+                    <span className={styles.dots}>
+                      {colors.slice(0, MAX_DOTS).map((s) => (
+                        <span key={s} className={styles.dot} style={{ background: colorOf(s) }} />
+                      ))}
+                      {colors.length > MAX_DOTS && (
+                        <span className={styles.more}>+{colors.length - MAX_DOTS}</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <section className={styles.agenda}>
+          <h3 className={styles.agendaHead}>
+            <span className={styles.agendaTitle}>{selectedLabel}</span>
+            {dayEvents.length > 0 && (
+              <span className={styles.count}>{dayEvents.length} etkinlik</span>
+            )}
+          </h3>
+          {urls.length === 0 ? (
+            <p className={styles.note}>
+              Takvim bağlı değil. Google Takvim'in “iCal biçiminde gizli adres”ini ayarlara
+              ekleyince etkinlikler burada görünür.
+            </p>
+          ) : dayEvents.length > 0 ? (
+            <ul className={styles.list}>
+              {dayEvents.map((ev) => {
+                const [start, end] = timeColumn(ev, selected);
+                return (
+                  <li
+                    key={ev.key}
+                    className={styles.event}
+                    data-past={(!ev.allDay && ev.end <= now) || undefined}
+                    title={ev.location ? `${ev.title}\n${ev.location}` : ev.title}
+                  >
+                    <span className={styles.time}>
+                      <span>{start}</span>
+                      {end && <span className={styles.timeEnd}>{end}</span>}
+                    </span>
+                    <span className={styles.swatch} style={{ background: colorOf(ev.source) }} />
+                    <span className={styles.text}>
+                      <span className={styles.title}>{ev.title}</span>
+                      {ev.location && <span className={styles.location}>{ev.location}</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className={styles.note}>
+              {loading ? "Yükleniyor…" : isToday ? "Bugün etkinlik yok" : "Bu gün etkinlik yok"}
+            </p>
+          )}
+          {failed > 0 && (
+            <p className={styles.error}>
+              {failed === urls.length ? "Takvim yüklenemedi" : `${failed} takvim yüklenemedi`}
+            </p>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

@@ -7,11 +7,19 @@
 //! 1. Dock: `show_popup(widgetId, anchor)` → burada kaydedilir, popup'a
 //!    `popup://open` gider.
 //! 2. Popup sayfası yeni paneli çizer, boyutunu bildirir: `popup_ready`.
-//! 3. Burada konumlanır, gösterilir ve odaklanır.
+//! 3. Burada konumlanır, gösterilir ve odaklanır; yanıt açılış animasyonunun
+//!    çıkış noktasını taşır.
 //!
 //! Kapanma: odak kaybı (başka yere tıklama), `Esc`, aynı widget'a ikinci tıklama.
 //! Dock odak almadığı için (NOACTIVATE) dock'a tıklamak popup'ın odağını almaz;
 //! bu yüzden ikinci tıklama "kapat" olarak çalışır.
+//!
+//! Kapanış animasyonu (7.6): Rust pencereyi doğrudan gizlemez; sayfaya
+//! `popup://close` gönderir, sayfa animasyonu bitirip `hide_popup(seq)` çağırır.
+//! Sayfa yanıt vermezse `CLOSE_FALLBACK` sonra yine de gizlenir.
+//!
+//! Gölge için pencere panelden her yönde `SHADOW_PAD` büyüktür; konum hesabı
+//! panelin kendisine göre yapılır.
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -31,8 +39,14 @@ pub const LABEL: &str = "popup";
 const OPEN_EVENT: &str = "popup://open";
 /// Sayfa paneli boşaltır: bir sonraki açılışta eski panelin son karesi görünmesin.
 const CLOSED_EVENT: &str = "popup://closed";
+/// Rust'tan kapanma isteği (odak kaybı, ikinci tıklama): sayfa animasyonla kapatır.
+const CLOSE_EVENT: &str = "popup://close";
+/// Sayfa kapanış animasyonundan sonra `hide_popup` çağırmazsa.
+const CLOSE_FALLBACK: Duration = Duration::from_millis(500);
+/// Panelin gölgesi için pencerenin her yöndeki payı (PopupWindow.module.css ile aynı).
+const SHADOW_PAD: f64 = 16.0;
 
-/// Bar ile popup arası ve ekran kenarı payı (mantıksal piksel).
+/// Bar ile panel arası ve ekran kenarı payı (mantıksal piksel).
 const GAP: f64 = 10.0;
 const MARGIN: f64 = 8.0;
 /// Odak kaybıyla kapanan popup'ın widget'ına bu süre içinde gelen tıklama
@@ -53,11 +67,26 @@ struct OpenPayload {
     seq: u64,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct ClosePayload {
+    seq: u64,
+}
+
+/// `popup_ready` yanıtı: açılış animasyonunun çıkış noktası.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Placed {
+    /// Tıklanan widget'ın ortası, panelin sol kenarından (CSS px).
+    origin_x: f64,
+}
+
 struct State {
     /// Açık ya da açılmakta olan panel.
     current: Option<String>,
     anchor: Option<Anchor>,
-    /// Her açılışta artar; geç gelen `popup_ready` eski açılışa aitse yok sayılır.
+    /// Her açılışta artar; geç gelen `popup_ready` / `hide_popup` eski açılışa
+    /// aitse yok sayılır.
     seq: u64,
     closed_by_blur: Option<(String, Instant)>,
 }
@@ -88,7 +117,8 @@ pub fn toggle(app: &AppHandle, widget_id: String, anchor: Anchor) -> AppResult<(
         let mut s = STATE.lock().unwrap();
         if s.current.as_deref() == Some(widget_id.as_str()) {
             drop(s);
-            return hide(app);
+            request_close(app);
+            return Ok(());
         }
         if let Some((id, at)) = s.closed_by_blur.take()
             && id == widget_id
@@ -105,16 +135,19 @@ pub fn toggle(app: &AppHandle, widget_id: String, anchor: Anchor) -> AppResult<(
     Ok(())
 }
 
-/// Popup sayfası paneli çizdi; `width`/`height` mantıksal piksel.
-pub fn ready(app: &AppHandle, seq: u64, width: f64, height: f64) -> AppResult<()> {
+/// Popup sayfası paneli çizdi; `width`/`height` panelin mantıksal boyutu
+/// (pencere her yönde `SHADOW_PAD` büyük). Gösterilmediyse `None`.
+pub fn ready(app: &AppHandle, seq: u64, width: f64, height: f64) -> AppResult<Option<Placed>> {
     let anchor = {
         let s = STATE.lock().unwrap();
         if s.seq != seq || s.current.is_none() {
-            return Ok(()); // bu arada kapandı ya da başka panel istendi
+            return Ok(None); // bu arada kapandı ya da başka panel istendi
         }
         s.anchor
     };
-    let Some(anchor) = anchor else { return Ok(()) };
+    let Some(anchor) = anchor else {
+        return Ok(None);
+    };
 
     let popup = window(app)?;
     let dock = app
@@ -129,44 +162,77 @@ pub fn ready(app: &AppHandle, seq: u64, width: f64, height: f64) -> AppResult<()
     let bar = placement::reserved_rect().unwrap_or(dock_rect);
     let monitor = placement::primary_monitor_rect();
 
-    let w = (width * scale).round() as i32;
-    let h = (height * scale).round() as i32;
+    let pad = (SHADOW_PAD * scale).round() as i32;
+    let w = (width * scale).round() as i32 + 2 * pad;
+    let h = (height * scale).round() as i32 + 2 * pad;
     let margin = (MARGIN * scale).round() as i32;
     let gap = (GAP * scale).round() as i32;
 
-    // Widget'ın ortasına hizala, ekran dışına taşırma.
+    // Paneli widget'ın ortasına hizala; panel ekran dışına taşmasın (gölge taşabilir).
     let center = dock_rect.left + ((anchor.x + anchor.width / 2.0) * scale).round() as i32;
-    let max_x = (monitor.right - margin - w).max(monitor.left + margin);
-    let x = (center - w / 2).clamp(monitor.left + margin, max_x);
+    let min_x = monitor.left + margin - pad;
+    let max_x = (monitor.right - margin + pad - w).max(min_x);
+    let x = (center - w / 2).clamp(min_x, max_x);
     let y = match EDGE {
-        Edge::Bottom => bar.top - gap - h,
-        Edge::Top => bar.bottom + gap,
+        Edge::Bottom => bar.top - gap + pad - h,
+        Edge::Top => bar.bottom + gap - pad,
     };
 
     unsafe { SetWindowPos(popup_hwnd, Some(HWND_TOPMOST), x, y, w, h, SWP_NOACTIVATE)? };
     popup.show()?;
     focus::activate(hwnd_to_id(popup_hwnd));
-    Ok(())
+    Ok(Some(Placed {
+        origin_x: f64::from(center - x - pad) / scale,
+    }))
 }
 
-/// `Esc`, ikinci tıklama ya da paneldeki bir eylemden sonra.
-pub fn hide(app: &AppHandle) -> AppResult<()> {
-    STATE.lock().unwrap().current = None;
+/// Sayfa kapanış animasyonunu bitirdi (ya da `Esc` / paneldeki bir eylem).
+/// `seq` eski bir açılışa aitse (bu arada başka panel açıldı) yok sayılır.
+pub fn hide(app: &AppHandle, seq: Option<u64>) -> AppResult<()> {
+    {
+        let mut s = STATE.lock().unwrap();
+        if seq.is_some_and(|q| q != s.seq) {
+            return Ok(());
+        }
+        s.current = None;
+    }
     window(app)?.hide()?;
     app.emit_to(LABEL, CLOSED_EVENT, ())?;
     Ok(())
 }
 
+/// Sayfadan animasyonla kapanmasını iste; yanıt gelmezse yine de gizle.
+fn request_close(app: &AppHandle) {
+    let seq = {
+        let mut s = STATE.lock().unwrap();
+        s.current = None;
+        s.seq
+    };
+    let _ = app.emit_to(LABEL, CLOSE_EVENT, ClosePayload { seq });
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(CLOSE_FALLBACK);
+        // Bu arada yeni panel açıldıysa (seq değişti) dokunma.
+        let stale = {
+            let s = STATE.lock().unwrap();
+            s.seq == seq && s.current.is_none()
+        };
+        if stale
+            && let Ok(popup) = window(&app)
+            && popup.is_visible().unwrap_or(false)
+        {
+            let _ = hide(&app, Some(seq));
+        }
+    });
+}
+
 fn on_blur(app: &AppHandle) {
     {
         let mut s = STATE.lock().unwrap();
-        let Some(id) = s.current.take() else { return };
+        let Some(id) = s.current.clone() else { return };
         s.closed_by_blur = Some((id, Instant::now()));
     }
-    if let Ok(popup) = window(app) {
-        let _ = popup.hide();
-    }
-    let _ = app.emit_to(LABEL, CLOSED_EVENT, ());
+    request_close(app);
 }
 
 fn window(app: &AppHandle) -> AppResult<WebviewWindow> {

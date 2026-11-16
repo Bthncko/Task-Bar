@@ -13,6 +13,6 @@ export const clockWidget: WidgetDefinition<ClockConfig> = {
   name: "Saat",
   Bar: ClockBar,
   Popup: CalendarPopup,
-  popupSize: { width: 320, height: 510 },
+  popupSize: { width: 620, height: 380 },
   defaultConfig: { showSeconds: false },
 };

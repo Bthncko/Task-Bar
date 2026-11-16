@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { WeatherIcon } from "../icons";
+import { commands, report } from "../../lib/ipc";
+import { LinkButton, PanelHeader } from "../ui/panel";
+import { usePopupClose } from "../ui/popupClose";
 import { cachedForecast, fetchForecast, type Forecast } from "./api";
+import { WeatherArt } from "./Art";
 import { describeWeather } from "./wmo";
 import type { WeatherConfig } from "./index";
 import styles from "./Popup.module.css";
@@ -22,6 +25,7 @@ function dayLabel(date: string, index: number) {
 
 export function WeatherPopup({ config }: { config: WeatherConfig }) {
   const { lat, lon, unit, city } = config;
+  const close = usePopupClose();
   const [forecast, setForecast] = useState<Forecast | null>(() =>
     cachedForecast({ lat, lon, unit }),
   );
@@ -46,19 +50,42 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
     };
   }, [lat, lon, unit, attempt]);
 
+  const header = (
+    <PanelHeader
+      title={city}
+      actions={
+        <LinkButton
+          onClick={() => {
+            commands.openSettings("weather").catch(report("open_settings"));
+            close();
+          }}
+        >
+          Değiştir
+        </LinkButton>
+      }
+    />
+  );
+
   if (!forecast) {
     return (
-      <div className={styles.empty}>
-        {failed ? (
-          <>
-            <p>Hava durumu alınamadı. İnternet bağlantını kontrol et.</p>
-            <button type="button" className={styles.retry} onClick={() => setAttempt((n) => n + 1)}>
-              Yeniden dene
-            </button>
-          </>
-        ) : (
-          <p>Yükleniyor…</p>
-        )}
+      <div className={styles.root}>
+        {header}
+        <div className={styles.empty}>
+          {failed ? (
+            <>
+              <p>Hava durumu alınamadı. İnternet bağlantını kontrol et.</p>
+              <button
+                type="button"
+                className={styles.retry}
+                onClick={() => setAttempt((n) => n + 1)}
+              >
+                Yeniden dene
+              </button>
+            </>
+          ) : (
+            <p>Yükleniyor…</p>
+          )}
+        </div>
       </div>
     );
   }
@@ -72,18 +99,24 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
 
   return (
     <div className={styles.root}>
-      <header className={styles.header}>
-        <WeatherIcon kind={now.kind} night={!current.isDay} size={44} />
-        <span className={styles.temp}>{deg(current.temperature)}</span>
-        <div className={styles.summary}>
-          <span className={styles.city}>{city}</span>
-          <span>{now.text}</span>
-          <span className={styles.dim}>
-            Hissedilen {deg(current.apparent)}
-            {today && ` · ${deg(today.max)} / ${deg(today.min)}`}
-          </span>
+      {header}
+
+      <section className={styles.now}>
+        <div className={styles.nowRow}>
+          <WeatherArt kind={now.kind} night={!current.isDay} size={56} />
+          <span className={styles.temp}>{deg(current.temperature)}</span>
+          <span className={styles.feels}>Hissedilen {deg(current.apparent)}</span>
         </div>
-      </header>
+        <p className={styles.nowText}>
+          {now.text}
+          {today && (
+            <span className={styles.dim}>
+              {" "}
+              · Y {deg(today.max)} D {deg(today.min)}
+            </span>
+          )}
+        </p>
+      </section>
 
       <div
         className={styles.hours}
@@ -94,14 +127,13 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
       >
         {hourly.map((h, i) => {
           const { text, kind } = describeWeather(h.code);
+          const precip = h.precip !== null && h.precip >= PRECIP_MIN ? `%${h.precip}` : "";
           return (
-            <div key={h.time} className={styles.hour} title={text}>
-              <span className={styles.dim}>{i === 0 ? "Şimdi" : h.time.slice(11, 13)}</span>
-              <WeatherIcon kind={kind} night={!h.isDay} size={20} />
+            <div key={h.time} className={styles.hour} title={text} data-now={i === 0 || undefined}>
+              <span className={styles.hourLabel}>{i === 0 ? "Şimdi" : h.time.slice(11, 13)}</span>
+              <WeatherArt kind={kind} night={!h.isDay} size={24} />
               <span className={styles.hourTemp}>{deg(h.temperature)}</span>
-              <span className={styles.precip}>
-                {h.precip !== null && h.precip >= PRECIP_MIN ? `%${h.precip}` : ""}
-              </span>
+              <span className={styles.precip}>{precip}</span>
             </div>
           );
         })}
@@ -113,7 +145,7 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
           return (
             <li key={d.date} className={styles.day} title={text}>
               <span className={styles.dayName}>{dayLabel(d.date, i)}</span>
-              <WeatherIcon kind={kind} night={false} size={20} />
+              <WeatherArt kind={kind} night={false} size={22} />
               <span className={styles.precip}>
                 {d.precip !== null && d.precip >= PRECIP_MIN ? `%${d.precip}` : ""}
               </span>
@@ -127,7 +159,7 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
                   }}
                 />
               </span>
-              <span className={styles.num}>{deg(d.max)}</span>
+              <span className={`${styles.num} ${styles.high}`}>{deg(d.max)}</span>
             </li>
           );
         })}

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FC } from "react";
-import type { Config } from "../lib/ipc";
+import { listen } from "@tauri-apps/api/event";
+import { commands, events, report, type Config } from "../lib/ipc";
 import { startConfigSync, useConfig } from "../lib/store";
 import { applyTheme } from "../lib/theme";
 import { Appearance } from "./settings/Appearance";
@@ -29,6 +30,18 @@ export function SettingsWindow() {
   useEffect(() => {
     if (config) applyTheme(config.theme);
   }, [config?.theme]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Başka yerden belirli bir bölüm istenebilir (ör. hava panelindeki "Değiştir").
+  useEffect(() => {
+    const go = (page: string | null) => {
+      if (page && PAGES.some((p) => p.id === page)) setActive(page);
+    };
+    commands.takeSettingsPage().then(go).catch(report("take_settings_page"));
+    const unlisten = listen<string>(events.settingsPage, (e) => go(e.payload));
+    return () => {
+      unlisten.then((off) => off());
+    };
+  }, []);
 
   const { Page } = PAGES.find((p) => p.id === active) ?? PAGES[0];
 

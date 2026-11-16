@@ -80,9 +80,15 @@ export const events = {
   /** Yalnızca popup penceresine: hangi panel çizilecek. */
   popupOpen: "popup://open",
   popupClosed: "popup://closed",
+  /** Rust kapanma istiyor (odak kaybı, ikinci tıklama): animasyonla kapat. */
+  popupClose: "popup://close",
+  /** Açık ayarlar penceresi: bu bölüme geç. */
+  settingsPage: "settings://page",
 } as const;
 
 export type PopupOpen = { widgetId: string; seq: number };
+/** `popup_ready` yanıtı: tıklanan widget'ın ortası, panelin sol kenarından (CSS px). */
+export type PopupPlaced = { originX: number } | null;
 
 // --- komutlar -----------------------------------------------------------------
 
@@ -100,13 +106,16 @@ export const commands = {
     invoke<void>("show_popup", { widgetId, anchor }),
   /** Popup sayfası paneli çizdi; boyut mantıksal piksel. */
   popupReady: (seq: number, width: number, height: number) =>
-    invoke<void>("popup_ready", { seq, width, height }),
-  hidePopup: () => invoke<void>("hide_popup"),
+    invoke<PopupPlaced>("popup_ready", { seq, width, height }),
+  /** Kapanış animasyonu bitti; `seq` verilirse yalnızca o açılış kapanır. */
+  hidePopup: (seq?: number) => invoke<void>("hide_popup", { seq: seq ?? null }),
 
   /** ICS aboneliğini metin olarak indirir (CORS yüzünden Rust'ta). */
   fetchIcs: (url: string) => invoke<string>("fetch_ics", { url }),
 
-  openSettings: () => invoke<void>("open_settings"),
+  /** `page`: açılınca gösterilecek bölüm (ör. "weather"). */
+  openSettings: (page?: string) => invoke<void>("open_settings", { page: page ?? null }),
+  takeSettingsPage: () => invoke<string | null>("take_settings_page"),
   /** Dock'un boş yerine sağ tık: tepsi menüsü. */
   showDockMenu: () => invoke<void>("show_dock_menu"),
   getBackdrop: () => invoke<Backdrop>("get_backdrop"),
