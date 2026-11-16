@@ -7,6 +7,10 @@ import { invoke } from "@tauri-apps/api/core";
 
 export type WidgetRef = { id: string };
 
+export type PinnedApp = { id: string; name: string; exe?: string | null; aumid?: string | null };
+
+export type AutostartState = { enabled: boolean; available: boolean };
+
 export type Config = {
   version: number;
   position: "top" | "bottom";
@@ -14,7 +18,7 @@ export type Config = {
   theme: { accent: string; opacity: number; radius: number };
   layout: { left: WidgetRef[]; center: WidgetRef[]; right: WidgetRef[] };
   widgets: {
-    apps: { pinned: unknown[]; magnify: number };
+    apps: { pinned: PinnedApp[]; magnify: number };
     weather: { lat: number; lon: number; city: string; unit: "C" | "F" };
     calendar: { icsUrls: string[] };
   } & Record<string, unknown>;
@@ -88,6 +92,12 @@ export const commands = {
 
   /** ICS aboneliğini metin olarak indirir (CORS yüzünden Rust'ta). */
   fetchIcs: (url: string) => invoke<string>("fetch_ics", { url }),
+
+  openSettings: () => invoke<void>("open_settings"),
+  /** Dock'un boş yerine sağ tık: tepsi menüsü. */
+  showDockMenu: () => invoke<void>("show_dock_menu"),
+  getAutostart: () => invoke<AutostartState>("get_autostart"),
+  setAutostart: (enabled: boolean) => invoke<AutostartState>("set_autostart", { enabled }),
 
   getConfig: () => invoke<Config>("get_config"),
   setConfig: (value: Config) => invoke<void>("set_config", { value }),

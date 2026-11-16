@@ -146,6 +146,29 @@ export function cachedForecast(p: WeatherParams): Forecast | null {
   return readCache<Forecast>(forecastKey(p));
 }
 
+// --- şehir arama (ayarlar) — sonuç yoksa yanıtta `results` alanı hiç yok (denendi) ---
+
+export type Place = {
+  id: number;
+  name: string;
+  admin1?: string;
+  country?: string;
+  latitude: number;
+  longitude: number;
+};
+
+export async function searchPlaces(query: string): Promise<Place[]> {
+  const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+  url.searchParams.set("name", query);
+  url.searchParams.set("count", "8");
+  url.searchParams.set("language", "tr");
+  url.searchParams.set("format", "json");
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
+  const json = await res.json();
+  return Array.isArray(json?.results) ? (json.results as Place[]) : [];
+}
+
 // --- önbellek (yalnızca kolaylık; erişilemezse sessizce geç) -------------------
 
 function readCache<T>(key: string): T | null {

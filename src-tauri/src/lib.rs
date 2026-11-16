@@ -17,14 +17,27 @@ use config::ConfigStore;
 use error::AppError;
 use services::apps::{self, AppsService};
 
+const MENU_SETTINGS: &str = "tray:settings";
 const MENU_HIDE_TASKBAR: &str = "tray:hide-taskbar";
 const MENU_AUTOSTART: &str = "tray:autostart";
 const MENU_QUIT: &str = "tray:quit";
 
 /// Tepsi menüsündeki onay kutuları (durumlarını güncelleyebilmek için).
 struct TrayMenu {
+    /// Dock'a sağ tıklayınca da aynı menü açılır: Windows çubuğu gizliyken
+    /// tepsi simgesi de onunla birlikte gizlenir.
+    menu: Menu<Wry>,
     hide_taskbar: CheckMenuItem<Wry>,
     autostart: CheckMenuItem<Wry>,
+}
+
+/// Dock'un boş yerine sağ tık: tepsi menüsü imlecin olduğu yerde.
+pub(crate) fn show_dock_menu(window: &tauri::WebviewWindow) -> tauri::Result<()> {
+    let app = window.app_handle();
+    if let Some(tray) = app.try_state::<TrayMenu>() {
+        window.popup_menu(&tray.menu)?;
+    }
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -49,6 +62,10 @@ pub fn run() {
             commands::popup_ready,
             commands::hide_popup,
             commands::fetch_ics,
+            commands::open_settings,
+            commands::show_dock_menu,
+            commands::get_autostart,
+            commands::set_autostart,
             commands::get_config,
             commands::set_config,
             commands::get_apps,
@@ -73,6 +90,15 @@ pub fn run() {
         // Tüm menü olayları (tepsi + sağ tık menüleri) buraya gelir.
         .on_menu_event(|app, event| match event.id().as_ref() {
             MENU_QUIT => app.exit(0),
+            MENU_SETTINGS => {
+                // Olay işleyicisinde pencere oluşturmak Windows'ta kilitlenir.
+                let app = app.clone();
+                std::thread::spawn(move || {
+                    if let Err(e) = win::settings::open(&app) {
+                        eprintln!("ayarlar açılamadı: {e}");
+                    }
+                });
+            }
             MENU_HIDE_TASKBAR => toggle_hide_taskbar(app),
             MENU_AUTOSTART => toggle_autostart(app),
             id => apps::handle_menu_event(app, id),
@@ -121,8 +147,9 @@ pub fn run() {
     });
 }
 
-/// Tepsi (bölüm 11). "Ayarlar" Aşama 6'da eklenecek.
+/// Tepsi (bölüm 11).
 fn create_tray(app: &AppHandle, hide_taskbar: bool) -> tauri::Result<()> {
+    let settings_item = MenuItem::with_id(app, MENU_SETTINGS, "Ayarlar…", true, None::<&str>)?;
     let hide_item = CheckMenuItem::with_id(
         app,
         MENU_HIDE_TASKBAR,
@@ -131,25 +158,24 @@ fn create_tray(app: &AppHandle, hide_taskbar: bool) -> tauri::Result<()> {
         hide_taskbar,
         None::<&str>,
     )?;
-    // Geliştirme sürümü Vite sunucusu olmadan açılamaz; açılışa yalnızca
-    // `tauri build` ile üretilen sürüm kaydedilsin.
-    let release = !cfg!(debug_assertions);
     let autostart_item = CheckMenuItem::with_id(
         app,
         MENU_AUTOSTART,
-        if release {
+        if AUTOSTART_AVAILABLE {
             "Açılışta başlat"
         } else {
             "Açılışta başlat (yalnızca kurulu sürüm)"
         },
-        release,
-        app.autolaunch().is_enabled().unwrap_or(false),
+        AUTOSTART_AVAILABLE,
+        autostart_enabled(app),
         None::<&str>,
     )?;
     let quit = MenuItem::with_id(app, MENU_QUIT, "Çıkış", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
+            &settings_item,
+            &PredefinedMenuItem::separator(app)?,
             &hide_item,
             &autostart_item,
             &PredefinedMenuItem::separator(app)?,
@@ -157,6 +183,7 @@ fn create_tray(app: &AppHandle, hide_taskbar: bool) -> tauri::Result<()> {
         ],
     )?;
     app.manage(TrayMenu {
+        menu: menu.clone(),
         hide_taskbar: hide_item,
         autostart: autostart_item,
     });
@@ -190,17 +217,33 @@ pub(crate) fn apply_hide_taskbar(app: &AppHandle, hide: bool) {
     }
 }
 
+/// Geliştirme sürümü Vite sunucusu olmadan açılamaz; açılışa yalnızca
+/// `tauri build` ile üretilen sürüm kaydedilsin.
+pub(crate) const AUTOSTART_AVAILABLE: bool = !cfg!(debug_assertions);
+
+pub(crate) fn autostart_enabled(app: &AppHandle) -> bool {
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+
 fn toggle_autostart(app: &AppHandle) {
+    if let Err(e) = set_autostart(app, !autostart_enabled(app)) {
+        eprintln!("{e}");
+    }
+}
+
+/// Tepsi ve ayarlar penceresi ortak yolu; tepsideki onay kutusunu da eşitler.
+pub(crate) fn set_autostart(app: &AppHandle, enable: bool) -> Result<(), String> {
+    if !AUTOSTART_AVAILABLE {
+        return Err("açılışta başlatma yalnızca kurulu sürümde".into());
+    }
     let autolaunch = app.autolaunch();
-    let enable = !autolaunch.is_enabled().unwrap_or(false);
     let result = if enable {
         autolaunch.enable()
     } else {
         autolaunch.disable()
     };
-    if let Err(e) = result {
-        eprintln!("açılışta başlatma ayarlanamadı: {e}");
+    if let Some(tray) = app.try_state::<TrayMenu>() {
+        let _ = tray.autostart.set_checked(autostart_enabled(app));
     }
-    let enabled = autolaunch.is_enabled().unwrap_or(false);
-    let _ = app.state::<TrayMenu>().autostart.set_checked(enabled);
+    result.map_err(|e| format!("açılışta başlatma ayarlanamadı: {e}"))
 }

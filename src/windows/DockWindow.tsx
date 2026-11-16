@@ -67,7 +67,16 @@ export function DockWindow() {
 
   return (
     <div className={styles.root} data-edge={DOCK_EDGE}>
-      <div className={styles.bar} data-hit>
+      <div
+        className={styles.bar}
+        data-hit
+        // Widget'ların kendi sağ tık menüleri varsa onlar önce davranır.
+        onContextMenu={(e) => {
+          if (e.defaultPrevented) return;
+          e.preventDefault();
+          commands.showDockMenu().catch((err) => console.error("show_dock_menu", err));
+        }}
+      >
         {config &&
           SECTIONS.map((section) => (
             <div key={section} className={`${styles.section} ${styles[section]}`}>

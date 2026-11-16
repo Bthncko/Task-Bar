@@ -68,6 +68,40 @@ pub fn hide_popup(app: AppHandle) -> CmdResult {
     popup::hide(&app).map_err(Into::into)
 }
 
+// --- ayarlar ----------------------------------------------------------------
+
+/// Pencere oluşturma Windows'ta eşzamanlı komutta kilitlenir → async.
+#[tauri::command]
+pub async fn open_settings(app: AppHandle) -> CmdResult {
+    crate::win::settings::open(&app).map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn show_dock_menu(window: WebviewWindow) -> CmdResult {
+    crate::show_dock_menu(&window).map_err(|e| e.to_string())
+}
+
+#[derive(serde::Serialize)]
+pub struct AutostartState {
+    enabled: bool,
+    /// Geliştirme sürümünde kapalı (Vite sunucusu olmadan açılamaz).
+    available: bool,
+}
+
+#[tauri::command]
+pub fn get_autostart(app: AppHandle) -> AutostartState {
+    AutostartState {
+        enabled: crate::autostart_enabled(&app),
+        available: crate::AUTOSTART_AVAILABLE,
+    }
+}
+
+#[tauri::command]
+pub fn set_autostart(app: AppHandle, enabled: bool) -> CmdResult<AutostartState> {
+    crate::set_autostart(&app, enabled)?;
+    Ok(get_autostart(app))
+}
+
 // --- takvim -----------------------------------------------------------------
 
 /// ICS aboneliğini indirir (metin olarak). Ağ beklemesi ana iş parçacığında olmasın.
