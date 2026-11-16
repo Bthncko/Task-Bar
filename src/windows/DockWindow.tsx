@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
-import { commands } from "../lib/ipc";
+import { commands, events } from "../lib/ipc";
+import { useService } from "../lib/useService";
+import { Glass } from "./Glass";
 import { startConfigSync, useConfig } from "../lib/store";
 import { applyTheme } from "../lib/theme";
 import { registry } from "../widgets/registry";
@@ -60,10 +62,12 @@ startConfigSync();
 export function DockWindow() {
   useExpandOnHover();
   const config = useConfig();
+  const backdrop = useService(commands.getBackdrop, events.backdrop) ?? null;
+  const luma = backdrop?.luma;
 
   useEffect(() => {
-    if (config) applyTheme(config.theme);
-  }, [config?.theme]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (config) applyTheme(config.theme, luma);
+  }, [config?.theme, luma]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={styles.root} data-edge={DOCK_EDGE}>
@@ -77,6 +81,7 @@ export function DockWindow() {
           commands.showDockMenu().catch((err) => console.error("show_dock_menu", err));
         }}
       >
+        <Glass image={backdrop?.image ?? null} />
         {config &&
           SECTIONS.map((section) => (
             <div key={section} className={`${styles.section} ${styles[section]}`}>

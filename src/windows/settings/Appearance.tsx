@@ -6,7 +6,7 @@ import styles from "./Settings.module.css";
 type Theme = Config["theme"];
 
 // src-tauri/src/config.rs → Theme::default ve tokens.css ile aynı.
-const DEFAULT_THEME: Theme = { accent: "#3b9eff", opacity: 0.55, radius: 16 };
+const DEFAULT_THEME: Theme = { accent: "#3b9eff", opacity: 0.85, radius: 16 };
 
 const SWATCHES = [
   "#3b9eff",
@@ -55,14 +55,18 @@ export function Appearance({ config }: { config: Config }) {
             </label>
           </div>
         </Row>
-        <Row label="Saydamlık" hint="Çubuğun arka planı.">
+        <Row
+          label="Saydamlık"
+          hint="Arttıkça çubuğun arkası daha çok görünür. Açık renkli duvar kâğıdında yüksek değer yazıları zorlaştırabilir."
+        >
+          {/* config'te opaklık saklanır (1 = tam cam); burada tersi gösterilir. */}
           <Slider
             label="Saydamlık"
-            min={20}
-            max={100}
-            value={Math.round(theme.opacity * 100)}
+            min={0}
+            max={90}
+            value={Math.round((1 - theme.opacity) * 100)}
             format={(v) => `%${v}`}
-            onChange={(v) => setTheme({ opacity: v / 100 }, DRAG_DELAY_MS)}
+            onChange={(v) => setTheme({ opacity: 1 - v / 100 }, DRAG_DELAY_MS)}
           />
         </Row>
         <Row label="Köşe yuvarlaklığı">

@@ -11,6 +11,9 @@ export type PinnedApp = { id: string; name: string; exe?: string | null; aumid?:
 
 export type AutostartState = { enabled: boolean; available: boolean };
 
+/** Bulanık duvar kâğıdı şeridi (7.2). Yoksa düz cam. */
+export type Backdrop = { image: string; luma: number } | null;
+
 export type Config = {
   version: number;
   position: "top" | "bottom";
@@ -64,6 +67,7 @@ export const events = {
   audio: "audio://changed",
   power: "power://changed",
   radios: "radios://changed",
+  backdrop: "backdrop://changed",
   /** Yalnızca popup penceresine: hangi panel çizilecek. */
   popupOpen: "popup://open",
   popupClosed: "popup://closed",
@@ -96,6 +100,7 @@ export const commands = {
   openSettings: () => invoke<void>("open_settings"),
   /** Dock'un boş yerine sağ tık: tepsi menüsü. */
   showDockMenu: () => invoke<void>("show_dock_menu"),
+  getBackdrop: () => invoke<Backdrop>("get_backdrop"),
   getAutostart: () => invoke<AutostartState>("get_autostart"),
   setAutostart: (enabled: boolean) => invoke<AutostartState>("set_autostart", { enabled }),
 

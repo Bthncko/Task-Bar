@@ -64,6 +64,7 @@ pub fn run() {
             commands::fetch_ics,
             commands::open_settings,
             commands::show_dock_menu,
+            commands::get_backdrop,
             commands::get_autostart,
             commands::set_autostart,
             commands::get_config,
@@ -120,6 +121,7 @@ pub fn run() {
             services::audio::spawn(app.handle());
             services::power::spawn(app.handle());
             services::radios::spawn(app.handle());
+            services::backdrop::spawn(app.handle());
 
             let dock = app
                 .get_webview_window("dock")

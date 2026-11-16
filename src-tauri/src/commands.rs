@@ -6,6 +6,7 @@ use tauri::{AppHandle, State, WebviewWindow};
 use crate::config::{Config, ConfigStore};
 use crate::services::apps::{AppItem, AppsService};
 use crate::services::audio::{AudioCmd, AudioService, AudioState};
+use crate::services::backdrop::{Backdrop, BackdropService};
 use crate::services::{ics, launcher};
 use crate::services::media::{MediaCmd, MediaService, MediaState};
 use crate::services::power::{PowerService, PowerState};
@@ -66,6 +67,13 @@ pub fn popup_ready(app: AppHandle, seq: u64, width: f64, height: f64) -> CmdResu
 #[tauri::command]
 pub fn hide_popup(app: AppHandle) -> CmdResult {
     popup::hide(&app).map_err(Into::into)
+}
+
+// --- cam çubuk (7.2) ---------------------------------------------------------
+
+#[tauri::command]
+pub fn get_backdrop(backdrop: State<BackdropService>) -> Option<Backdrop> {
+    backdrop.get()
 }
 
 // --- ayarlar ----------------------------------------------------------------

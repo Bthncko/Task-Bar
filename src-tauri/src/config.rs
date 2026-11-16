@@ -52,9 +52,10 @@ pub struct Theme {
 impl Default for Theme {
     fn default() -> Self {
         Self {
-            // tokens.css ile aynı: --accent, --glass-alpha, --r-bar
+            // --accent, --glass-opacity (cam katmanlarının opaklığı; ayarlarda
+            // "saydamlık" olarak tersi gösterilir), --r-bar
             accent: "#3b9eff".into(),
-            opacity: 0.55,
+            opacity: 0.85,
             radius: 16.0,
         }
     }

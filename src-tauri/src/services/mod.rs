@@ -1,5 +1,6 @@
 pub mod apps;
 pub mod audio;
+pub mod backdrop;
 pub mod icons;
 pub mod ics;
 pub mod launcher;
