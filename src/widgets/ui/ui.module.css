@@ -88,7 +88,7 @@
 
 .iconButton:active {
   background-color: var(--tile-press);
-  transform: scale(0.94);
+  transform: scale(0.97);
 }
 
 .iconButton:disabled {

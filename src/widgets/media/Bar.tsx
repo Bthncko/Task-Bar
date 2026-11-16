@@ -88,7 +88,10 @@ export function MediaBar() {
           aria-label={media.playing ? "Duraklat" : "Oynat"}
           onClick={() => commands.mediaToggle().catch(report("media_toggle"))}
         >
-          {media.playing ? <PauseIcon size={17} /> : <PlayIcon size={17} />}
+          {/* Durum değişince simge çapraz geçişle değişir (7.7). */}
+          <span key={media.playing ? "pause" : "play"} className={styles.swap}>
+            {media.playing ? <PauseIcon size={17} /> : <PlayIcon size={17} />}
+          </span>
         </IconButton>
         <IconButton
           className={styles.control}

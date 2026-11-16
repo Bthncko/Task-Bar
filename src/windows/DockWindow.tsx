@@ -1,5 +1,8 @@
-import { useEffect, useRef } from "react";
-import { commands, events } from "../lib/ipc";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { commands, events, type Config } from "../lib/ipc";
+import { useReducedMotion } from "../lib/motion";
+import { usePresence } from "../lib/presence";
 import { useService } from "../lib/useService";
 import { Glass } from "./Glass";
 import { startConfigSync, useConfig } from "../lib/store";
@@ -65,12 +68,22 @@ export function DockWindow() {
   const backdrop = useService(commands.getBackdrop, events.backdrop) ?? null;
   const luma = backdrop?.luma;
 
+  const [fullscreen, setFullscreen] = useState(false);
+
   useEffect(() => {
     if (config) applyTheme(config.theme, luma);
   }, [config?.theme, luma]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Tam ekrana girerken çubuk aşağı kayar; Rust dock'u ancak sonra arkaya alır.
+  useEffect(() => {
+    const unlisten = listen<boolean>(events.fullscreen, (e) => setFullscreen(e.payload));
+    return () => {
+      unlisten.then((off) => off());
+    };
+  }, []);
+
   return (
-    <div className={styles.root} data-edge={DOCK_EDGE}>
+    <div className={styles.root} data-edge={DOCK_EDGE} data-fullscreen={fullscreen || undefined}>
       <div
         className={styles.bar}
         data-hit
@@ -84,18 +97,101 @@ export function DockWindow() {
         <Glass image={backdrop?.image ?? null} />
         {config &&
           SECTIONS.map((section) => (
-            <div key={section} className={`${styles.section} ${styles[section]}`}>
-              {config.layout[section].map(({ id }) => {
-                const widget = registry[id];
-                if (!widget) return null;
-                const { Bar } = widget;
-                // Widget'ın kendi ayarları config.widgets[id]; yoksa varsayılanı.
-                const widgetConfig = config.widgets[id] ?? widget.defaultConfig;
-                return <Bar key={id} config={widgetConfig} />;
-              })}
-            </div>
+            <Section
+              key={section}
+              section={section}
+              ids={config.layout[section].map((r) => r.id).filter((id) => registry[id])}
+              widgets={config.widgets}
+            />
           ))}
       </div>
+    </div>
+  );
+}
+
+function Section({
+  section,
+  ids,
+  widgets,
+}: {
+  section: DockSection;
+  ids: string[];
+  widgets: Config["widgets"];
+}) {
+  const [items, drop] = usePresence(ids);
+  return (
+    <div className={`${styles.section} ${styles[section]}`}>
+      {items.map(({ id, entering, leaving }) => {
+        const widget = registry[id];
+        const { Bar } = widget;
+        // Widget'ın kendi ayarları config.widgets[id]; yoksa varsayılanı.
+        const widgetConfig = widgets[id] ?? widget.defaultConfig;
+        return (
+          // Anahtar aynı kalır: çıkan widget yeniden takılmaz, son hâli kaybolur.
+          <WidgetSlot key={id} entering={entering} leaving={leaving} onGone={() => drop(id)}>
+            <Bar config={widgetConfig} />
+          </WidgetSlot>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Widget eklenince / çıkarılınca (ayarlardan): genişlik + opaklık, 250 ms (7.7). */
+const SLOT_MS = 250;
+
+function WidgetSlot({
+  entering,
+  leaving,
+  onGone,
+  children,
+}: {
+  entering: boolean;
+  leaving: boolean;
+  onGone: () => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+  const gone = useRef(onGone);
+  useEffect(() => {
+    gone.current = onGone;
+  });
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || (!entering && !leaving)) return;
+    const width = el.getBoundingClientRect().width;
+    // Boş widget (ör. müzik çalmıyor) ya da animasyonlar kapalı: hemen.
+    if (width === 0 || reduced) {
+      if (leaving) gone.current();
+      return;
+    }
+    // Bölüm aralığı da kapansın: komşusu olan taraftaki boşluk eriyerek.
+    const gap = parseFloat(getComputedStyle(el.parentElement!).columnGap) || 0;
+    const side = el.nextElementSibling ? "marginRight" : "marginLeft";
+    const shown = { width: `${width}px`, opacity: 1, [side]: "0px" };
+    const hidden = { width: "0px", opacity: 0, [side]: `${-gap}px` };
+    el.style.overflow = "hidden";
+    const anim = el.animate(entering ? [hidden, shown] : [shown, hidden], {
+      duration: SLOT_MS,
+      easing: entering ? "ease-out" : "ease-in",
+      fill: leaving ? "forwards" : "none",
+    });
+    anim.onfinish = () => {
+      el.style.overflow = "";
+      if (leaving) gone.current();
+    };
+    return () => {
+      anim.onfinish = null;
+      anim.cancel();
+      el.style.overflow = "";
+    };
+  }, [entering, leaving, reduced]);
+
+  return (
+    <div ref={ref} className={styles.widget} data-leaving={leaving || undefined}>
+      {children}
     </div>
   );
 }

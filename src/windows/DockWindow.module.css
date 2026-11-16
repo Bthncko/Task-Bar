@@ -28,6 +28,46 @@
   bottom: var(--bar-gap-edge);
 }
 
+/* --- hareket (7.7) -------------------------------------------------------- */
+
+/* Dock açılışı: alttan kayarak belirir. */
+.bar {
+  animation: dock-in 450ms var(--ease-out);
+  transition:
+    transform var(--t-med) var(--ease-out),
+    opacity var(--t-med) var(--ease-out);
+}
+
+@keyframes dock-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+.root[data-edge="top"] .bar {
+  animation-name: dock-in-down;
+}
+
+@keyframes dock-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+}
+
+/* Tam ekran: çubuk kenara doğru kayarak çekilir (Rust 200 ms sonra arkaya alır),
+   çıkışta aynı yoldan geri gelir. */
+.root[data-fullscreen] .bar {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(calc(var(--bar-visual) + var(--bar-gap-edge)));
+}
+
+.root[data-edge="top"][data-fullscreen] .bar {
+  transform: translateY(calc(-1 * (var(--bar-visual) + var(--bar-gap-edge))));
+}
+
 /* --- cam katmanları ------------------------------------------------------- */
 
 .glass {
@@ -106,6 +146,21 @@
 }
 
 /* --- bölümler ------------------------------------------------------------- */
+
+/* Her widget bir kutuda: eklenince / çıkarılınca genişliği canlandırılır. Boş
+   (hiçbir şey çizmeyen) widget yer kaplamaz, aralık da bırakmaz. */
+.widget {
+  display: flex;
+  align-items: flex-start;
+}
+
+.widget:empty {
+  display: none;
+}
+
+.widget[data-leaving] {
+  pointer-events: none;
+}
 
 .section {
   display: flex;

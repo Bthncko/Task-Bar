@@ -77,6 +77,8 @@ export const events = {
   power: "power://changed",
   radios: "radios://changed",
   backdrop: "backdrop://changed",
+  /** Tam ekran uygulama açıldı (true) / kapandı (false). */
+  fullscreen: "fullscreen://changed",
   /** Yalnızca popup penceresine: hangi panel çizilecek. */
   popupOpen: "popup://open",
   popupClosed: "popup://closed",

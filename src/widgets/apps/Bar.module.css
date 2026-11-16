@@ -213,6 +213,43 @@
   }
 }
 
+/* Dock açılışı (7.7): ilk listedeki ikonlar 20 ms arayla alttan belirir. Animasyon
+   öğe eklenince bir kez çalışır; sonradan gelenler yukarıdaki pop-in'i kullanır. */
+.slot:not([data-entering], [data-leaving]) .pop {
+  animation: intro 450ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 20ms + 80ms);
+}
+
+@keyframes intro {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* Açık uygulama çizgisi ikonuyla birlikte belirsin (kendi transform'u var: yalnızca opaklık). */
+.slot:not([data-entering], [data-leaving]) .indicator {
+  animation: intro-fade 450ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 20ms + 180ms);
+}
+
+@keyframes intro-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+[data-edge="top"] .slot:not([data-entering], [data-leaving]) .pop {
+  animation-name: intro-down;
+}
+
+@keyframes intro-down {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
 .lift[data-launching] {
   animation: bounce 700ms ease-in-out infinite;
 }

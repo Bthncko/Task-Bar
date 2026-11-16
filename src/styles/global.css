@@ -40,3 +40,18 @@ button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* 7.7: Windows'ta "Animasyon efektleri" kapalıysa tüm süreler sıfır. Animasyonlar
+   tek karede son hâline gelir (animationend yine tetiklenir: kaybolan öğeler silinir).
+   Büyütme ayrıca kapatılır (lib/motion.ts). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+    transition-delay: 0ms !important;
+  }
+}

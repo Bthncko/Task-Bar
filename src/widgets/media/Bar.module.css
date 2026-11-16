@@ -8,12 +8,12 @@
   min-width: 200px;
   max-width: 260px;
   overflow: hidden;
-  animation: appear var(--t-slow) var(--ease-out);
+  animation: appear 250ms var(--ease-out);
 }
 
 .card[data-leaving] {
   pointer-events: none;
-  animation: disappear var(--t-med) ease-in forwards;
+  animation: disappear 250ms var(--ease-out) forwards;
 }
 
 @keyframes appear {
@@ -124,4 +124,18 @@
 .control {
   width: 22px;
   height: 22px;
+}
+
+/* Oynat ↔ duraklat: yeni simge hafif ölçekle belirir (7.7). */
+.swap {
+  display: inline-grid;
+  place-items: center;
+  animation: swap 150ms ease;
+}
+
+@keyframes swap {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
 }

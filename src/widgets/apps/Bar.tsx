@@ -1,5 +1,6 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
 import { createMagnifier, type Magnifier } from "../../lib/magnify";
+import { useReducedMotion } from "../../lib/motion";
 import { commands, events, report, type AppItem } from "../../lib/ipc";
 import { useService } from "../../lib/useService";
 import { Divider } from "../ui";
@@ -87,6 +88,8 @@ export function AppsBar({ config }: { config: AppsConfig }) {
   const groupRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef(new Map<string, HTMLDivElement>());
   const magnifier = useRef<Magnifier | null>(null);
+  // Animasyon efektleri kapalıysa büyütme de kapalı (7.7).
+  const magnify = useReducedMotion() ? 1 : config.magnify;
 
   useEffect(() => {
     const group = groupRef.current;
@@ -94,7 +97,7 @@ export function AppsBar({ config }: { config: AppsConfig }) {
     const m = createMagnifier(group, {
       base: ICON,
       gap: GAP,
-      max: config.magnify,
+      max: magnify,
       range: ICON * 3,
       smoothingMs: 45,
     });
@@ -103,7 +106,7 @@ export function AppsBar({ config }: { config: AppsConfig }) {
       m.destroy();
       magnifier.current = null;
     };
-  }, [config.magnify]);
+  }, [magnify]);
 
   // Liste değişince büyütücüye yeni ikon kutularını ver (kaybolanlar hariç).
   const key = entries.map((e) => `${e.app.id}${e.leaving ? "-" : ""}`).join("|");
@@ -113,7 +116,7 @@ export function AppsBar({ config }: { config: AppsConfig }) {
       .map((e) => slotRefs.current.get(e.app.id))
       .filter((s): s is HTMLDivElement => !!s);
     magnifier.current?.setSlots(slots);
-  }, [key, config.magnify]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, magnify]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pencere küçültme animasyonunun hedefi: ikonların büyütülmemiş konumları.
   // Kutuların o anki (büyümüş olabilecek) yerleri değil, dinlenme düzeni hesaplanır.
@@ -163,6 +166,8 @@ export function AppsBar({ config }: { config: AppsConfig }) {
             className={styles.slot}
             data-entering={entry.entering || undefined}
             data-leaving={entry.leaving || undefined}
+            // Dock açılışında ikonlar 20 ms arayla belirir (Bar.module.css → intro).
+            style={{ "--i": i } as CSSProperties}
             ref={(el) => {
               if (entry.leaving) return;
               if (el) slotRefs.current.set(app.id, el);
