@@ -1,17 +1,154 @@
-.icon {
+/* Pil karosu (7.5): 44×40, doluluk kadar yükselen sıvı, ortada kalın sayı.
+   Renk: prizde yeşil; pilde ≤%10 kırmızı, tasarrufta sarı, <%30 turuncu,
+   yoksa vurgu. Dalga hep hareket eder: şarjda hızlı, prizde dolu iken orta,
+   pilde yavaş. */
+
+/* Renk geçişle değişsin (takınca / çıkarınca). */
+@property --fill-color {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #3b9eff;
+}
+
+.battery {
+  --fill-color: var(--accent);
   position: relative;
-  display: inline-flex;
+  width: 44px;
+  padding: 0;
+  justify-content: center;
+  overflow: hidden;
+  isolation: isolate;
+  background-color: color-mix(in srgb, var(--fill-color) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fill-color) 45%, transparent);
+  transition:
+    --fill-color var(--t-slow) ease,
+    transform var(--t-fast) var(--ease-out);
 }
 
-.bolt {
+/* Karonun genel hover zemini yerine kendi rengini biraz koyulaştır. */
+.battery[data-level]:hover {
+  background-color: color-mix(in srgb, var(--fill-color) 26%, transparent);
+}
+
+.battery[data-level="plugged"] {
+  --fill-color: var(--ok);
+}
+
+.battery[data-level="saver"] {
+  --fill-color: #ffd60a;
+}
+
+.battery[data-level="low"] {
+  --fill-color: #ff9500;
+}
+
+.battery[data-level="danger"] {
+  --fill-color: var(--danger);
+}
+
+/* Sıvının üst 3 px'i boş: dalga orada, %100'de de görünür. */
+.liquid {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-60%, -50%);
-  color: var(--warn);
-  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.9));
+  inset: auto 0 0;
+  height: var(--level);
+  background: linear-gradient(transparent 3px, var(--fill-color) 3px);
+  transition: height var(--t-slow) var(--ease-out);
+  z-index: -1;
 }
 
-.low {
-  color: var(--danger);
+/* İki kat genişlikte; prizdeyken sola kayar. */
+.wave {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 200%;
+  height: 4px;
+  fill: var(--fill-color);
+}
+
+.wave {
+  animation: wave 5s linear infinite;
+}
+
+.battery[data-level="plugged"] .wave {
+  animation-duration: 3s;
+}
+
+.battery[data-charging] .wave {
+  animation-duration: 1.6s;
+}
+
+@keyframes wave {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Takıldığı an: alttan yukarı geçen parıltı. */
+.shine {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    to top,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 45%,
+    transparent 70%
+  );
+  background-size: 100% 250%;
+  animation: shine 700ms var(--ease-out) forwards;
+}
+
+@keyframes shine {
+  from {
+    background-position: 0 0%;
+    opacity: 1;
+  }
+  to {
+    background-position: 0 100%;
+    opacity: 0;
+  }
+}
+
+.number {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text);
+}
+
+/* Sıvının içinde kalan kısım koyu: düz kırpma (dalga yüksekliğini yok sayar). */
+.inLiquid {
+  color: var(--on-accent);
+  clip-path: inset(calc(100% - var(--level) + 3px) 0 0 0);
+  transition: clip-path var(--t-slow) var(--ease-out);
+}
+
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  color: #fff;
+  filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.7));
+  animation: bolt-in 450ms var(--ease-spring);
+}
+
+@keyframes bolt-in {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battery .wave,
+  .shine,
+  .badge {
+    animation: none;
+  }
 }

@@ -68,6 +68,58 @@ export function Pill({
   );
 }
 
+/**
+ * İki parçalı hap (7.5): sol yarı aç/kapat, ince ayraç, sağ yarı ok.
+ * `active` iken vurgu çerçevesi; kapalıyken soluk.
+ */
+export function SplitPill({
+  active,
+  disabled,
+  label,
+  arrowLabel,
+  icon,
+  arrow,
+  onToggle,
+  onArrow,
+  onContextMenu,
+  title,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  label: string;
+  arrowLabel: string;
+  icon: ReactNode;
+  arrow: ReactNode;
+  onToggle: () => void;
+  onArrow: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
+  title?: string;
+}) {
+  return (
+    <div
+      className={cx(styles.pill, styles.split)}
+      data-active={active || undefined}
+      title={title}
+      onContextMenu={onContextMenu}
+    >
+      <button
+        type="button"
+        className={styles.splitMain}
+        aria-label={label}
+        aria-pressed={active}
+        disabled={disabled}
+        onClick={onToggle}
+      >
+        {icon}
+      </button>
+      <span className={styles.splitDivider} aria-hidden />
+      <button type="button" className={styles.splitArrow} aria-label={arrowLabel} onClick={onArrow}>
+        {arrow}
+      </button>
+    </div>
+  );
+}
+
 /** Kalın dolgu çubuğu (0–100). */
 export function Meter({
   value,

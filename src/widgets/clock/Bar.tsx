@@ -1,39 +1,58 @@
 import { useEffect, useState } from "react";
 import { togglePopup } from "../../lib/popup";
 import { Tile } from "../ui";
+import type { ClockConfig } from "./index";
 import styles from "./Bar.module.css";
 
 const timeFmt = new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" });
 const dateFmt = new Intl.DateTimeFormat("tr-TR", {
+  weekday: "short",
   day: "numeric",
   month: "short",
-  weekday: "short",
 });
+const fullFmt = new Intl.DateTimeFormat("tr-TR", { dateStyle: "full", timeStyle: "short" });
 
-// Bir sonraki dakika başına kalan süre: her saniye render etmeyiz (bölüm 6.1).
-function msToNextMinute(now: Date) {
-  return 60_000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 20;
+/** "Sal 20 Eki": Intl sırası yerele göre değişir, parçalardan kurulur. */
+function shortDate(d: Date) {
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    dateFmt.formatToParts(d).find((p) => p.type === type)?.value ?? "";
+  return `${part("weekday")} ${part("day")} ${part("month")}`;
 }
 
-export function ClockBar() {
+/** Bir sonraki dakika (ya da saniye) başına kalan süre: gereğinden sık çizilmez. */
+function msToNext(now: Date, seconds: boolean) {
+  const ms = now.getMilliseconds();
+  return (seconds ? 1000 - ms : 60_000 - (now.getSeconds() * 1000 + ms)) + 20;
+}
+
+export function ClockBar({ config }: { config: ClockConfig }) {
+  const seconds = config.showSeconds;
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
-    const id = window.setTimeout(() => setNow(new Date()), msToNextMinute(now));
+    const id = window.setTimeout(() => setNow(new Date()), msToNext(now, seconds));
     return () => window.clearTimeout(id);
-  }, [now]);
+  }, [now, seconds]);
+
+  const full = fullFmt.format(now);
 
   return (
     <Tile
       as="button"
       variant="plain"
+      interactive
       className={styles.clock}
-      title={now.toLocaleString("tr-TR")}
-      aria-label={`${now.toLocaleString("tr-TR")} — takvimi aç`}
+      title={full}
+      aria-label={`${full} — takvimi aç`}
       onClick={(e) => togglePopup("clock", e.currentTarget)}
     >
-      <span className={styles.time}>{timeFmt.format(now)}</span>
-      <span className={styles.date}>{dateFmt.format(now)}</span>
+      <span className={styles.top}>
+        <span className={styles.time}>{timeFmt.format(now)}</span>
+        {seconds && (
+          <span className={styles.seconds}>{String(now.getSeconds()).padStart(2, "0")}</span>
+        )}
+      </span>
+      <span className={styles.date}>{shortDate(now)}</span>
     </Tile>
   );
 }

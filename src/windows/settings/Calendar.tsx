@@ -2,7 +2,7 @@ import { useState } from "react";
 import { commands, type Config } from "../../lib/ipc";
 import { updateConfig } from "../../lib/store";
 import { parse } from "../../widgets/calendar/ics";
-import { Card, Section } from "./controls";
+import { Card, Row, Section, Toggle } from "./controls";
 import styles from "./Settings.module.css";
 
 /** Google'ın herkese açık Türkiye tatilleri takvimi (gizli değil). */
@@ -65,9 +65,25 @@ export function Calendar({ config }: { config: Config }) {
 
   return (
     <Section
-      title="Takvim"
+      title="Saat ve takvim"
       intro="Saate tıklayınca açılan takvimde bu aboneliklerin etkinlikleri görünür. Salt okunur; 15 dakikada bir yenilenir."
     >
+      <Card>
+        <Row label="Saniyeleri göster" hint="Saatin yanında soluk, küçük saniye.">
+          <Toggle
+            label="Saniyeleri göster"
+            checked={config.widgets.clock?.showSeconds ?? false}
+            onChange={(on) =>
+              updateConfig((c) => ({
+                ...c,
+                widgets: { ...c.widgets, clock: { ...c.widgets.clock, showSeconds: on } },
+              }))
+            }
+          />
+        </Row>
+      </Card>
+
+      <h3 className={styles.subTitle}>Takvim abonelikleri</h3>
       <Card>
         {urls.length === 0 ? (
           <p className={styles.cardNote}>Henüz takvim eklenmedi.</p>

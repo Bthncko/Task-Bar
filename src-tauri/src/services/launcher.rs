@@ -18,21 +18,47 @@ pub enum LaunchTarget {
     Aumid(String),
 }
 
-/// Paketli uygulamaların exe'si doğrudan çalıştırılamaz; onları AUMID ile başlat.
+/// AUMID, Başlat'taki uygulamalar listesinde (`shell:AppsFolder`) varsa her zaman
+/// onunla başlat. Paketli uygulamaların exe'si doğrudan çalışmaz; tarayıcıdaki web
+/// uygulamalarının (Edge/Chrome PWA, Firefox web uygulaması) exe'si ise yalnızca
+/// düz tarayıcıyı açar. Exe yalnızca AUMID çözülmezse kullanılır.
 pub fn launch_target(
     exe: Option<&str>,
     aumid: Option<&str>,
     aumid_resolves: bool,
 ) -> Option<LaunchTarget> {
-    let packaged = exe.is_none_or(|e| {
-        let e = e.to_lowercase();
-        e.ends_with("\\applicationframehost.exe") || e.contains("\\windowsapps\\")
-    });
     match (exe, aumid) {
-        (Some(exe), _) if !packaged => Some(LaunchTarget::Exe(exe.to_string())),
         (_, Some(aumid)) if aumid_resolves => Some(LaunchTarget::Aumid(aumid.to_string())),
         (Some(exe), _) => Some(LaunchTarget::Exe(exe.to_string())),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn web_app_launches_by_aumid_not_browser() {
+        let edge = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
+        assert_eq!(
+            launch_target(Some(edge), Some("Facebook.InstagramBeta_x!App"), true),
+            Some(LaunchTarget::Aumid("Facebook.InstagramBeta_x!App".into()))
+        );
+    }
+
+    #[test]
+    fn falls_back_to_exe_when_aumid_unknown() {
+        let code = r"C:\Code\Code.exe";
+        assert_eq!(
+            launch_target(Some(code), Some("Some.Window.Id"), false),
+            Some(LaunchTarget::Exe(code.into()))
+        );
+        assert_eq!(
+            launch_target(Some(code), None, false),
+            Some(LaunchTarget::Exe(code.into()))
+        );
+        assert_eq!(launch_target(None, Some("x"), false), None);
     }
 }
 

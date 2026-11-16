@@ -99,6 +99,14 @@ pub struct Widgets {
     pub apps: AppsConfig,
     pub weather: WeatherConfig,
     pub calendar: CalendarConfig,
+    pub clock: ClockConfig,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ClockConfig {
+    /// Saatin yanında soluk saniye (açıksa widget saniyede bir çizilir).
+    pub show_seconds: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

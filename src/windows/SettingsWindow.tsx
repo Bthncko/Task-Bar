@@ -17,7 +17,7 @@ const PAGES: { id: string; label: string; Page: FC<{ config: Config }> }[] = [
   { id: "widgets", label: "Widget'lar", Page: Widgets },
   { id: "apps", label: "Uygulamalar", Page: Apps },
   { id: "weather", label: "Hava durumu", Page: Weather },
-  { id: "calendar", label: "Takvim", Page: Calendar },
+  { id: "calendar", label: "Saat ve takvim", Page: Calendar },
   { id: "general", label: "Genel", Page: General },
 ];
 

@@ -26,6 +26,7 @@ export type Config = {
     apps: { pinned: PinnedApp[]; magnify: number };
     weather: { lat: number; lon: number; city: string; unit: "C" | "F" };
     calendar: { icsUrls: string[] };
+    clock: { showSeconds: boolean };
   } & Record<string, unknown>;
 };
 
@@ -50,7 +51,13 @@ export type MediaState = {
 
 export type AudioState = { volume: number; muted: boolean; device: string } | null;
 
-export type PowerState = { percent: number; plugged: boolean; charging: boolean } | null;
+export type PowerState = {
+  percent: number;
+  plugged: boolean;
+  charging: boolean;
+  /** Enerji / pil tasarrufu açık. */
+  saver: boolean;
+} | null;
 
 export type RadioInfo = { on: boolean; disabled: boolean };
 export type RadiosState = {

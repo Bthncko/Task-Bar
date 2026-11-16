@@ -1,0 +1,54 @@
+/* Solda iki satır (durum kalın, şehir soluk), sağda ince derece ve karodan
+   4 px taşan renkli ikon (7.5). Zemin: ui/Tile tinted. */
+.tile {
+  position: relative;
+  gap: 10px;
+  padding: 0 34px 0 10px;
+  max-width: 230px;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.state,
+.city {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.state {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.city {
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.degrees {
+  margin-left: auto;
+  font-size: var(--fs-xl);
+  font-weight: 300;
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.art {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+  pointer-events: none;
+}
+
+.tile[data-stale] .degrees,
+.tile[data-stale] .state {
+  opacity: 0.6;
+}

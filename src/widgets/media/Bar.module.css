@@ -1,45 +1,127 @@
-/* Zemin, köşe, yükseklik: ui/Tile. Burada yalnızca iç düzen. */
+/* Zemin, köşe, yükseklik: ui/Tile (tinted). Düzen A (7.5): üstte ortalı
+   "Şarkı · Sanatçı", altta üç kontrol. */
 .card {
-  padding: 0 4px;
-  max-width: 300px;
-}
-
-.art {
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  object-fit: cover;
-  background: var(--tile-hover);
-}
-
-.text {
-  display: flex;
   flex-direction: column;
-  min-width: 0;
-  max-width: 150px;
-  line-height: 1.2;
+  justify-content: center;
+  gap: 0;
+  padding: 4px 6px 2px;
+  min-width: 200px;
+  max-width: 260px;
+  overflow: hidden;
+  animation: appear var(--t-slow) var(--ease-out);
 }
 
-.title,
-.artist {
+.card[data-leaving] {
+  pointer-events: none;
+  animation: disappear var(--t-med) ease-in forwards;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    min-width: 0;
+    max-width: 0;
+    padding-inline: 0;
+  }
+}
+
+@keyframes disappear {
+  to {
+    opacity: 0;
+    min-width: 0;
+    max-width: 0;
+    padding-inline: 0;
+  }
+}
+
+/* --- başlık ------------------------------------------------------------------ */
+
+.titleBox {
+  position: relative;
+  width: 100%;
+  height: 15px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: var(--fs-sm);
+  line-height: 15px;
+  text-align: center;
   white-space: nowrap;
 }
 
-.title {
-  font-size: 12.5px;
+/* Güncel etiket akışta: karo genişliğini o belirler (200–260). */
+.label {
+  display: inline-block;
+  padding-inline: 6px;
+}
+
+/* Solan eski etiket yenisinin üstünde durur. */
+.label[data-out] {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 100%;
+}
+
+.label b {
   font-weight: 600;
 }
 
 .artist {
-  font-size: 11.5px;
-  color: var(--text-2);
+  color: rgba(255, 255, 255, 0.75);
 }
+
+/* Sığmıyorsa: soldan hizala, kenarları soluklaştır, hover'da kaydır. */
+.titleBox[data-overflow] {
+  text-align: left;
+  mask-image: linear-gradient(to right, transparent, #000 8px, #000 calc(100% - 12px), transparent);
+}
+
+.titleBox[data-overflow] .label {
+  padding-inline: 8px 12px;
+}
+
+.card:hover .titleBox[data-overflow] .label:not([data-out]) {
+  animation: marquee var(--marquee-time) linear 0.4s infinite alternate;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--marquee));
+  }
+}
+
+/* Şarkı değişince: çapraz geçiş. */
+.label[data-in] {
+  animation: fadeIn var(--t-med) ease-out;
+}
+
+.label[data-out] {
+  animation: fadeOut var(--t-med) ease-in forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
+/* --- kontroller ---------------------------------------------------------------- */
 
 .controls {
   display: flex;
   align-items: center;
-  flex: none;
+  justify-content: center;
+  gap: 6px;
+}
+
+.control {
+  width: 22px;
+  height: 22px;
 }

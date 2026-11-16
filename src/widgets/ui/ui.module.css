@@ -35,6 +35,10 @@
     color-mix(in srgb, var(--tile-color) 80%, black)
   );
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition:
+    --tile-color var(--t-slow) ease,
+    filter var(--t-fast) ease,
+    transform var(--t-fast) var(--ease-out);
 }
 
 .solid {
@@ -119,6 +123,60 @@
   color: var(--text);
   background-color: var(--accent-soft);
   box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* İki parçalı hap: her yarının kendi hover zemini, aralarında ince çizgi. */
+.split {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.split:hover {
+  background-color: transparent;
+}
+
+.split[data-active] .splitDivider {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.splitMain,
+.splitArrow {
+  height: 100%;
+  display: inline-grid;
+  place-items: center;
+  color: inherit;
+  transition: background-color var(--t-fast) ease;
+}
+
+.splitMain {
+  padding: 0 7px 0 10px;
+}
+
+.splitArrow {
+  padding: 0 7px 0 5px;
+}
+
+.splitMain:hover,
+.splitArrow:hover {
+  background-color: var(--tile-hover);
+}
+
+.splitMain:active,
+.splitArrow:active {
+  background-color: var(--tile-press);
+}
+
+.splitMain:disabled {
+  opacity: 0.5;
+  background-color: transparent;
+}
+
+.splitDivider {
+  flex: none;
+  width: 1px;
+  height: 14px;
+  background: var(--hairline);
 }
 
 /* --- Meter ------------------------------------------------------------------- */

@@ -1,7 +1,7 @@
-import { commands, events, report } from "../../lib/ipc";
+import { commands, events, report, type RadioInfo } from "../../lib/ipc";
 import { useService } from "../../lib/useService";
-import { BluetoothIcon, WifiIcon } from "../icons";
-import { Dim, IconButton, Tile } from "../ui";
+import { BluetoothIcon, ChevronIcon, WifiIcon } from "../icons";
+import { SplitPill, Tile } from "../ui";
 
 const EMPTY = { wifi: null, bluetooth: null, ssid: null, signal: null };
 
@@ -9,19 +9,10 @@ type Kind = "wifi" | "bluetooth";
 
 export function RadiosBar() {
   const radios = useService(commands.getRadios, events.radios) ?? EMPTY;
-
-  // Tıkla: Windows'un kendi paneli (görev çubuğundaki gibi). Sağ tık: ayar sayfası.
-  const openPanel = (kind: Kind) => () =>
-    commands.openQuickSettings(kind).catch(report("open_quick_settings"));
-  const openSettings = (kind: Kind) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    commands.openSystemSettings(kind).catch(report("open_system_settings"));
-  };
-
   const { wifi, bluetooth } = radios;
   if (!wifi && !bluetooth) return null;
 
-  const wifiTitle = !wifi
+  const wifiState = !wifi
     ? ""
     : wifi.disabled
       ? "Wi-Fi donanımdan kapalı"
@@ -30,42 +21,66 @@ export function RadiosBar() {
         : radios.ssid
           ? `Wi-Fi: ${radios.ssid}`
           : "Wi-Fi açık, bağlı değil";
+  const btState = !bluetooth
+    ? ""
+    : `Bluetooth ${bluetooth.disabled ? "donanımdan kapalı" : bluetooth.on ? "açık" : "kapalı"}`;
 
-  // (7.5'te iki Pill olacak: aç/kapat │ ayarlar.)
   return (
     <Tile variant="plain">
       {wifi && (
-        <IconButton
-          title={`${wifiTitle} (sağ tık: ayarlar)`}
-          aria-label={wifiTitle}
-          onClick={openPanel("wifi")}
-          onContextMenu={openSettings("wifi")}
-        >
-          {wifi.on ? (
-            <WifiIcon bars={radios.ssid ? (radios.signal ?? 5) : 0} off={false} />
-          ) : (
-            <Dim>
-              <WifiIcon bars={0} off />
-            </Dim>
-          )}
-        </IconButton>
+        <Radio
+          kind="wifi"
+          info={wifi}
+          name="Wi-Fi"
+          state={wifiState}
+          icon={<WifiIcon bars={radios.ssid ? (radios.signal ?? 5) : 0} off={!wifi.on} />}
+        />
       )}
       {bluetooth && (
-        <IconButton
-          title={`Bluetooth ${bluetooth.disabled ? "donanımdan kapalı" : bluetooth.on ? "açık" : "kapalı"} (sağ tık: ayarlar)`}
-          aria-label="Bluetooth"
-          onClick={openPanel("bluetooth")}
-          onContextMenu={openSettings("bluetooth")}
-        >
-          {bluetooth.on ? (
-            <BluetoothIcon off={false} />
-          ) : (
-            <Dim>
-              <BluetoothIcon off />
-            </Dim>
-          )}
-        </IconButton>
+        <Radio
+          kind="bluetooth"
+          info={bluetooth}
+          name="Bluetooth"
+          state={btState}
+          icon={<BluetoothIcon off={!bluetooth.on} />}
+        />
       )}
     </Tile>
+  );
+}
+
+/**
+ * Sol yarı: aç/kapat. Ok: Windows'un kendi paneli (ağ listesi / hızlı ayarlar).
+ * Sağ tık: Ayarlar'daki sayfa.
+ */
+function Radio({
+  kind,
+  info,
+  name,
+  state,
+  icon,
+}: {
+  kind: Kind;
+  info: RadioInfo;
+  name: string;
+  state: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <SplitPill
+      active={info.on}
+      disabled={info.disabled}
+      title={`${state}\nSağ tık: ${name} ayarları`}
+      label={`${name} ${info.on ? "kapat" : "aç"}`}
+      arrowLabel={`${name} panelini aç`}
+      icon={icon}
+      arrow={<ChevronIcon size={13} />}
+      onToggle={() => commands.setRadio(kind, !info.on).catch(report("set_radio"))}
+      onArrow={() => commands.openQuickSettings(kind).catch(report("open_quick_settings"))}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        commands.openSystemSettings(kind).catch(report("open_system_settings"));
+      }}
+    />
   );
 }

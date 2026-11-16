@@ -1,3 +1,11 @@
+/* `tinted` karonun rengi: kayıtlı özellik olduğu için geçişle değişebilir
+   (kapak / hava durumu değişince, 7.5). */
+@property --tile-color {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgb(58 62 76);
+}
+
 /* Tasarım değişkenleri (PLAN-ASAMA-7.md, bölüm C). Bileşenler sabit renk/ölçü
    yazmaz, yalnızca bunları kullanır. Tema (config.theme) lib/theme.ts ile yazılır. */
 :root {

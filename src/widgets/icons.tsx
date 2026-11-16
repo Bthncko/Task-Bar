@@ -87,6 +87,25 @@ export const BoltIcon = (p: IconProps) => (
   </Svg>
 );
 
+// --- genel -----------------------------------------------------------------------
+
+export const ChevronIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9.5 6.5l5.5 5.5-5.5 5.5" />
+  </Svg>
+);
+
+/** Enerji tasarrufu. */
+export const LeafIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path
+      d="M5 19c0-8 5-13 15-14-.5 9.5-6 14.5-13 14.5M5 19c2.5-4 5.5-6.5 9-8"
+      fill="currentColor"
+      fillOpacity={0.9}
+    />
+  </Svg>
+);
+
 // --- radyolar ------------------------------------------------------------------
 
 export function WifiIcon({ bars, off, ...p }: IconProps & { bars: number; off: boolean }) {

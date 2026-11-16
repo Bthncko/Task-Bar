@@ -1,45 +1,82 @@
-.slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 76px;
-  height: 18px;
-  margin: 0;
-  background: transparent;
-  cursor: default;
-}
-
-.slider::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(
-    to right,
-    var(--accent) 0 var(--fill),
-    var(--tile-press) var(--fill) 100%
-  );
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  margin-top: -4px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  transition: transform 100ms ease;
-}
-
-.slider:active::-webkit-slider-thumb {
-  transform: scale(1.15);
-}
-
+/* İki satır (7.5): üstte ikon + aygıt adı + yüzde, altta kalın dolgu çubuğu. */
 .tile {
+  width: 170px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 3px;
   padding: 0 10px 0 6px;
-  gap: 6px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+  font-size: var(--fs-sm);
+}
+
+.mute {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: -2px 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  color: inherit;
+  transition: background-color var(--t-fast) ease;
+}
+
+.mute:hover {
+  background-color: var(--tile-hover);
+}
+
+.mute:active {
+  background-color: var(--tile-press);
+}
+
+.tile[data-muted] .mute {
+  color: var(--text-3);
+}
+
+.device {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-2);
 }
 
 .percent {
+  flex: none;
   min-width: 3ch;
   text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sürükleme alanı çubuktan geniş; çubuk hover'da 8 → 10 px kalınlaşır. */
+.track {
+  display: flex;
+  align-items: center;
+  height: 12px;
+  margin: 0 0 0 4px;
+  border-radius: var(--r-pill);
+  outline: none;
+  cursor: default;
+}
+
+.track:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.meter {
+  flex: 1;
+  transition: height var(--t-fast) var(--ease-out);
+}
+
+.track:hover .meter,
+.track:active .meter {
+  height: 10px;
 }
