@@ -1,7 +1,8 @@
 //! Uygulamalar servisi: açık pencereleri uygulamalara gruplar, sabitlenenlerle
 //! birleştirir ve değişince `apps://changed` gönderir (bölüm 5).
 //!
-//! Tek bir iş parçacığı 750 ms'de bir yeniden listeler (v1 yoklama, bölüm 5.2).
+//! Tek bir iş parçacığı listeler. 7.8: pencere olayları (`app_events`) onu
+//! hemen uyandırır; seyrek yoklama yalnızca olayı olmayan değişimler için yedek.
 //! Komutlar son anlık görüntüyü okur; bir şey değiştirdiklerinde yoklayıcıyı
 //! hemen uyandırırlar.
 
@@ -23,7 +24,8 @@ use crate::error::{AppError, AppResult};
 use crate::win::focus;
 
 pub const APPS_CHANGED: &str = "apps://changed";
-const POLL_INTERVAL: Duration = Duration::from_millis(750);
+/// Yedek yoklama: asıl tetikleyici pencere olayları.
+const POLL_INTERVAL: Duration = Duration::from_secs(5);
 pub const MENU_PREFIX: &str = "app-menu";
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -78,7 +80,7 @@ impl AppsService {
         self.snapshot.lock().unwrap().items.clone()
     }
 
-    fn refresh_soon(&self) {
+    pub(crate) fn refresh_soon(&self) {
         let _ = self.wake.lock().unwrap().send(());
     }
 
@@ -263,6 +265,9 @@ pub fn spawn_poller(app: AppHandle, wake: Receiver<()>) {
             let mut cache = PollerCache::default();
             loop {
                 let (items, meta) = build(&app, &mut cache);
+                super::app_events::set_known(
+                    items.iter().flat_map(|i| i.windows.iter().map(|w| w.hwnd)),
+                );
                 let service = app.state::<AppsService>();
                 let changed = {
                     let mut snap = service.snapshot.lock().unwrap();

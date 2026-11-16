@@ -29,6 +29,8 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
 # WinRT async işlemlerini beklemek (`.join()`) ve tip dönüşümü için; windows 0.62 ile aynı.
 windows-future = "0.3"
+# COM geri çağrıları (`#[implement]`) bu adla doğrudan bağımlılık ister.
+windows-core = "0.62"
 
 # Uygulama yalnızca Windows için. Tauri ile aynı sürüm (0.62) — HWND tipleri birebir uyuşsun.
 windows = { version = "0.62", features = [

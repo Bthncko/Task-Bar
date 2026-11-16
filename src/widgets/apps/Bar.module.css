@@ -296,3 +296,25 @@
     animation-duration: 1ms;
   }
 }
+
+/* Çok uygulama (7.8): en küçük boyda da sığmayan grup yatay kayar (tekerlek).
+   Taşan kenarlar soluklaşır; göstergeler ve hover zemini için dikey pay. */
+.group[data-scrolling] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  height: auto;
+  padding: 3px 3px 7px;
+  margin-bottom: -7px;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 10px,
+    #000 calc(100% - 16px),
+    transparent
+  );
+}
+
+.group[data-scrolling] .tooltip {
+  display: none;
+}

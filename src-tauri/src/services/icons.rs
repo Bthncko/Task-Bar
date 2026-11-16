@@ -61,12 +61,12 @@ fn display_name(item: &IShellItem, is_exe: bool) -> Option<String> {
     unsafe {
         if is_exe {
             // Exe için "chrome.exe" yerine sürüm bilgisindeki açıklama ("Google Chrome").
-            if let Ok(item2) = item.cast::<IShellItem2>() {
-                if let Ok(p) = item2.GetString(&PKEY_FileDescription) {
-                    let s = take_pwstr(p);
-                    if !s.trim().is_empty() {
-                        return Some(s.trim().to_string());
-                    }
+            if let Ok(item2) = item.cast::<IShellItem2>()
+                && let Ok(p) = item2.GetString(&PKEY_FileDescription)
+            {
+                let s = take_pwstr(p);
+                if !s.trim().is_empty() {
+                    return Some(s.trim().to_string());
                 }
             }
         }
@@ -166,12 +166,14 @@ unsafe fn bitmap_to_rgba(bitmap: HBITMAP) -> Option<(u32, u32, Vec<u8>)> {
 /// BGRA → RGBA. Alfa kanalı boşsa (eski 24 bit ikonlar) opak yapar; önceden
 /// çarpılmış (premultiplied) alfa ise düz alfaya çevirir.
 fn fix_alpha_and_swizzle(buf: &mut [u8]) {
-    let all_transparent = buf.chunks_exact(4).all(|p| p[3] == 0);
+    let all_transparent = buf.as_chunks::<4>().0.iter().all(|p| p[3] == 0);
     let premultiplied = !all_transparent
         && buf
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .all(|p| p[0] <= p[3] && p[1] <= p[3] && p[2] <= p[3]);
-    for p in buf.chunks_exact_mut(4) {
+    for p in buf.as_chunks_mut::<4>().0 {
         p.swap(0, 2);
         if all_transparent {
             p[3] = 255;

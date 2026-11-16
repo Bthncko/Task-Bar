@@ -82,7 +82,7 @@ struct Source {
 }
 
 pub fn spawn(app: &AppHandle) {
-    runner::spawn(app, "backdrop", BACKDROP_CHANGED, POLL, None, || {
+    runner::spawn(app, "backdrop", BACKDROP_CHANGED, POLL, None, |_| {
         let mut last: Option<Source> = None;
         let mut cached: Option<Backdrop> = None;
         move |_: Option<()>| {

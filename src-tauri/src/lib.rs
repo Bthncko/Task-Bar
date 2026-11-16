@@ -120,6 +120,7 @@ pub fn run() {
             let (wake_tx, wake_rx) = mpsc::channel();
             app.manage(AppsService::new(wake_tx));
             apps::spawn_poller(app.handle().clone(), wake_rx);
+            services::app_events::spawn(app.handle());
             services::media::spawn(app.handle());
             services::audio::spawn(app.handle());
             services::power::spawn(app.handle());

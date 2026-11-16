@@ -7,6 +7,11 @@
 //!
 //! Ağ adı: Microsoft'un konum izni gerektirmeyen yol olarak önerdiği
 //! `WlanConnectionProfileDetails.GetConnectedSsid` (WlanQueryInterface değil).
+//!
+//! 7.8: yoklama yerine olay. `Radio.StateChanged` (aç/kapat, uçak modu, donanım
+//! anahtarı) ve `NetworkInformation.NetworkStatusChanged` (bağlantı değişimi)
+//! servisi uyandırır. Sinyal gücünün olayı yok; seyrek yoklama onu ve kaçan
+//! olayları yakalar.
 
 use std::sync::mpsc::Sender;
 use std::time::Duration;
@@ -14,12 +19,15 @@ use std::time::Duration;
 use serde::Serialize;
 use tauri::AppHandle;
 use windows::Devices::Radios::{Radio, RadioAccessStatus, RadioKind, RadioState};
-use windows::Networking::Connectivity::NetworkInformation;
+use windows::Foundation::TypedEventHandler;
+use windows::Networking::Connectivity::{NetworkInformation, NetworkStatusChangedEventHandler};
+use windows::core::IInspectable;
 
-use super::runner;
+use super::runner::{self, Waker};
 
 pub const RADIOS_CHANGED: &str = "radios://changed";
-const POLL: Duration = Duration::from_secs(2);
+/// Yedek yoklama: sinyal çubukları ve kaçan olaylar için.
+const POLL: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -49,28 +57,67 @@ pub struct SetRadio {
 pub type RadiosService = runner::ServiceHandle<RadiosState, SetRadio>;
 
 pub fn spawn(app: &AppHandle) {
-    runner::spawn(app, "radios", RADIOS_CHANGED, POLL, RadiosState::default(), || {
-        let mut access_requested = false;
-        move |cmd: Option<SetRadio>| {
-            if !access_requested {
-                // Yalnızca değiştirmek için gerekir; okuma her zaman serbest.
-                let _ = Radio::RequestAccessAsync().and_then(|op| op.join());
-                access_requested = true;
+    runner::spawn(
+        app,
+        "radios",
+        RADIOS_CHANGED,
+        POLL,
+        RadiosState::default(),
+        |waker: Waker<SetRadio>| {
+            let mut access_requested = false;
+            // Olaylarına abone olunan radyolar: nesne yaşadıkça abonelik sürer.
+            let mut watched: Vec<Radio> = Vec::new();
+            let w = waker.clone();
+            if let Err(e) = NetworkInformation::NetworkStatusChanged(
+                &NetworkStatusChangedEventHandler::new(move |_| {
+                    w.wake();
+                    Ok(())
+                }),
+            ) {
+                eprintln!("[radios] ağ bildirimi kaydedilemedi: {e}");
             }
-            let radios = list_radios();
-            if let Some(cmd) = cmd {
-                let kind = if cmd.wifi {
-                    RadioKind::WiFi
-                } else {
-                    RadioKind::Bluetooth
-                };
-                let result = set_state(&radios, kind, cmd.on);
-                let _ = cmd.reply.send(result);
-                return read_state(&list_radios());
+            move |cmd: Option<SetRadio>| {
+                if !access_requested {
+                    // Yalnızca değiştirmek için gerekir; okuma her zaman serbest.
+                    let _ = Radio::RequestAccessAsync().and_then(|op| op.join());
+                    access_requested = true;
+                }
+                if watched.is_empty() {
+                    watched = subscribe(&waker);
+                }
+                let radios = list_radios();
+                if let Some(cmd) = cmd {
+                    let kind = if cmd.wifi {
+                        RadioKind::WiFi
+                    } else {
+                        RadioKind::Bluetooth
+                    };
+                    let result = set_state(&radios, kind, cmd.on);
+                    let _ = cmd.reply.send(result);
+                    return read_state(&list_radios());
+                }
+                read_state(&radios)
             }
-            read_state(&radios)
-        }
-    });
+        },
+    );
+}
+
+/// Her radyonun durum değişimine abone olur; abone olunanları döndürür.
+fn subscribe(waker: &Waker<SetRadio>) -> Vec<Radio> {
+    list_radios()
+        .into_iter()
+        .filter(|radio| {
+            let w = waker.clone();
+            radio
+                .StateChanged(&TypedEventHandler::<Radio, IInspectable>::new(
+                    move |_, _| {
+                        w.wake();
+                        Ok(())
+                    },
+                ))
+                .is_ok()
+        })
+        .collect()
 }
 
 fn list_radios() -> Vec<Radio> {
@@ -113,10 +160,7 @@ fn wifi_connection() -> (Option<String>, Option<u8>) {
         .map(|s| s.to_string())
         .ok()
         .filter(|s| !s.is_empty());
-    let signal = profile
-        .GetSignalBars()
-        .and_then(|bars| bars.Value())
-        .ok();
+    let signal = profile.GetSignalBars().and_then(|bars| bars.Value()).ok();
     (ssid, signal)
 }
 

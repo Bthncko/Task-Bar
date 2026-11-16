@@ -9,6 +9,8 @@ import styles from "./Bar.module.css";
 
 const ICON = 40; // tokens.css → --icon-size
 const GAP = 6; // tokens.css → --icon-gap
+/** Çok uygulama açıkken ikonlar en çok bu boya kadar küçülür (7.8). */
+const MIN_ICON = 24;
 /** Başlatma zıplaması en çok bu kadar sürer (pencere gelmese de). */
 const LAUNCH_MS = 3000;
 const NO_APPS: AppItem[] = [];
@@ -81,6 +83,37 @@ function useLaunching() {
   return [launching, start] as const;
 }
 
+/**
+ * Bölümde kalan yere sığacak ikon boyu (7.8): bölümün genişliğinden diğer
+ * widget'lar çıkarılır, ikonlar sığmazsa `MIN_ICON`'a kadar küçülür. O da
+ * yetmezse `room` (kalan genişlik) ile grup kaydırılabilir yapılır.
+ */
+function useIconSize(group: React.RefObject<HTMLDivElement | null>, count: number) {
+  const [fit, setFit] = useState({ size: ICON, room: Infinity });
+  useEffect(() => {
+    const widget = group.current?.parentElement; // DockWindow → .widget
+    const section = widget?.parentElement;
+    if (!widget || !section) return;
+    const measure = () => {
+      const gap = parseFloat(getComputedStyle(section).columnGap) || 0;
+      const others = [...section.children]
+        .filter((c) => c !== widget)
+        .map((c) => c.getBoundingClientRect().width)
+        .filter((w) => w > 0)
+        .reduce((sum, w) => sum + w + gap, 0);
+      const room = section.clientWidth - others;
+      const size = Math.floor((room + GAP) / Math.max(count, 1) - GAP);
+      setFit({ size: Math.max(MIN_ICON, Math.min(ICON, size)), room });
+    };
+    // Gözlemci ilk ölçümü de kendisi yapar; bölüm ve komşu widget'lar değişince yeniler.
+    const ro = new ResizeObserver(measure);
+    ro.observe(section);
+    for (const c of section.children) if (c !== widget) ro.observe(c);
+    return () => ro.disconnect();
+  }, [group, count]);
+  return fit;
+}
+
 export function AppsBar({ config }: { config: AppsConfig }) {
   const apps = useService(commands.getApps, events.apps) ?? NO_APPS;
   const [entries, drop] = useEntries(apps);
@@ -88,17 +121,21 @@ export function AppsBar({ config }: { config: AppsConfig }) {
   const groupRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef(new Map<string, HTMLDivElement>());
   const magnifier = useRef<Magnifier | null>(null);
+  const count = entries.filter((e) => !e.leaving).length;
+  const { size: icon, room } = useIconSize(groupRef, count);
+  // En küçük boyda da sığmıyor: grup kayar (büyüyen ikonlar kırpılacağı için büyütme kapalı).
+  const scrolling = count * (icon + GAP) - GAP > room;
   // Animasyon efektleri kapalıysa büyütme de kapalı (7.7).
-  const magnify = useReducedMotion() ? 1 : config.magnify;
+  const magnify = useReducedMotion() || scrolling ? 1 : config.magnify;
 
   useEffect(() => {
     const group = groupRef.current;
     if (!group) return;
     const m = createMagnifier(group, {
-      base: ICON,
+      base: icon,
       gap: GAP,
       max: magnify,
-      range: ICON * 3,
+      range: icon * 3,
       smoothingMs: 45,
     });
     magnifier.current = m;
@@ -106,7 +143,7 @@ export function AppsBar({ config }: { config: AppsConfig }) {
       m.destroy();
       magnifier.current = null;
     };
-  }, [magnify]);
+  }, [magnify, icon]);
 
   // Liste değişince büyütücüye yeni ikon kutularını ver (kaybolanlar hariç).
   const key = entries.map((e) => `${e.app.id}${e.leaving ? "-" : ""}`).join("|");
@@ -116,7 +153,7 @@ export function AppsBar({ config }: { config: AppsConfig }) {
       .map((e) => slotRefs.current.get(e.app.id))
       .filter((s): s is HTMLDivElement => !!s);
     magnifier.current?.setSlots(slots);
-  }, [key, magnify]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, magnify, icon]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pencere küçültme animasyonunun hedefi: ikonların büyütülmemiş konumları.
   // Kutuların o anki (büyümüş olabilecek) yerleri değil, dinlenme düzeni hesaplanır.
@@ -132,7 +169,7 @@ export function AppsBar({ config }: { config: AppsConfig }) {
           idsKey
             .split("|")
             .filter(Boolean)
-            .map((id, i) => ({ id, x: r.left + i * (ICON + GAP), y: r.top, size: ICON })),
+            .map((id, i) => ({ id, x: r.left + i * (icon + GAP), y: r.top, size: icon })),
         )
         .catch(report("set_app_icon_rects"));
     };
@@ -144,7 +181,7 @@ export function AppsBar({ config }: { config: AppsConfig }) {
       window.removeEventListener("resize", send);
       group.removeEventListener("pointerenter", send);
     };
-  }, [idsKey]);
+  }, [idsKey, icon]);
 
   // Sabitlenenler ile yalnızca açık olanlar arasında ayraç: ilk sabitlenmemiş ikon.
   const firstUnpinned = entries.findIndex((e) => !e.app.pinned && !e.leaving);
@@ -154,6 +191,21 @@ export function AppsBar({ config }: { config: AppsConfig }) {
     <div
       ref={groupRef}
       className={styles.group}
+      // Küçülmüş ikonlar çubukta dikeyde ortalı kalsın.
+      style={
+        icon === ICON
+          ? undefined
+          : ({
+              "--icon-size": `${icon}px`,
+              // Kayarken üst pay (3 px, Bar.module.css) da telafi edilir.
+              marginTop: (ICON - icon) / 2 - (scrolling ? 3 : 0),
+              maxWidth: scrolling ? room : undefined,
+            } as CSSProperties)
+      }
+      data-scrolling={scrolling || undefined}
+      onWheel={(e) => {
+        if (scrolling) e.currentTarget.scrollLeft += e.deltaY;
+      }}
       data-hit
       onPointerMove={(e) => magnifier.current?.move(e.clientX)}
       onPointerLeave={() => magnifier.current?.leave()}

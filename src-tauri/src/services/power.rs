@@ -57,7 +57,7 @@ pub struct PowerState {
 pub type PowerService = runner::ServiceHandle<Option<PowerState>, ()>;
 
 pub fn spawn(app: &AppHandle) {
-    runner::spawn(app, "power", POWER_CHANGED, POLL, None, || {
+    runner::spawn(app, "power", POWER_CHANGED, POLL, None, |_| {
         |_: Option<()>| {
             let mut status = SYSTEM_POWER_STATUS::default();
             unsafe { GetSystemPowerStatus(&mut status) }.ok()?;
@@ -102,7 +102,7 @@ unsafe extern "system" fn on_power_setting(
         }
     }
     if let Some(app) = APP.get() {
-        app.state::<PowerService>().send(());
+        app.state::<PowerService>().wake();
     }
     0
 }

@@ -1,3 +1,4 @@
+pub mod app_events;
 pub mod apps;
 pub mod audio;
 pub mod backdrop;

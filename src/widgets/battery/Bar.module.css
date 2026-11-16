@@ -66,16 +66,21 @@
   fill: var(--fill-color);
 }
 
+/* Dalga kare kare ilerler (saniyede ~8–15 adım): sürekli 60 kare çizim boşta
+   tek çekirdeğin ~%35'ini (GPU + renderer) yiyordu, adımlı hâli ~%4 (7.8 ölçümü).
+   Yavaş dalgada adım 1–2 px olduğundan göze akıcı görünür. */
 .wave {
-  animation: wave 5s linear infinite;
+  animation: wave 5s steps(40) infinite;
 }
 
 .battery[data-level="plugged"] .wave {
   animation-duration: 3s;
+  animation-timing-function: steps(24);
 }
 
 .battery[data-charging] .wave {
   animation-duration: 1.6s;
+  animation-timing-function: steps(24);
 }
 
 @keyframes wave {

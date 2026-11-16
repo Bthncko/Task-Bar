@@ -82,19 +82,19 @@ pub fn set_hidden(hidden: bool) {
 
 /// Çıkışta / panikte: çubuğu geri getir. Kullanıcı ayarına (config) dokunmaz.
 pub fn cleanup() {
-    if let Some(control) = CONTROL.get() {
-        if control.want_hidden.load(Ordering::SeqCst) {
-            restore(control);
-        }
+    if let Some(control) = CONTROL.get()
+        && control.want_hidden.load(Ordering::SeqCst)
+    {
+        restore(control);
     }
 }
 
 /// Explorer yeniden başladı: gizliysek otomatik gizlemeyi yeniden kur.
 pub fn on_explorer_restart() {
-    if let Some(control) = CONTROL.get() {
-        if control.want_hidden.load(Ordering::SeqCst) {
-            set_autohide(true);
-        }
+    if let Some(control) = CONTROL.get()
+        && control.want_hidden.load(Ordering::SeqCst)
+    {
+        set_autohide(true);
     }
 }
 
