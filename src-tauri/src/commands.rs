@@ -7,10 +7,12 @@ use crate::win::placement;
 
 type CmdResult<T = ()> = Result<T, String>;
 
-/// Fare dock'a girince pencereyi büyütme payı kadar uzatır, çıkınca geri alır (3.2 Plan A).
+/// Fare dock'a girince görünür bölgeyi büyütme payına açar, çıkınca bara daraltır (3.2).
 #[tauri::command]
 pub fn set_dock_expanded(window: WebviewWindow, expanded: bool) -> CmdResult {
-    placement::place(&window, expanded).map_err(Into::into)
+    let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+    placement::set_expanded(hwnd, expanded);
+    Ok(())
 }
 
 #[tauri::command]

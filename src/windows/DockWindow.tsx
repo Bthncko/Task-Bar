@@ -5,7 +5,7 @@ import type { DockLayout, DockSection } from "../widgets/types";
 import styles from "./DockWindow.module.css";
 
 // src-tauri/src/win/placement.rs → EDGE ile aynı tutulmalı.
-const DOCK_EDGE: "top" | "bottom" = "top";
+const DOCK_EDGE: "top" | "bottom" = "bottom";
 
 // Aşama 4'te config.json'dan gelecek.
 const LAYOUT: DockLayout = {
@@ -18,9 +18,9 @@ const SECTIONS: DockSection[] = ["left", "center", "right"];
 const COLLAPSE_DELAY_MS = 150;
 
 /**
- * 3.2 Plan A: pencere normalde yalnızca bar yüksekliğinde. İmleç dock'a girince
- * Rust'tan pencereyi büyütme payı kadar uzatmasını isteriz; imleç bardan ve
- * büyümüş ikonlardan çıkınca kısa bir gecikmeyle geri küçültürüz.
+ * 3.2: pencere hep bar + pay yüksekliğinde, ama normalde yalnızca bar şeridi
+ * görünür ve tıklanır (Rust'ta pencere bölgesi). İmleç dock'a girince bölgeyi
+ * açtırırız; imleç bardan ve büyümüş ikonlardan çıkınca kısa gecikmeyle daraltırız.
  */
 function useExpandOnHover() {
   const expanded = useRef(false);

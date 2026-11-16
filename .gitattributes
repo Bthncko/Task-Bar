@@ -1,0 +1,2 @@
+# Windows PowerShell 5.1 betikleri: CRLF + (dosyada) UTF-8 BOM, yoksa Türkçe karakterler bozulur.
+*.ps1 text eol=crlf

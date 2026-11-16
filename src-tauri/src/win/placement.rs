@@ -1,6 +1,31 @@
-use tauri::{PhysicalPosition, PhysicalSize, WebviewWindow};
+//! Dock penceresinin ekrandaki yeri.
+//!
+//! Ekranda ayrılan şerit (AppBar, bölüm 4.1) yalnızca bar yüksekliğindedir.
+//! Pencere ise her zaman bar + büyütme payı yüksekliğindedir ve hiç yeniden
+//! boyutlanmaz (bölüm 3.2).
+//!
+//! Neden Plan A değil: pencereyi yukarı doğru büyütmek alt kenarda hem ilk
+//! karede titreme (WebView eski boyutta çiziliyor) hem de büyüyen ikonların
+//! eski pencere sınırında kesilmesine yol açtı.
+//!
+//! Plan B'nin yoklamasız türevi: pencereye `SetWindowRgn` ile bölge veriyoruz.
+//! Normalde bölge yalnızca bar şeridi; dışındaki şeffaf pay hem görünmez hem
+//! de tıklamaları alttaki pencereye geçirir. İmleç bara girince (frontend
+//! bildirir) bölge tüm pencereye açılır, çıkınca geri daralır. Bar her zaman
+//! bölgenin içinde olduğundan girişi sayfa kendisi algılar; imleç yoklamaya gerek yok.
 
-use crate::error::{AppError, AppResult};
+use std::sync::Mutex;
+
+use windows::Win32::Foundation::{HWND, POINT, RECT};
+use windows::Win32::Graphics::Gdi::{
+    CreateRectRgn, GetMonitorInfoW, MONITOR_DEFAULTTOPRIMARY, MONITORINFO, MonitorFromPoint,
+    RDW_ALLCHILDREN, RDW_INVALIDATE, RDW_UPDATENOW, RedrawWindow, SetWindowRgn,
+};
+use windows::Win32::UI::HiDpi::GetDpiForWindow;
+use windows::Win32::UI::WindowsAndMessaging::{SWP_NOACTIVATE, SWP_NOZORDER, SetWindowPos};
+
+use super::appbar;
+use crate::error::AppResult;
 
 /// Mantıksal piksel. `src/styles/tokens.css` ile aynı tutulmalı.
 pub const BAR_HEIGHT: f64 = 56.0;
@@ -9,32 +34,137 @@ pub const MAGNIFY_PAD: f64 = 40.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Edge {
+    #[allow(dead_code)] // Geliştirmede üst kenar kullanılmıştı; ayarlara açılacak.
     Top,
-    #[allow(dead_code)] // Aşama 3'te dock alta alınınca kullanılacak.
     Bottom,
 }
 
-/// Geliştirme sırasında dock ekranın üstünde; Windows çubuğuyla çakışmasın (bölüm 4.2).
 /// Frontend'deki `DOCK_EDGE` ile aynı tutulmalı.
-pub const EDGE: Edge = Edge::Top;
+pub const EDGE: Edge = Edge::Bottom;
 
-/// Dock'u birincil monitörün kenarına tam genişlikte yerleştirir.
-/// `expanded` iken pencere büyütme payı kadar ekranın içine doğru uzar (Plan A).
-pub fn place(window: &WebviewWindow, expanded: bool) -> AppResult<()> {
-    let monitor = window.primary_monitor()?.ok_or(AppError::NoMonitor)?;
-    let scale = monitor.scale_factor();
-    let origin = *monitor.position();
-    let size = *monitor.size();
+struct Geometry {
+    expanded: bool,
+    /// AppBar'ın ayırdığı şerit (fiziksel piksel, ekran koordinatı).
+    reserved: Option<RECT>,
+    /// Büyütme payı (fiziksel piksel).
+    pad: i32,
+}
 
-    let logical_height = BAR_HEIGHT + if expanded { MAGNIFY_PAD } else { 0.0 };
-    // Koordinatlar fiziksel piksel: DPI ölçeğiyle çarp.
-    let height = (logical_height * scale).round() as u32;
-    let y = match EDGE {
-        Edge::Top => origin.y,
-        Edge::Bottom => origin.y + size.height as i32 - height as i32,
+static GEOMETRY: Mutex<Geometry> = Mutex::new(Geometry {
+    expanded: false,
+    reserved: None,
+    pad: 0,
+});
+
+/// Ekranda ayrılan yeri yeniden hesaplar (açılış, çözünürlük/DPI değişimi,
+/// başka bir appbar'ın değişmesi) ve pencereyi yerleştirir.
+pub fn reposition(hwnd: HWND) -> AppResult<()> {
+    let monitor = primary_monitor_rect();
+    let scale = scale(hwnd);
+    let thickness = (BAR_HEIGHT * scale).round() as i32;
+    let pad = (MAGNIFY_PAD * scale).round() as i32;
+    let reserved =
+        appbar::set_pos(hwnd, monitor, thickness).unwrap_or_else(|| edge_strip(monitor, thickness));
+    {
+        let mut g = GEOMETRY.lock().unwrap();
+        g.reserved = Some(reserved);
+        g.pad = pad;
+    }
+
+    // Pencere = ayrılan şerit + ekranın içine doğru pay.
+    let window = match EDGE {
+        Edge::Bottom => RECT {
+            top: reserved.top - pad,
+            ..reserved
+        },
+        Edge::Top => RECT {
+            bottom: reserved.bottom + pad,
+            ..reserved
+        },
     };
-
-    window.set_position(PhysicalPosition::new(origin.x, y))?;
-    window.set_size(PhysicalSize::new(size.width, height))?;
+    // Kilit bırakıldı: SetWindowPos pencere mesajı tetikler.
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            None,
+            window.left,
+            window.top,
+            window.right - window.left,
+            window.bottom - window.top,
+            SWP_NOZORDER | SWP_NOACTIVATE,
+        )?;
+    }
+    apply_region(hwnd);
     Ok(())
+}
+
+/// Büyütme sırasında görünür/tıklanır bölgeyi tüm pencereye açar / bara daraltır.
+pub fn set_expanded(hwnd: HWND, expanded: bool) {
+    GEOMETRY.lock().unwrap().expanded = expanded;
+    apply_region(hwnd);
+}
+
+fn apply_region(hwnd: HWND) {
+    let (expanded, reserved, pad) = {
+        let g = GEOMETRY.lock().unwrap();
+        (g.expanded, g.reserved, g.pad)
+    };
+    let Some(reserved) = reserved else { return };
+    unsafe {
+        if expanded {
+            // Bölge yok = tüm pencere.
+            SetWindowRgn(hwnd, None, true);
+            // WebView2 bölge dışındaki alanı çizmeyi atlıyor; bölge açılınca
+            // yeni kare üretmezse büyüyen ikonların üstü kesik kalıyordu.
+            let _ = RedrawWindow(
+                Some(hwnd),
+                None,
+                None,
+                RDW_INVALIDATE | RDW_ALLCHILDREN | RDW_UPDATENOW,
+            );
+        } else {
+            // Pencere koordinatında bar şeridi. Bölgenin sahibi artık sistem.
+            let width = reserved.right - reserved.left;
+            let height = reserved.bottom - reserved.top;
+            let region = match EDGE {
+                Edge::Bottom => CreateRectRgn(0, pad, width, pad + height),
+                Edge::Top => CreateRectRgn(0, 0, width, height),
+            };
+            SetWindowRgn(hwnd, Some(region), true);
+        }
+    }
+}
+
+/// AppBar yoksa: monitörün kenarında bar kalınlığında şerit.
+fn edge_strip(monitor: RECT, thickness: i32) -> RECT {
+    match EDGE {
+        Edge::Bottom => RECT {
+            top: monitor.bottom - thickness,
+            ..monitor
+        },
+        Edge::Top => RECT {
+            bottom: monitor.top + thickness,
+            ..monitor
+        },
+    }
+}
+
+/// v1 yalnızca birincil ekran (bölüm 11).
+pub fn primary_monitor_rect() -> RECT {
+    unsafe {
+        let monitor = MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY);
+        let mut info = MONITORINFO {
+            cbSize: size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        let _ = GetMonitorInfoW(monitor, &mut info);
+        info.rcMonitor
+    }
+}
+
+fn scale(hwnd: HWND) -> f64 {
+    match unsafe { GetDpiForWindow(hwnd) } {
+        0 => 1.0,
+        dpi => dpi as f64 / 96.0,
+    }
 }

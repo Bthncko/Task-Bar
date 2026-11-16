@@ -24,7 +24,8 @@
         "shadow": false,
         "visible": false,
         "focus": false,
-        "focusable": false
+        "focusable": false,
+        "noRedirectionBitmap": true
       }
     ],
     "security": {

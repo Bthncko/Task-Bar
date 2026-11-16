@@ -15,6 +15,8 @@ use crate::error::AppResult;
 #[serde(rename_all = "camelCase", default)]
 pub struct Config {
     pub version: u32,
+    /// Windows görev çubuğunu gizle (bölüm 4.2). Varsayılan kapalı; tepsiden açılır.
+    pub hide_windows_taskbar: bool,
     pub widgets: Widgets,
 }
 
@@ -22,6 +24,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             version: 1,
+            hide_windows_taskbar: false,
             widgets: Widgets::default(),
         }
     }

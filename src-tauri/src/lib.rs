@@ -8,17 +8,39 @@ mod win;
 
 use std::sync::mpsc;
 
-use tauri::menu::{Menu, MenuItem};
+use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, RunEvent, Wry};
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
 use config::ConfigStore;
 use error::AppError;
 use services::apps::{self, AppsService};
 
+const MENU_HIDE_TASKBAR: &str = "tray:hide-taskbar";
+const MENU_AUTOSTART: &str = "tray:autostart";
+const MENU_QUIT: &str = "tray:quit";
+
+/// Tepsi menüsündeki onay kutuları (durumlarını güncelleyebilmek için).
+struct TrayMenu {
+    hide_taskbar: CheckMenuItem<Wry>,
+    autostart: CheckMenuItem<Wry>,
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    // Çökmede de sistemi geri ver: AppBar'ı kaldır, Windows çubuğunu göster.
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        win::shutdown();
+        default_hook(info);
+    }));
+
+    let app = tauri::Builder::default()
+        // Tek örnek: dokümana göre ilk kaydedilen eklenti olmalı.
+        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {
+            // İkinci kopya açılmaz; ilk kopya zaten ekranda.
+        }))
         .invoke_handler(tauri::generate_handler![
             commands::set_dock_expanded,
             commands::get_apps,
@@ -31,17 +53,20 @@ pub fn run() {
             commands::open_start,
         ])
         // Tüm menü olayları (tepsi + sağ tık menüleri) buraya gelir.
-        .on_menu_event(|app, event| {
-            let id = event.id().as_ref();
-            if id == "quit" {
-                app.exit(0);
-            } else {
-                apps::handle_menu_event(app, id);
-            }
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            MENU_QUIT => app.exit(0),
+            MENU_HIDE_TASKBAR => toggle_hide_taskbar(app),
+            MENU_AUTOSTART => toggle_autostart(app),
+            id => apps::handle_menu_event(app, id),
         })
         .setup(|app| {
+            app.handle()
+                .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))?;
+
             let config_dir = app.path().app_config_dir()?;
-            app.manage(ConfigStore::load(config_dir));
+            let config = ConfigStore::load(config_dir.clone());
+            let hide_taskbar = config.get().hide_windows_taskbar;
+            app.manage(config);
 
             let (wake_tx, wake_rx) = mpsc::channel();
             app.manage(AppsService::new(wake_tx));
@@ -50,21 +75,67 @@ pub fn run() {
             let dock = app
                 .get_webview_window("dock")
                 .ok_or(AppError::NoDockWindow)?;
-            win::placement::place(&dock, false)?;
+            let hwnd = dock.hwnd()?;
             win::window_style::apply_dock_style(&dock)?;
+            win::appbar::register(app.handle(), hwnd)?;
+            win::placement::reposition(hwnd)?;
             dock.show()?;
 
-            create_tray(app.handle())?;
+            // Önceki çökmeden kalan gizli çubuğu da burada onarır.
+            win::taskbar::init(config_dir, hide_taskbar);
+
+            create_tray(app.handle(), hide_taskbar)?;
             Ok(())
         })
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("Akıllı Dock başlatılamadı");
+
+    app.run(|_app, event| {
+        if let RunEvent::Exit = event {
+            win::shutdown();
+        }
+    });
 }
 
-/// Tepsi ikonu: şimdilik yalnızca Çıkış (bölüm 11; diğer öğeler sonraki aşamalarda).
-fn create_tray(app: &AppHandle) -> tauri::Result<()> {
-    let quit = MenuItem::with_id(app, "quit", "Çıkış", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&quit])?;
+/// Tepsi (bölüm 11). "Ayarlar" Aşama 6'da eklenecek.
+fn create_tray(app: &AppHandle, hide_taskbar: bool) -> tauri::Result<()> {
+    let hide_item = CheckMenuItem::with_id(
+        app,
+        MENU_HIDE_TASKBAR,
+        "Windows görev çubuğunu gizle",
+        true,
+        hide_taskbar,
+        None::<&str>,
+    )?;
+    // Geliştirme sürümü Vite sunucusu olmadan açılamaz; açılışa yalnızca
+    // `tauri build` ile üretilen sürüm kaydedilsin.
+    let release = !cfg!(debug_assertions);
+    let autostart_item = CheckMenuItem::with_id(
+        app,
+        MENU_AUTOSTART,
+        if release {
+            "Açılışta başlat"
+        } else {
+            "Açılışta başlat (yalnızca kurulu sürüm)"
+        },
+        release,
+        app.autolaunch().is_enabled().unwrap_or(false),
+        None::<&str>,
+    )?;
+    let quit = MenuItem::with_id(app, MENU_QUIT, "Çıkış", true, None::<&str>)?;
+    let menu = Menu::with_items(
+        app,
+        &[
+            &hide_item,
+            &autostart_item,
+            &PredefinedMenuItem::separator(app)?,
+            &quit,
+        ],
+    )?;
+    app.manage(TrayMenu {
+        hide_taskbar: hide_item,
+        autostart: autostart_item,
+    });
 
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip("Akıllı Dock")
@@ -75,4 +146,29 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
     }
     tray.build(app)?;
     Ok(())
+}
+
+fn toggle_hide_taskbar(app: &AppHandle) {
+    let config = app.state::<ConfigStore>();
+    let hide = !config.get().hide_windows_taskbar;
+    if let Err(e) = config.update(|c| c.hide_windows_taskbar = hide) {
+        eprintln!("ayar kaydedilemedi: {e}");
+    }
+    win::taskbar::set_hidden(hide);
+    let _ = app.state::<TrayMenu>().hide_taskbar.set_checked(hide);
+}
+
+fn toggle_autostart(app: &AppHandle) {
+    let autolaunch = app.autolaunch();
+    let enable = !autolaunch.is_enabled().unwrap_or(false);
+    let result = if enable {
+        autolaunch.enable()
+    } else {
+        autolaunch.disable()
+    };
+    if let Err(e) = result {
+        eprintln!("açılışta başlatma ayarlanamadı: {e}");
+    }
+    let enabled = autolaunch.is_enabled().unwrap_or(false);
+    let _ = app.state::<TrayMenu>().autostart.set_checked(enabled);
 }

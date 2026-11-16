@@ -1,5 +1,7 @@
+pub mod appbar;
 pub mod focus;
 pub mod placement;
+pub mod taskbar;
 pub mod window_style;
 
 use windows::Win32::Foundation::HWND;
@@ -28,4 +30,11 @@ pub fn hwnd_to_id(h: HWND) -> isize {
 
 pub fn id_to_hwnd(id: isize) -> HWND {
     HWND(id as *mut _)
+}
+
+/// Temiz çıkış (bölüm 11): AppBar'ı kaldır → Windows çubuğunu geri getir.
+/// Normal çıkışta ve panik kancasında çağrılır; iki kez çağrılması zararsız.
+pub fn shutdown() {
+    appbar::remove();
+    taskbar::cleanup();
 }
