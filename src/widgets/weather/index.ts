@@ -1,5 +1,6 @@
 import type { WidgetDefinition } from "../types";
 import { WeatherBar } from "./Bar";
+import { WeatherPopup } from "./Popup";
 
 export interface WeatherConfig {
   lat: number;
@@ -12,5 +13,7 @@ export const weatherWidget: WidgetDefinition<WeatherConfig> = {
   id: "weather",
   name: "Hava durumu",
   Bar: WeatherBar,
+  Popup: WeatherPopup,
+  popupSize: { width: 340, height: 440 },
   defaultConfig: { lat: 41.01, lon: 28.98, city: "İstanbul", unit: "C" },
 };

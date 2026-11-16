@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { togglePopup } from "../../lib/popup";
 import { WeatherIcon } from "../icons";
 import { cachedCurrent, fetchCurrent, type CurrentWeather } from "./api";
 import { describeWeather } from "./wmo";
@@ -56,11 +57,20 @@ export function WeatherBar({ config }: { config: WeatherConfig }) {
   ].join("\n");
 
   return (
-    <div className={shared.item} title={title} data-stale={stale || undefined}>
-      <WeatherIcon kind={kind} night={!weather.isDay} size={20} />
-      <span className={shared.value} style={stale ? { opacity: 0.6 } : undefined}>
-        {Math.round(weather.temperature)}°
-      </span>
+    <div className={shared.item}>
+      <button
+        type="button"
+        className={shared.iconButton}
+        title={title}
+        aria-label={`Hava durumu: ${title}`}
+        data-stale={stale || undefined}
+        onClick={(e) => togglePopup("weather", e.currentTarget)}
+      >
+        <WeatherIcon kind={kind} night={!weather.isDay} size={20} />
+        <span className={shared.value} style={stale ? { opacity: 0.6 } : undefined}>
+          {Math.round(weather.temperature)}°
+        </span>
+      </button>
     </div>
   );
 }

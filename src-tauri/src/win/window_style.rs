@@ -1,8 +1,9 @@
-//! Dock penceresinin Win32 genişletilmiş stilleri (bölüm 3.1).
+//! Dock ve popup pencerelerinin Win32 genişletilmiş stilleri (bölüm 3.1, 3.4).
 //!
-//! - `WS_EX_TOOLWINDOW`: Alt+Tab'da görünmez.
-//! - `WS_EX_NOACTIVATE`: tıklayınca odağı çalmaz. (`focusable: false` da bunu
-//!   ekliyor — tao 0.37 `window_state.rs` — burada ikinci kez garantiye alınıyor.)
+//! - `WS_EX_TOOLWINDOW`: Alt+Tab'da görünmez (ikisi de).
+//! - `WS_EX_NOACTIVATE`: tıklayınca odağı çalmaz (yalnızca dock; popup odak alır).
+//!   (`focusable: false` da bunu ekliyor — tao 0.37 `window_state.rs` — burada
+//!   ikinci kez garantiye alınıyor.)
 //!
 //! Tao her pencere bayrağı değişiminde (ör. `show()`) `GWL_EXSTYLE`'ı baştan
 //! yazıyor ve `WS_EX_TOOLWINDOW`'u bilmiyor. Bu yüzden pencereyi alt sınıflayıp
@@ -21,16 +22,26 @@ use crate::error::{AppError, AppResult};
 
 const SUBCLASS_ID: usize = 0xD0C1;
 
-/// Pencere gösterilmeden önce çağrılmalı (stil değişimi gizliyken kesin uygulanır).
+/// Dock: araç penceresi + odak almaz. Pencere gösterilmeden önce çağrılmalı.
 pub fn apply_dock_style(window: &WebviewWindow) -> AppResult<()> {
+    apply(window, true)
+}
+
+/// Popup: araç penceresi, ama odak alır (odak kaybında kapanabilsin).
+pub fn apply_popup_style(window: &WebviewWindow) -> AppResult<()> {
+    apply(window, false)
+}
+
+fn apply(window: &WebviewWindow, no_activate: bool) -> AppResult<()> {
     let hwnd = window.hwnd()?;
+    let data = no_activate as usize;
     // SAFETY: hwnd bu iş parçacığında (ana iş parçacığı) oluşturulmuş geçerli bir pencere.
     unsafe {
-        if !SetWindowSubclass(hwnd, Some(keep_dock_style), SUBCLASS_ID, 0).as_bool() {
+        if !SetWindowSubclass(hwnd, Some(keep_style), SUBCLASS_ID, data).as_bool() {
             return Err(AppError::Win32("SetWindowSubclass başarısız".into()));
         }
         let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
-        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, dock_ex_style(ex) as isize);
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style(ex, no_activate) as isize);
         SetWindowPos(
             hwnd,
             None,
@@ -44,23 +55,27 @@ pub fn apply_dock_style(window: &WebviewWindow) -> AppResult<()> {
     Ok(())
 }
 
-fn dock_ex_style(ex: u32) -> u32 {
-    (ex | WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0) & !WS_EX_APPWINDOW.0
+fn ex_style(ex: u32, no_activate: bool) -> u32 {
+    let mut ex = (ex | WS_EX_TOOLWINDOW.0) & !WS_EX_APPWINDOW.0;
+    if no_activate {
+        ex |= WS_EX_NOACTIVATE.0;
+    }
+    ex
 }
 
-unsafe extern "system" fn keep_dock_style(
+unsafe extern "system" fn keep_style(
     hwnd: HWND,
     msg: u32,
     wparam: WPARAM,
     lparam: LPARAM,
     _id: usize,
-    _data: usize,
+    data: usize,
 ) -> LRESULT {
     // WM_STYLECHANGING: wParam hangi stilin değiştiğini, lParam STYLESTRUCT'ı verir.
     if msg == WM_STYLECHANGING && wparam.0 as i32 == GWL_EXSTYLE.0 {
         // SAFETY: Windows bu mesajda lParam'da geçerli bir STYLESTRUCT işaretçisi verir.
         let style = unsafe { &mut *(lparam.0 as *mut STYLESTRUCT) };
-        style.styleNew = dock_ex_style(style.styleNew);
+        style.styleNew = ex_style(style.styleNew, data != 0);
     }
     unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
 }

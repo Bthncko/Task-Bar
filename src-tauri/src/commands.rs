@@ -6,11 +6,11 @@ use tauri::{AppHandle, State, WebviewWindow};
 use crate::config::{Config, ConfigStore};
 use crate::services::apps::{AppItem, AppsService};
 use crate::services::audio::{AudioCmd, AudioService, AudioState};
-use crate::services::launcher;
+use crate::services::{ics, launcher};
 use crate::services::media::{MediaCmd, MediaService, MediaState};
 use crate::services::power::{PowerService, PowerState};
 use crate::services::radios::{RadiosService, RadiosState, SetRadio};
-use crate::win::placement;
+use crate::win::{placement, popup};
 
 type CmdResult<T = ()> = Result<T, String>;
 
@@ -47,6 +47,36 @@ pub fn open_quick_settings(panel: String) -> CmdResult {
         _ => "ms-actioncenter:controlcenter/&showFooter=true",
     };
     launcher::open_uri(uri).map_err(Into::into)
+}
+
+// --- popup (bölüm 3.4) ------------------------------------------------------
+
+/// Dock'taki widget tıklaması: paneli aç / kapat / değiştir.
+#[tauri::command]
+pub fn show_popup(app: AppHandle, widget_id: String, anchor: popup::Anchor) -> CmdResult {
+    popup::toggle(&app, widget_id, anchor).map_err(Into::into)
+}
+
+/// Popup sayfası paneli çizdi; şimdi konumlanıp gösterilebilir.
+#[tauri::command]
+pub fn popup_ready(app: AppHandle, seq: u64, width: f64, height: f64) -> CmdResult {
+    popup::ready(&app, seq, width, height).map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn hide_popup(app: AppHandle) -> CmdResult {
+    popup::hide(&app).map_err(Into::into)
+}
+
+// --- takvim -----------------------------------------------------------------
+
+/// ICS aboneliğini indirir (metin olarak). Ağ beklemesi ana iş parçacığında olmasın.
+#[tauri::command]
+pub async fn fetch_ics(url: String) -> CmdResult<String> {
+    tauri::async_runtime::spawn_blocking(move || ics::fetch(&url))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(Into::into)
 }
 
 // --- config ----------------------------------------------------------------

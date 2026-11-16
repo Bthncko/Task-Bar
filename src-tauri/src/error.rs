@@ -19,6 +19,9 @@ pub enum AppError {
     #[error("uygulama bulunamadı: {0}")]
     UnknownApp(String),
 
+    #[error("{0}")]
+    InvalidInput(String),
+
     #[error("Win32 hatası: {0}")]
     Win32(String),
 }

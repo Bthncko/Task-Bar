@@ -10,6 +10,10 @@
   /* Renk */
   --bar-bg: rgba(18, 20, 26, 0.62);
   --bar-border: rgba(255, 255, 255, 0.09);
+  /* Paneller okunsun diye bardan daha opak (cam efekti Aşama 7). */
+  --popup-bg: rgba(22, 24, 31, 0.96);
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-hover: rgba(255, 255, 255, 0.09);
   --text: rgba(255, 255, 255, 0.92);
   --text-dim: rgba(255, 255, 255, 0.58);
   --accent: #6aa8ff;

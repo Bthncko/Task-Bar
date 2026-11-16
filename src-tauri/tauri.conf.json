@@ -26,6 +26,21 @@
         "focus": false,
         "focusable": false,
         "noRedirectionBitmap": true
+      },
+      {
+        "label": "popup",
+        "title": "Akıllı Dock Panel",
+        "width": 340,
+        "height": 400,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false,
+        "visible": false,
+        "focus": false,
+        "noRedirectionBitmap": true
       }
     ],
     "security": {

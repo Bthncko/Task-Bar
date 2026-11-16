@@ -45,6 +45,10 @@ pub fn run() {
             commands::set_dock_expanded,
             commands::open_system_settings,
             commands::open_quick_settings,
+            commands::show_popup,
+            commands::popup_ready,
+            commands::hide_popup,
+            commands::fetch_ics,
             commands::get_config,
             commands::set_config,
             commands::get_apps,
@@ -99,6 +103,7 @@ pub fn run() {
             win::appbar::register(app.handle(), hwnd)?;
             win::placement::reposition(hwnd)?;
             dock.show()?;
+            win::popup::init(app.handle())?;
 
             // Önceki çökmeden kalan gizli çubuğu da burada onarır.
             win::taskbar::init(config_dir, hide_taskbar);

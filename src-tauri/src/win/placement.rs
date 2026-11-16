@@ -135,6 +135,11 @@ fn apply_region(hwnd: HWND) {
     }
 }
 
+/// Bar şeridi (fiziksel piksel, ekran koordinatı); popup'lar bunun üstüne açılır.
+pub fn reserved_rect() -> Option<RECT> {
+    GEOMETRY.lock().unwrap().reserved
+}
+
 /// AppBar yoksa: monitörün kenarında bar kalınlığında şerit.
 fn edge_strip(monitor: RECT, thickness: i32) -> RECT {
     match EDGE {
@@ -162,7 +167,7 @@ pub fn primary_monitor_rect() -> RECT {
     }
 }
 
-fn scale(hwnd: HWND) -> f64 {
+pub fn scale(hwnd: HWND) -> f64 {
     match unsafe { GetDpiForWindow(hwnd) } {
         0 => 1.0,
         dpi => dpi as f64 / 96.0,

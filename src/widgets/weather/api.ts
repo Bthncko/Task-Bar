@@ -39,20 +39,128 @@ export async function fetchCurrent(p: WeatherParams): Promise<CurrentWeather> {
     isDay: c.is_day !== 0,
     fetchedAt: Date.now(),
   };
-  try {
-    localStorage.setItem(cacheKey(p), JSON.stringify(weather));
-  } catch {
-    // Önbellek yalnızca kolaylık; yazılamazsa sorun değil.
-  }
+  writeCache(cacheKey(p), weather);
   return weather;
 }
 
 /** Son başarılı yanıt (çevrimdışıyken gösterilir). */
 export function cachedCurrent(p: WeatherParams): CurrentWeather | null {
+  return readCache<CurrentWeather>(cacheKey(p));
+}
+
+// --- panel: saatlik + 7 günlük (parametre adları canlı yanıtla denendi) -------------
+
+export type HourPoint = {
+  /** Yerel saat, "2026-11-16T21:00" */
+  time: string;
+  temperature: number;
+  code: number;
+  isDay: boolean;
+  precip: number | null;
+};
+
+export type DayPoint = {
+  /** Yerel tarih, "2026-11-16" */
+  date: string;
+  code: number;
+  max: number;
+  min: number;
+  precip: number | null;
+};
+
+export type Forecast = {
+  current: CurrentWeather & { apparent: number };
+  hourly: HourPoint[];
+  daily: DayPoint[];
+};
+
+const HOURS = 24;
+
+const forecastKey = (p: WeatherParams) => `${cacheKey(p)}:forecast`;
+
+export async function fetchForecast(p: WeatherParams): Promise<Forecast> {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", String(p.lat));
+  url.searchParams.set("longitude", String(p.lon));
+  url.searchParams.set("current", "temperature_2m,apparent_temperature,weather_code,is_day");
+  url.searchParams.set("hourly", "temperature_2m,weather_code,is_day,precipitation_probability");
+  url.searchParams.set(
+    "daily",
+    "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+  );
+  url.searchParams.set("forecast_days", "7");
+  url.searchParams.set("timezone", "auto");
+  if (p.unit === "F") url.searchParams.set("temperature_unit", "fahrenheit");
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
+  const json = await res.json();
+  const { current: c, hourly: h, daily: d } = json ?? {};
+  if (typeof c?.temperature_2m !== "number" || !Array.isArray(h?.time) || !Array.isArray(d?.time)) {
+    throw new Error("beklenmeyen yanıt");
+  }
+
+  // Saatlik dizi günün başından başlar; şimdiki saatten itibaren 24 saat.
+  const nowHour = `${String(c.time).slice(0, 13)}:00`;
+  const first = Math.max(
+    0,
+    (h.time as string[]).findIndex((t) => t >= nowHour),
+  );
+  const hourly: HourPoint[] = (h.time as string[]).slice(first, first + HOURS).map((time, k) => {
+    const i = first + k;
+    return {
+      time,
+      temperature: h.temperature_2m[i],
+      code: h.weather_code[i],
+      isDay: h.is_day[i] !== 0,
+      precip: h.precipitation_probability?.[i] ?? null,
+    };
+  });
+
+  const daily: DayPoint[] = (d.time as string[]).map((date, i) => ({
+    date,
+    code: d.weather_code[i],
+    max: d.temperature_2m_max[i],
+    min: d.temperature_2m_min[i],
+    precip: d.precipitation_probability_max?.[i] ?? null,
+  }));
+
+  const forecast: Forecast = {
+    current: {
+      temperature: c.temperature_2m,
+      apparent: c.apparent_temperature,
+      code: c.weather_code,
+      isDay: c.is_day !== 0,
+      fetchedAt: Date.now(),
+    },
+    hourly,
+    daily,
+  };
+  writeCache(forecastKey(p), forecast);
+  // Bar da aynı veriyle güncel kalsın.
+  writeCache(cacheKey(p), forecast.current);
+  return forecast;
+}
+
+export function cachedForecast(p: WeatherParams): Forecast | null {
+  return readCache<Forecast>(forecastKey(p));
+}
+
+// --- önbellek (yalnızca kolaylık; erişilemezse sessizce geç) -------------------
+
+function readCache<T>(key: string): T | null {
   try {
-    const raw = localStorage.getItem(cacheKey(p));
-    return raw ? (JSON.parse(raw) as CurrentWeather) : null;
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
   } catch {
     return null;
+  }
+}
+
+function writeCache(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // yazılamazsa sorun değil
   }
 }

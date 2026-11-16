@@ -1,6 +1,7 @@
 pub mod appbar;
 pub mod focus;
 pub mod placement;
+pub mod popup;
 pub mod taskbar;
 pub mod window_style;
 

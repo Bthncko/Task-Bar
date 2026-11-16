@@ -60,7 +60,12 @@ export const events = {
   audio: "audio://changed",
   power: "power://changed",
   radios: "radios://changed",
+  /** Yalnızca popup penceresine: hangi panel çizilecek. */
+  popupOpen: "popup://open",
+  popupClosed: "popup://closed",
 } as const;
+
+export type PopupOpen = { widgetId: string; seq: number };
 
 // --- komutlar -----------------------------------------------------------------
 
@@ -72,6 +77,17 @@ export const commands = {
   /** Windows'un hızlı ayarlar paneli; "wifi" doğrudan ağ listesini açar. */
   openQuickSettings: (panel: "wifi" | "bluetooth" | "battery") =>
     invoke<void>("open_quick_settings", { panel }),
+
+  /** Widget'ın panelini aç / kapat. `anchor`: widget'ın dock'taki yatay konumu (CSS px). */
+  showPopup: (widgetId: string, anchor: { x: number; width: number }) =>
+    invoke<void>("show_popup", { widgetId, anchor }),
+  /** Popup sayfası paneli çizdi; boyut mantıksal piksel. */
+  popupReady: (seq: number, width: number, height: number) =>
+    invoke<void>("popup_ready", { seq, width, height }),
+  hidePopup: () => invoke<void>("hide_popup"),
+
+  /** ICS aboneliğini metin olarak indirir (CORS yüzünden Rust'ta). */
+  fetchIcs: (url: string) => invoke<string>("fetch_ics", { url }),
 
   getConfig: () => invoke<Config>("get_config"),
   setConfig: (value: Config) => invoke<void>("set_config", { value }),

@@ -7,6 +7,12 @@
   padding: 0 6px;
   line-height: var(--icon-size);
   white-space: nowrap;
+  border-radius: 8px;
+  transition: background-color 120ms ease;
+}
+
+.clock:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .time {
