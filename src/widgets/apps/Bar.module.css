@@ -1,0 +1,85 @@
+.group {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--icon-gap);
+  height: var(--icon-size);
+  min-width: var(--icon-size);
+}
+
+.slot {
+  position: relative;
+  flex: none;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  display: flex;
+  justify-content: center;
+}
+
+.icon {
+  flex: none;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  display: grid;
+  place-items: center;
+  transform: scale(var(--scale, 1));
+  transform-origin: top center;
+  will-change: transform;
+}
+
+[data-edge="bottom"] .icon {
+  transform-origin: bottom center;
+}
+
+.icon:active {
+  filter: brightness(0.8);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+}
+
+/* İkonu alınamayan uygulamalar için yedek kare. */
+.fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--icon-radius);
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  font-weight: 600;
+  background: linear-gradient(160deg, #6b7387, #3e4453);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* Açık uygulama noktaları: ekran kenarı tarafında. İki nokta = birden çok pencere. */
+.dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  pointer-events: none;
+}
+
+[data-edge="bottom"] .dots {
+  top: auto;
+  bottom: -4px;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+
+.dots[data-focused="true"] .dot {
+  background: var(--dot-active);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.7);
+}

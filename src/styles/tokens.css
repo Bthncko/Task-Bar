@@ -1,0 +1,24 @@
+/* Tasarım değişkenleri. Aşama 6'da tema config'ten buraya yazılacak. */
+:root {
+  /* Ölçüler (mantıksal piksel) — src-tauri/src/win/placement.rs ile aynı tutulmalı */
+  --bar-height: 56px;
+  --bar-inset: 4px;
+  --icon-size: 40px;
+  --icon-gap: 8px;
+  --magnify-pad: 40px;
+
+  /* Renk */
+  --bar-bg: rgba(18, 20, 26, 0.62);
+  --bar-border: rgba(255, 255, 255, 0.09);
+  --text: rgba(255, 255, 255, 0.92);
+  --text-dim: rgba(255, 255, 255, 0.58);
+  --accent: #6aa8ff;
+  --dot: rgba(255, 255, 255, 0.55);
+  --dot-active: #ffffff;
+
+  /* Biçim */
+  --radius: 14px;
+  --icon-radius: 10px;
+
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}

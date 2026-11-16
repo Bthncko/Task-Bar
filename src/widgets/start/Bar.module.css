@@ -1,0 +1,21 @@
+.start {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  display: grid;
+  place-items: center;
+  border-radius: var(--icon-radius);
+  color: var(--accent);
+  transition: background-color 120ms ease;
+}
+
+.start svg {
+  fill: currentColor;
+}
+
+.start:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.start:active {
+  background: rgba(255, 255, 255, 0.14);
+}

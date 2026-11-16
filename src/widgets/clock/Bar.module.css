@@ -1,0 +1,21 @@
+.clock {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  height: var(--icon-size);
+  align-self: center;
+  padding: 0 6px;
+  line-height: var(--icon-size);
+  white-space: nowrap;
+}
+
+.time {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.date {
+  font-size: 13px;
+  color: var(--text-dim);
+}

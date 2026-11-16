@@ -1,0 +1,390 @@
+//! Uygulamalar servisi: açık pencereleri uygulamalara gruplar, sabitlenenlerle
+//! birleştirir ve değişince `apps://changed` gönderir (bölüm 5).
+//!
+//! Tek bir iş parçacığı 750 ms'de bir yeniden listeler (v1 yoklama, bölüm 5.2).
+//! Komutlar son anlık görüntüyü okur; bir şey değiştirdiklerinde yoklayıcıyı
+//! hemen uyandırırlar.
+
+use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
+use std::time::Duration;
+
+use serde::Serialize;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
+use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
+
+use super::icons::shell_info;
+use super::launcher::{self, LaunchTarget, launch_target};
+use super::windows_list::{self, process_aumid, process_image, window_aumid};
+use crate::config::{ConfigStore, PinnedApp};
+use crate::error::{AppError, AppResult};
+use crate::win::focus;
+
+pub const APPS_CHANGED: &str = "apps://changed";
+const POLL_INTERVAL: Duration = Duration::from_millis(750);
+pub const MENU_PREFIX: &str = "app-menu";
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AppItem {
+    pub id: String,
+    pub name: String,
+    pub icon: Option<String>,
+    pub pinned: bool,
+    pub windows: Vec<WindowInfo>,
+    pub focused: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct WindowInfo {
+    pub hwnd: isize,
+    pub title: String,
+}
+
+/// Bir uygulama hakkında bilinen her şey (ikon hariç komutlara gereken kısmı).
+#[derive(Debug, Clone)]
+struct AppMeta {
+    name: String,
+    icon: Option<String>,
+    exe: Option<String>,
+    aumid: Option<String>,
+    launch: Option<LaunchTarget>,
+}
+
+#[derive(Default)]
+struct Snapshot {
+    items: Vec<AppItem>,
+    meta: HashMap<String, AppMeta>,
+    /// Dock'a ait olmayan son ön plan penceresi (odak tuzağına karşı, bölüm 5.4).
+    last_foreground: isize,
+}
+
+pub struct AppsService {
+    snapshot: Mutex<Snapshot>,
+    wake: Mutex<Sender<()>>,
+}
+
+impl AppsService {
+    pub fn new(wake: Sender<()>) -> Self {
+        Self {
+            snapshot: Mutex::new(Snapshot::default()),
+            wake: Mutex::new(wake),
+        }
+    }
+
+    pub fn items(&self) -> Vec<AppItem> {
+        self.snapshot.lock().unwrap().items.clone()
+    }
+
+    fn refresh_soon(&self) {
+        let _ = self.wake.lock().unwrap().send(());
+    }
+
+    fn find(&self, id: &str) -> AppResult<(AppItem, AppMeta, isize)> {
+        let snap = self.snapshot.lock().unwrap();
+        let item = snap
+            .items
+            .iter()
+            .find(|i| i.id == id)
+            .cloned()
+            .ok_or_else(|| AppError::UnknownApp(id.to_string()))?;
+        let meta = snap
+            .meta
+            .get(id)
+            .cloned()
+            .ok_or_else(|| AppError::UnknownApp(id.to_string()))?;
+        Ok((item, meta, snap.last_foreground))
+    }
+
+    /// Sol tık (bölüm 5.4 tablosu).
+    pub fn activate(&self, id: &str) -> AppResult<()> {
+        let (item, meta, last_fg) = self.find(id)?;
+        if item.windows.is_empty() {
+            return self.launch_meta(&meta);
+        }
+        let own_pid = std::process::id();
+        let fg = focus::foreground();
+        let fg = if focus::window_pid(fg) == own_pid {
+            last_fg
+        } else {
+            fg
+        };
+        let hwnds: Vec<isize> = item.windows.iter().map(|w| w.hwnd).collect();
+        if hwnds.contains(&fg) {
+            if hwnds.len() > 1 {
+                // Sırayla dolaş: en alttakini öne getir → hepsi sırayla gelir.
+                focus::activate(*hwnds.last().unwrap());
+            } else {
+                focus::minimize(fg);
+            }
+        } else {
+            focus::activate(hwnds[0]);
+        }
+        self.refresh_soon();
+        Ok(())
+    }
+
+    /// Orta tık / "Yeni pencere".
+    pub fn launch(&self, id: &str) -> AppResult<()> {
+        let (_, meta, _) = self.find(id)?;
+        self.launch_meta(&meta)
+    }
+
+    fn launch_meta(&self, meta: &AppMeta) -> AppResult<()> {
+        let target = meta
+            .launch
+            .as_ref()
+            .ok_or_else(|| AppError::UnknownApp(meta.name.clone()))?;
+        launcher::launch(target)?;
+        self.refresh_soon();
+        Ok(())
+    }
+
+    pub fn close_window(&self, hwnd: isize) {
+        focus::close(hwnd);
+        self.refresh_soon();
+    }
+
+    pub fn close_all(&self, id: &str) -> AppResult<()> {
+        let (item, _, _) = self.find(id)?;
+        for w in &item.windows {
+            focus::close(w.hwnd);
+        }
+        self.refresh_soon();
+        Ok(())
+    }
+
+    pub fn pin(&self, config: &ConfigStore, id: &str) -> AppResult<()> {
+        let (_, meta, _) = self.find(id)?;
+        config.update(|c| {
+            let pinned = &mut c.widgets.apps.pinned;
+            if !pinned.iter().any(|p| p.id == id) {
+                pinned.push(PinnedApp {
+                    id: id.to_string(),
+                    name: meta.name.clone(),
+                    exe: meta.exe.clone(),
+                    aumid: meta.aumid.clone(),
+                });
+            }
+        })?;
+        self.refresh_soon();
+        Ok(())
+    }
+
+    pub fn unpin(&self, config: &ConfigStore, id: &str) -> AppResult<()> {
+        config.update(|c| c.widgets.apps.pinned.retain(|p| p.id != id))?;
+        self.refresh_soon();
+        Ok(())
+    }
+
+    /// Sağ tık: yerel (native) bağlam menüsü, imlecin olduğu yerde.
+    pub fn show_menu(&self, window: &WebviewWindow, id: &str) -> AppResult<()> {
+        let (item, meta, _) = self.find(id)?;
+        let app = window.app_handle();
+        let mid = |action: &str| format!("{MENU_PREFIX}:{action}:{id}");
+
+        let pin = if item.pinned {
+            MenuItem::with_id(app, mid("unpin"), "Sabitlemeyi kaldır", true, None::<&str>)?
+        } else {
+            MenuItem::with_id(app, mid("pin"), "Sabitle", true, None::<&str>)?
+        };
+        let new_window = MenuItem::with_id(
+            app,
+            mid("new"),
+            if item.windows.is_empty() {
+                "Aç"
+            } else {
+                "Yeni pencere"
+            },
+            meta.launch.is_some(),
+            None::<&str>,
+        )?;
+        let menu = Menu::with_items(app, &[&new_window, &pin])?;
+        if !item.windows.is_empty() {
+            let close_label = if item.windows.len() == 1 {
+                "Pencereyi kapat".to_string()
+            } else {
+                format!("Tüm pencereleri kapat ({})", item.windows.len())
+            };
+            let close = MenuItem::with_id(app, mid("close"), close_label, true, None::<&str>)?;
+            menu.append(&PredefinedMenuItem::separator(app)?)?;
+            menu.append(&close)?;
+        }
+        window.popup_menu(&menu)?;
+        Ok(())
+    }
+}
+
+/// Menü olayları: `app-menu:<eylem>:<id>`. id içinde ':' olabilir (exe yolu).
+pub fn handle_menu_event(app: &AppHandle, menu_id: &str) {
+    let mut parts = menu_id.splitn(3, ':');
+    let (Some(MENU_PREFIX), Some(action), Some(id)) = (parts.next(), parts.next(), parts.next())
+    else {
+        return;
+    };
+    let apps = app.state::<AppsService>();
+    let config = app.state::<ConfigStore>();
+    let result = match action {
+        "pin" => apps.pin(&config, id),
+        "unpin" => apps.unpin(&config, id),
+        "new" => apps.launch(id),
+        "close" => apps.close_all(id),
+        _ => Ok(()),
+    };
+    if let Err(e) = result {
+        eprintln!("menü eylemi '{action}' başarısız: {e}");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Yoklayıcı
+// ---------------------------------------------------------------------------
+
+#[derive(Default)]
+struct PollerCache {
+    /// (hwnd, pid) → (exe, aumid). Pencere yaşadıkça bunlar değişmez.
+    windows: HashMap<(isize, u32), (Option<String>, Option<String>)>,
+    meta: HashMap<String, AppMeta>,
+    /// Sabitlenmemiş açık uygulamaların ilk görülme sırası (ikonlar zıplamasın).
+    order: Vec<String>,
+    last_foreground: isize,
+}
+
+pub fn spawn_poller(app: AppHandle, wake: Receiver<()>) {
+    std::thread::Builder::new()
+        .name("apps-poller".into())
+        .spawn(move || {
+            // Kabuk ve özellik deposu API'leri COM ister.
+            unsafe {
+                let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+            }
+            let mut cache = PollerCache::default();
+            loop {
+                let (items, meta) = build(&app, &mut cache);
+                let service = app.state::<AppsService>();
+                let changed = {
+                    let mut snap = service.snapshot.lock().unwrap();
+                    let changed = snap.items != items;
+                    snap.items = items.clone();
+                    snap.meta = meta;
+                    snap.last_foreground = cache.last_foreground;
+                    changed
+                };
+                if changed {
+                    let _ = app.emit(APPS_CHANGED, &items);
+                }
+                match wake.recv_timeout(POLL_INTERVAL) {
+                    Ok(()) | Err(RecvTimeoutError::Timeout) => {
+                        // Komutların ardından gelen olayların yerine oturması için kısa bekleme.
+                        std::thread::sleep(Duration::from_millis(60));
+                        while wake.try_recv().is_ok() {}
+                    }
+                    Err(RecvTimeoutError::Disconnected) => break,
+                }
+            }
+        })
+        .expect("apps-poller başlatılamadı");
+}
+
+fn build(app: &AppHandle, cache: &mut PollerCache) -> (Vec<AppItem>, HashMap<String, AppMeta>) {
+    let own_pid = std::process::id();
+    let pinned = app.state::<ConfigStore>().get().widgets.apps.pinned;
+
+    let fg = focus::foreground();
+    if fg != 0 && focus::window_pid(fg) != own_pid {
+        cache.last_foreground = fg;
+    }
+
+    // 1) Pencereleri uygulamalara grupla (z sırası korunur).
+    let raws = windows_list::list(own_pid);
+    let alive: HashSet<(isize, u32)> = raws.iter().map(|r| (r.hwnd, r.pid)).collect();
+    cache.windows.retain(|k, _| alive.contains(k));
+
+    let mut groups: HashMap<String, Vec<WindowInfo>> = HashMap::new();
+    let mut seen_order: Vec<String> = Vec::new();
+    for raw in raws {
+        let (exe, aumid) = cache
+            .windows
+            .entry((raw.hwnd, raw.pid))
+            .or_insert_with(|| {
+                // Önce pencereye yazılmış AUMID, yoksa paketli sürecin kimliği.
+                let aumid = window_aumid(raw.hwnd).or_else(|| process_aumid(raw.pid));
+                (process_image(raw.pid), aumid)
+            })
+            .clone();
+        // Gruplama anahtarı: AUMID varsa o, yoksa küçük harfli exe yolu.
+        let id = match (&aumid, &exe) {
+            (Some(a), _) => a.clone(),
+            (None, Some(e)) => e.to_lowercase(),
+            (None, None) => format!("pid:{}", raw.pid),
+        };
+        if !cache.meta.contains_key(&id) {
+            let meta = resolve_meta(aumid.as_deref(), exe.as_deref(), &raw.title);
+            cache.meta.insert(id.clone(), meta);
+        }
+        if !groups.contains_key(&id) {
+            seen_order.push(id.clone());
+        }
+        groups.entry(id).or_default().push(WindowInfo {
+            hwnd: raw.hwnd,
+            title: raw.title,
+        });
+    }
+
+    // 2) Sabitlenenlerin bilgisini (kapalı olsalar da) hazırla.
+    for p in &pinned {
+        if !cache.meta.contains_key(&p.id) {
+            let mut meta = resolve_meta(p.aumid.as_deref(), p.exe.as_deref(), &p.name);
+            meta.name = p.name.clone();
+            cache.meta.insert(p.id.clone(), meta);
+        }
+    }
+
+    // 3) Sıra: sabitlenenler (config sırası), sonra diğer açıklar ilk görülme sırasıyla.
+    let pinned_ids: HashSet<&str> = pinned.iter().map(|p| p.id.as_str()).collect();
+    cache
+        .order
+        .retain(|id| groups.contains_key(id) && !pinned_ids.contains(id.as_str()));
+    for id in seen_order {
+        if !pinned_ids.contains(id.as_str()) && !cache.order.contains(&id) {
+            cache.order.push(id);
+        }
+    }
+
+    let ids = pinned
+        .iter()
+        .map(|p| p.id.clone())
+        .chain(cache.order.iter().cloned());
+    let mut items = Vec::new();
+    let mut meta_out = HashMap::new();
+    for id in ids {
+        let Some(meta) = cache.meta.get(&id) else {
+            continue;
+        };
+        let windows = groups.remove(&id).unwrap_or_default();
+        let focused = windows.iter().any(|w| w.hwnd == cache.last_foreground);
+        items.push(AppItem {
+            id: id.clone(),
+            name: meta.name.clone(),
+            icon: meta.icon.clone(),
+            pinned: pinned_ids.contains(id.as_str()),
+            windows,
+            focused,
+        });
+        meta_out.insert(id, meta.clone());
+    }
+    (items, meta_out)
+}
+
+fn resolve_meta(aumid: Option<&str>, exe: Option<&str>, fallback_name: &str) -> AppMeta {
+    let info = shell_info(aumid, exe);
+    AppMeta {
+        name: info.name.unwrap_or_else(|| fallback_name.to_string()),
+        icon: info.icon,
+        exe: exe.map(str::to_string),
+        aumid: aumid.map(str::to_string),
+        launch: launch_target(exe, aumid, info.aumid_resolves),
+    }
+}
