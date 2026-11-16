@@ -5,8 +5,8 @@
 //! `WM_ACTIVATE` → `ABM_ACTIVATE`, `WM_WINDOWPOSCHANGED` → `ABM_WINDOWPOSCHANGED`.
 //! Çıkmadan önce mutlaka `ABM_REMOVE`.
 //!
-//! Tam ekran uygulama açılınca (`ABN_FULLSCREENAPP`) doküman appbar'ın
-//! z-sırasının en altına inmesini söylüyor; kapanınca eski yerine döner.
+//! Tam ekran uygulama açılınca (`ABN_FULLSCREENAPP`) dock gizlenir, kapanınca
+//! (ya da Alt+Tab ile çıkılınca) geri gelir; bkz. `set_fullscreen_z`.
 
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
@@ -19,13 +19,14 @@ use windows::Win32::Graphics::Gdi::{
 use windows::Win32::UI::Shell::{
     ABE_BOTTOM, ABE_TOP, ABM_ACTIVATE, ABM_NEW, ABM_QUERYPOS, ABM_REMOVE, ABM_SETPOS,
     ABM_WINDOWPOSCHANGED, ABN_FULLSCREENAPP, ABN_POSCHANGED, APPBARDATA, DefSubclassProc,
-    SHAppBarMessage, SetWindowSubclass,
+    QUNS_BUSY, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN, SHAppBarMessage,
+    SHQueryUserNotificationState, SetWindowSubclass,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetClassNameW, GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId, HWND_BOTTOM,
-    HWND_NOTOPMOST, HWND_TOPMOST, PostMessageW, RegisterWindowMessageW, SWP_NOACTIVATE, SWP_NOMOVE,
-    SWP_NOSIZE, SetWindowPos, WM_ACTIVATE, WM_APP, WM_DISPLAYCHANGE, WM_DPICHANGED,
-    WM_WINDOWPOSCHANGED,
+    GWL_EXSTYLE, GetClassNameW, GetForegroundWindow, GetWindowLongW, GetWindowRect,
+    GetWindowThreadProcessId, HWND_TOPMOST, PostMessageW, RegisterWindowMessageW, SW_HIDE,
+    SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetWindowPos, ShowWindow,
+    WM_ACTIVATE, WM_APP, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_WINDOWPOSCHANGED, WS_EX_TOPMOST,
 };
 use windows::core::w;
 
@@ -56,7 +57,34 @@ pub fn register(app: &AppHandle, hwnd: HWND) -> AppResult<()> {
             return Err(AppError::Win32("AppBar alt sınıflama başarısız".into()));
         }
     }
-    new_appbar(hwnd)
+    new_appbar(hwnd)?;
+    check_fullscreen_at_start(hwnd);
+    Ok(())
+}
+
+/// Dock, tam ekran oyun açıkken başlarsa kabuk `ABN_FULLSCREENAPP` göndermiyor
+/// (bu makinede görüldü): dock oyunun üstünde kalıyordu. Açılışta kabuğa sorulur.
+fn check_fullscreen_at_start(hwnd: HWND) {
+    let id = hwnd_to_id(hwnd);
+    std::thread::spawn(move || {
+        // Dock önce yerleşip görünsün; sonra gerekiyorsa normal yoldan çekilir.
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        let state = unsafe { SHQueryUserNotificationState() };
+        let busy = matches!(
+            state,
+            Ok(QUNS_BUSY | QUNS_RUNNING_D3D_FULL_SCREEN | QUNS_PRESENTATION_MODE)
+        );
+        if busy && foreground_is_fullscreen() {
+            if cfg!(debug_assertions) {
+                eprintln!(
+                    "[appbar] açılışta tam ekran uygulama var ({}): dock çekiliyor",
+                    describe_foreground()
+                );
+            }
+            SHELL_FULLSCREEN.store(true, Ordering::SeqCst);
+            enter_fullscreen(id_to_hwnd(id));
+        }
+    });
 }
 
 fn data(hwnd: HWND) -> APPBARDATA {
@@ -166,46 +194,81 @@ static FULLSCREEN_GEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU
 /// video tam ekrana geçerken): bu aralıklarla yeniden bakılır.
 const FULLSCREEN_RECHECK_MS: [u64; 4] = [100, 150, 250, 500];
 
+/// Kabuğun son `ABN_FULLSCREENAPP` bildirimi: monitörde tam ekran uygulama var.
+static SHELL_FULLSCREEN: AtomicBool = AtomicBool::new(false);
+/// Dock şu an tam ekran yüzünden arkada / gizli.
+static HIDDEN: AtomicBool = AtomicBool::new(false);
+
 fn on_fullscreen(hwnd: HWND, opening: bool) {
-    if opening && !foreground_is_fullscreen() {
-        if cfg!(debug_assertions) {
-            eprintln!(
-                "[appbar] tam ekran bildirimi: ön plan henüz monitörü kaplamıyor ({}), yeniden bakılacak",
-                describe_foreground()
-            );
-        }
-        // Kapanma bildirimi (ya da yenisi) gelirse sayaç değişir, bekleme biter.
-        let generation = FULLSCREEN_GEN.fetch_add(1, Ordering::SeqCst) + 1;
-        let id = hwnd_to_id(hwnd);
-        std::thread::spawn(move || {
-            for ms in FULLSCREEN_RECHECK_MS {
-                std::thread::sleep(std::time::Duration::from_millis(ms));
-                if FULLSCREEN_GEN.load(Ordering::SeqCst) != generation {
-                    return;
-                }
-                if foreground_is_fullscreen() {
-                    enter_fullscreen(id_to_hwnd(id));
-                    return;
-                }
-            }
+    SHELL_FULLSCREEN.store(opening, Ordering::SeqCst);
+    if opening {
+        enter_when_ready(hwnd);
+    } else {
+        exit_fullscreen(hwnd);
+    }
+}
+
+/// Ön plan değişti (app_events). Kabuk, oyundan Alt+Tab ile çıkınca "tam ekran
+/// bitti" bildirimini göndermiyor (oyun arkada hâlâ monitörü kaplıyor): dock
+/// arkada kalıp tamamen kayboluyordu. Kabuk tam ekran derken ön plana bakılır:
+/// ön plan monitörü kaplamıyorsa dock geri gelir, oyuna dönülünce yine çekilir.
+pub fn on_foreground_changed() {
+    if !REGISTERED.load(Ordering::SeqCst) || !SHELL_FULLSCREEN.load(Ordering::SeqCst) {
+        return;
+    }
+    let hwnd = id_to_hwnd(DOCK_HWND.load(Ordering::SeqCst));
+    if HIDDEN.load(Ordering::SeqCst) {
+        if !foreground_is_fullscreen() {
             if cfg!(debug_assertions) {
                 eprintln!(
-                    "[appbar] tam ekran bildirimi yok sayıldı ({})",
+                    "[appbar] tam ekran pencere ön planda değil ({}): dock geri geliyor",
                     describe_foreground()
                 );
             }
-        });
+            exit_fullscreen(hwnd);
+        }
+    } else {
+        enter_when_ready(hwnd);
+    }
+}
+
+/// Ön plan monitörü kaplıyorsa çekil. Kaplamıyorsa henüz boyutlanmamış olabilir
+/// (tarayıcı videosu, küçültülmüş oyunun geri gelmesi): kısa aralıklarla yeniden bak.
+fn enter_when_ready(hwnd: HWND) {
+    if foreground_is_fullscreen() {
+        enter_fullscreen(hwnd);
         return;
     }
-    if opening {
-        enter_fullscreen(hwnd);
-    } else {
-        FULLSCREEN_GEN.fetch_add(1, Ordering::SeqCst);
-        if let Some(app) = APP.get() {
-            let _ = app.emit(FULLSCREEN_CHANGED, false);
-        }
-        set_fullscreen_z(hwnd, false);
+    if cfg!(debug_assertions) {
+        eprintln!(
+            "[appbar] tam ekran: ön plan henüz monitörü kaplamıyor ({}), yeniden bakılacak",
+            describe_foreground()
+        );
     }
+    // Kapanma bildirimi (ya da yenisi) gelirse sayaç değişir, bekleme biter.
+    let generation = FULLSCREEN_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+    let id = hwnd_to_id(hwnd);
+    std::thread::spawn(move || {
+        for ms in FULLSCREEN_RECHECK_MS {
+            std::thread::sleep(std::time::Duration::from_millis(ms));
+            if FULLSCREEN_GEN.load(Ordering::SeqCst) != generation {
+                return;
+            }
+            if foreground_is_fullscreen() {
+                enter_fullscreen(id_to_hwnd(id));
+                return;
+            }
+        }
+    });
+}
+
+fn exit_fullscreen(hwnd: HWND) {
+    FULLSCREEN_GEN.fetch_add(1, Ordering::SeqCst);
+    HIDDEN.store(false, Ordering::SeqCst);
+    if let Some(app) = APP.get() {
+        let _ = app.emit(FULLSCREEN_CHANGED, false);
+    }
+    set_fullscreen_z(hwnd, false);
 }
 
 /// Günlük için: ön plandaki pencerenin sınıfı, dikdörtgeni ve monitörü.
@@ -237,6 +300,7 @@ fn describe_foreground() -> String {
 
 fn enter_fullscreen(hwnd: HWND) {
     let generation = FULLSCREEN_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+    HIDDEN.store(true, Ordering::SeqCst);
     // Önce sayfaya haber ver: girişte çubuk aşağı kayar, dock ancak sonra arkaya
     // alınır (yoksa animasyon tam ekran pencerenin arkasında kalır). Çıkışta dock
     // hemen öne gelir, çubuk yukarı kayarak belirir.
@@ -252,28 +316,22 @@ fn enter_fullscreen(hwnd: HWND) {
     });
 }
 
+/// Tam ekranda dock gizlenir, çıkınca yeniden gösterilir.
+///
+/// Doküman appbar'ın z-sırasının en altına inmesini söylüyor; ilk sürüm böyle
+/// yapıyordu (NOTOPMOST + BOTTOM, çıkışta TOPMOST). Ama tam ekran oyun ön
+/// plandayken Windows "en üstte" bayrağını geri koymayı sessizce yok sayıyor
+/// (SetWindowPos başarılı dönüyor, bayrak gelmiyor; bu makinede STRAFTAT ile
+/// görüldü): Alt+Tab'da dock oyunun arkasında kalıp tamamen kayboluyordu.
+/// Bayrağa hiç dokunmadan gizleyip göstermek bu sorunu taşımıyor; AppBar
+/// kaydı ve ayrılan şerit pencere gizliyken de yerinde kalır.
 fn set_fullscreen_z(hwnd: HWND, opening: bool) {
     unsafe {
         if opening {
-            let _ = SetWindowPos(
-                hwnd,
-                Some(HWND_NOTOPMOST),
-                0,
-                0,
-                0,
-                0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-            );
-            let _ = SetWindowPos(
-                hwnd,
-                Some(HWND_BOTTOM),
-                0,
-                0,
-                0,
-                0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-            );
+            let _ = ShowWindow(hwnd, SW_HIDE);
         } else {
+            let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+            // Bayrak bir yerde düştüyse (eski sürüm, başka araç) yine de dene.
             let _ = SetWindowPos(
                 hwnd,
                 Some(HWND_TOPMOST),
@@ -282,6 +340,13 @@ fn set_fullscreen_z(hwnd: HWND, opening: bool) {
                 0,
                 0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            );
+        }
+        if cfg!(debug_assertions) {
+            let topmost = GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST.0 as i32 != 0;
+            eprintln!(
+                "[appbar] dock {} (en üstte: {topmost})",
+                if opening { "gizlendi" } else { "gösterildi" }
             );
         }
     }

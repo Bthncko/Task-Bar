@@ -98,6 +98,9 @@ unsafe extern "system" fn on_event(
     if id_object != OBJID_WINDOW.0 || id_child != CHILDID_SELF as i32 || hwnd.is_invalid() {
         return;
     }
+    if event == EVENT_SYSTEM_FOREGROUND {
+        crate::win::appbar::on_foreground_changed();
+    }
     let relevant = match event {
         EVENT_SYSTEM_FOREGROUND => true,
         EVENT_OBJECT_SHOW | EVENT_OBJECT_UNCLOAKED => is_visible_top_level(hwnd),
