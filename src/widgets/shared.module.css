@@ -1,0 +1,45 @@
+/* Küçük widget'ların ortak parçaları. */
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--icon-size);
+  white-space: nowrap;
+}
+
+.iconButton {
+  height: 32px;
+  min-width: 32px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+  color: var(--text);
+  transition:
+    background-color 120ms ease,
+    opacity 120ms ease;
+}
+
+.iconButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.iconButton:active {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.iconButton:disabled {
+  opacity: 0.35;
+}
+
+.dim {
+  color: var(--text-dim);
+}
+
+.value {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}

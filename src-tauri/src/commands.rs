@@ -1,11 +1,20 @@
-use tauri::{State, WebviewWindow};
+use std::sync::mpsc;
+use std::time::Duration;
 
-use crate::config::ConfigStore;
+use tauri::{AppHandle, State, WebviewWindow};
+
+use crate::config::{Config, ConfigStore};
 use crate::services::apps::{AppItem, AppsService};
+use crate::services::audio::{AudioCmd, AudioService, AudioState};
 use crate::services::launcher;
+use crate::services::media::{MediaCmd, MediaService, MediaState};
+use crate::services::power::{PowerService, PowerState};
+use crate::services::radios::{RadiosService, RadiosState, SetRadio};
 use crate::win::placement;
 
 type CmdResult<T = ()> = Result<T, String>;
+
+// --- pencere ---------------------------------------------------------------
 
 /// Fare dock'a girince görünür bölgeyi büyütme payına açar, çıkınca bara daraltır (3.2).
 #[tauri::command]
@@ -14,6 +23,51 @@ pub fn set_dock_expanded(window: WebviewWindow, expanded: bool) -> CmdResult {
     placement::set_expanded(hwnd, expanded);
     Ok(())
 }
+
+/// Windows'un kendi ayar sayfaları (radyo değiştirilemezse yedek yol, bölüm 6.7).
+#[tauri::command]
+pub fn open_system_settings(page: String) -> CmdResult {
+    let uri = match page.as_str() {
+        "wifi" => "ms-settings:network-wifi",
+        "bluetooth" => "ms-settings:bluetooth",
+        "sound" => "ms-settings:sound",
+        "battery" => "ms-settings:batterysaver",
+        _ => return Err(format!("bilinmeyen sayfa: {page}")),
+    };
+    launcher::open_uri(uri).map_err(Into::into)
+}
+
+/// Windows görev çubuğundaki gibi sistem panelini açar.
+/// Hızlı ayarlar adresi bu makinede görev çubuğu gizliyken denendi, sağ altta açılıyor.
+/// `ms-availablenetworks:` Microsoft'un ms-settings listesinde Wi-Fi ağları paneli olarak geçiyor.
+#[tauri::command]
+pub fn open_quick_settings(panel: String) -> CmdResult {
+    let uri = match panel.as_str() {
+        "wifi" => "ms-availablenetworks:",
+        _ => "ms-actioncenter:controlcenter/&showFooter=true",
+    };
+    launcher::open_uri(uri).map_err(Into::into)
+}
+
+// --- config ----------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_config(config: State<ConfigStore>) -> Config {
+    config.get()
+}
+
+#[tauri::command]
+pub fn set_config(app: AppHandle, config: State<ConfigStore>, value: Config) -> CmdResult {
+    let hide_before = config.get().hide_windows_taskbar;
+    let hide_after = value.hide_windows_taskbar;
+    config.update(|c| *c = value).map_err(String::from)?;
+    if hide_before != hide_after {
+        crate::apply_hide_taskbar(&app, hide_after);
+    }
+    Ok(())
+}
+
+// --- uygulamalar -----------------------------------------------------------
 
 #[tauri::command]
 pub fn get_apps(apps: State<AppsService>) -> Vec<AppItem> {
@@ -53,4 +107,74 @@ pub fn show_app_menu(window: WebviewWindow, apps: State<AppsService>, id: String
 #[tauri::command]
 pub fn open_start() -> CmdResult {
     launcher::open_start().map_err(Into::into)
+}
+
+// --- müzik -----------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_media(media: State<MediaService>) -> Option<MediaState> {
+    media.get()
+}
+
+#[tauri::command]
+pub fn media_toggle(media: State<MediaService>) {
+    media.send(MediaCmd::Toggle);
+}
+
+#[tauri::command]
+pub fn media_next(media: State<MediaService>) {
+    media.send(MediaCmd::Next);
+}
+
+#[tauri::command]
+pub fn media_prev(media: State<MediaService>) {
+    media.send(MediaCmd::Prev);
+}
+
+// --- ses -------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_audio(audio: State<AudioService>) -> Option<AudioState> {
+    audio.get()
+}
+
+/// `v`: 0–1.
+#[tauri::command]
+pub fn set_volume(audio: State<AudioService>, v: f32) {
+    audio.send(AudioCmd::SetVolume(v));
+}
+
+#[tauri::command]
+pub fn set_mute(audio: State<AudioService>, muted: bool) {
+    audio.send(AudioCmd::SetMute(muted));
+}
+
+// --- pil -------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_power(power: State<PowerService>) -> Option<PowerState> {
+    power.get()
+}
+
+// --- radyolar --------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_radios(radios: State<RadiosService>) -> RadiosState {
+    radios.get()
+}
+
+/// `kind`: "wifi" ya da "bluetooth". Radyo değişimi bir saniye sürebilir;
+/// ana iş parçacığını bekletmemek için async.
+#[tauri::command]
+pub async fn set_radio(radios: State<'_, RadiosService>, kind: String, on: bool) -> CmdResult {
+    let wifi = match kind.as_str() {
+        "wifi" => true,
+        "bluetooth" => false,
+        _ => return Err(format!("bilinmeyen radyo: {kind}")),
+    };
+    let (reply, result) = mpsc::channel();
+    radios.send(SetRadio { wifi, on, reply });
+    result
+        .recv_timeout(Duration::from_secs(8))
+        .map_err(|_| "radyo yanıt vermedi".to_string())?
 }

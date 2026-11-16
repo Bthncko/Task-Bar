@@ -71,6 +71,26 @@ pub fn launch(target: &LaunchTarget) -> AppResult<()> {
     }
 }
 
+/// `ms-settings:` gibi bir adresi kabuğa açtırır.
+pub fn open_uri(uri: &str) -> AppResult<()> {
+    let uri_w = wide(uri);
+    let result = unsafe {
+        ShellExecuteW(
+            None,
+            w!("open"),
+            PCWSTR(uri_w.as_ptr()),
+            PCWSTR::null(),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
+        )
+    };
+    if result.0 as isize > 32 {
+        Ok(())
+    } else {
+        Err(AppError::Win32(format!("açılamadı: {uri}")))
+    }
+}
+
 /// Windows'un kendi Başlat menüsü: Win tuşuna basıp bırak.
 pub fn open_start() -> AppResult<()> {
     let key = |flags: KEYBD_EVENT_FLAGS| INPUT {

@@ -1,0 +1,17 @@
+.icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.bolt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-60%, -50%);
+  color: #ffd84d;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.9));
+}
+
+.low {
+  color: #ff7a6b;
+}

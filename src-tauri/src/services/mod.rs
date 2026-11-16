@@ -1,4 +1,9 @@
 pub mod apps;
+pub mod audio;
 pub mod icons;
 pub mod launcher;
+pub mod media;
+pub mod power;
+pub mod radios;
+pub mod runner;
 pub mod windows_list;

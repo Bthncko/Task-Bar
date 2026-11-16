@@ -43,6 +43,10 @@ pub fn run() {
         }))
         .invoke_handler(tauri::generate_handler![
             commands::set_dock_expanded,
+            commands::open_system_settings,
+            commands::open_quick_settings,
+            commands::get_config,
+            commands::set_config,
             commands::get_apps,
             commands::activate_app,
             commands::launch_app,
@@ -51,6 +55,16 @@ pub fn run() {
             commands::unpin_app,
             commands::show_app_menu,
             commands::open_start,
+            commands::get_media,
+            commands::media_toggle,
+            commands::media_next,
+            commands::media_prev,
+            commands::get_audio,
+            commands::set_volume,
+            commands::set_mute,
+            commands::get_power,
+            commands::get_radios,
+            commands::set_radio,
         ])
         // Tüm menü olayları (tepsi + sağ tık menüleri) buraya gelir.
         .on_menu_event(|app, event| match event.id().as_ref() {
@@ -65,12 +79,17 @@ pub fn run() {
 
             let config_dir = app.path().app_config_dir()?;
             let config = ConfigStore::load(config_dir.clone());
+            config.attach(app.handle().clone());
             let hide_taskbar = config.get().hide_windows_taskbar;
             app.manage(config);
 
             let (wake_tx, wake_rx) = mpsc::channel();
             app.manage(AppsService::new(wake_tx));
             apps::spawn_poller(app.handle().clone(), wake_rx);
+            services::media::spawn(app.handle());
+            services::audio::spawn(app.handle());
+            services::power::spawn(app.handle());
+            services::radios::spawn(app.handle());
 
             let dock = app
                 .get_webview_window("dock")
@@ -154,8 +173,16 @@ fn toggle_hide_taskbar(app: &AppHandle) {
     if let Err(e) = config.update(|c| c.hide_windows_taskbar = hide) {
         eprintln!("ayar kaydedilemedi: {e}");
     }
+    apply_hide_taskbar(app, hide);
+}
+
+/// Windows çubuğunu gizle/göster ve tepsideki onay kutusunu eşitle.
+/// (Ayar kaydını çağıran yapar: tepsi ya da `set_config`.)
+pub(crate) fn apply_hide_taskbar(app: &AppHandle, hide: bool) {
     win::taskbar::set_hidden(hide);
-    let _ = app.state::<TrayMenu>().hide_taskbar.set_checked(hide);
+    if let Some(tray) = app.try_state::<TrayMenu>() {
+        let _ = tray.hide_taskbar.set_checked(hide);
+    }
 }
 
 fn toggle_autostart(app: &AppHandle) {

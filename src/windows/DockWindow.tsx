@@ -1,18 +1,14 @@
 import { useEffect, useRef } from "react";
 import { commands } from "../lib/ipc";
+import { startConfigSync, useConfig } from "../lib/store";
+import { applyTheme } from "../lib/theme";
 import { registry } from "../widgets/registry";
-import type { DockLayout, DockSection } from "../widgets/types";
+import type { DockSection } from "../widgets/types";
 import styles from "./DockWindow.module.css";
 
 // src-tauri/src/win/placement.rs → EDGE ile aynı tutulmalı.
+// (Config'teki `position` Aşama 6'da Rust'a bağlanınca buradan okunacak.)
 const DOCK_EDGE: "top" | "bottom" = "bottom";
-
-// Aşama 4'te config.json'dan gelecek.
-const LAYOUT: DockLayout = {
-  left: [{ id: "start" }, { id: "apps" }],
-  center: [{ id: "clock" }],
-  right: [],
-};
 
 const SECTIONS: DockSection[] = ["left", "center", "right"];
 const COLLAPSE_DELAY_MS = 150;
@@ -59,22 +55,32 @@ function useExpandOnHover() {
   }, []);
 }
 
+startConfigSync();
+
 export function DockWindow() {
   useExpandOnHover();
+  const config = useConfig();
+
+  useEffect(() => {
+    if (config) applyTheme(config.theme);
+  }, [config?.theme]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={styles.root} data-edge={DOCK_EDGE}>
       <div className={styles.bar} data-hit>
-        {SECTIONS.map((section) => (
-          <div key={section} className={`${styles.section} ${styles[section]}`}>
-            {LAYOUT[section].map(({ id }) => {
-              const widget = registry[id];
-              if (!widget) return null;
-              const { Bar } = widget;
-              return <Bar key={id} config={widget.defaultConfig} />;
-            })}
-          </div>
-        ))}
+        {config &&
+          SECTIONS.map((section) => (
+            <div key={section} className={`${styles.section} ${styles[section]}`}>
+              {config.layout[section].map(({ id }) => {
+                const widget = registry[id];
+                if (!widget) return null;
+                const { Bar } = widget;
+                // Widget'ın kendi ayarları config.widgets[id]; yoksa varsayılanı.
+                const widgetConfig = config.widgets[id] ?? widget.defaultConfig;
+                return <Bar key={id} config={widgetConfig} />;
+              })}
+            </div>
+          ))}
       </div>
     </div>
   );
