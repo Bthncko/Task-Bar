@@ -23,6 +23,8 @@ pub struct Config {
     pub position: String,
     /// Windows görev çubuğunu gizle (bölüm 4.2). Varsayılan kapalı; tepsiden açılır.
     pub hide_windows_taskbar: bool,
+    /// Küçültülen pencere dock'taki ikonuna girer, dock'tan açılınca çıkar (macOS tarzı).
+    pub minimize_to_dock: bool,
     pub theme: Theme,
     pub layout: Layout,
     pub widgets: Widgets,
@@ -34,6 +36,7 @@ impl Default for Config {
             version: 1,
             position: "bottom".into(),
             hide_windows_taskbar: false,
+            minimize_to_dock: true,
             theme: Theme::default(),
             layout: Layout::default(),
             widgets: Widgets::default(),

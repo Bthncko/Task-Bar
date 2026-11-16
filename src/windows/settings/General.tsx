@@ -25,6 +25,16 @@ export function General({ config }: { config: Config }) {
           />
         </Row>
         <Row
+          label="Pencereler dock'a küçülsün"
+          hint="Küçültülen pencere dock'taki ikonuna girer, dock'tan açınca ikondan çıkar (macOS tarzı). Açıkken bu pencerelerde Windows'un kendi küçültme/büyütme animasyonları kapanır."
+        >
+          <Toggle
+            label="Pencereler dock'a küçülsün"
+            checked={config.minimizeToDock}
+            onChange={(on) => updateConfig((c) => ({ ...c, minimizeToDock: on }))}
+          />
+        </Row>
+        <Row
           label="Açılışta başlat"
           hint={
             autostart && !autostart.available

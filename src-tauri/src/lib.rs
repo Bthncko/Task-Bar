@@ -65,6 +65,7 @@ pub fn run() {
             commands::open_settings,
             commands::show_dock_menu,
             commands::get_backdrop,
+            commands::set_app_icon_rects,
             commands::get_autostart,
             commands::set_autostart,
             commands::get_config,
@@ -112,6 +113,7 @@ pub fn run() {
             let config = ConfigStore::load(config_dir.clone());
             config.attach(app.handle().clone());
             let hide_taskbar = config.get().hide_windows_taskbar;
+            let minimize_to_dock = config.get().minimize_to_dock;
             app.manage(config);
 
             let (wake_tx, wake_rx) = mpsc::channel();
@@ -132,6 +134,8 @@ pub fn run() {
             win::placement::reposition(hwnd)?;
             dock.show()?;
             win::popup::init(app.handle())?;
+            win::window_fx::set_enabled(minimize_to_dock);
+            win::window_fx::spawn(app.handle());
 
             // Önceki çökmeden kalan gizli çubuğu da burada onarır.
             win::taskbar::init(config_dir, hide_taskbar);

@@ -11,7 +11,7 @@ import styles from "./ui.module.css";
 
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(" ");
 
-export type TileVariant = "plain" | "soft" | "tinted" | "solid";
+export type TileVariant = "plain" | "soft" | "tinted" | "solid" | "dark";
 
 type TileProps = (HTMLAttributes<HTMLElement> & ButtonHTMLAttributes<HTMLButtonElement>) & {
   /** `button`: tıklanabilir karo (klavye ile de). */
@@ -89,8 +89,8 @@ export function Meter({
 }
 
 /** Gruplar arası dikey ince çizgi. */
-export function Divider() {
-  return <span className={styles.divider} aria-hidden />;
+export function Divider({ className }: { className?: string }) {
+  return <span className={cx(styles.divider, className)} aria-hidden />;
 }
 
 /** Eş genişlikli rakamlarla değer (yüzde, derece...). */

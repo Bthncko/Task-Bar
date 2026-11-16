@@ -1,3 +1,6 @@
+/* Uygulama ikonları (PLAN-ASAMA-7 7.4). Büyütme: lib/magnify.ts her karede
+   kutunun genişliğini ve --scale değişkenini yazar. */
+
 .group {
   display: flex;
   align-items: flex-start;
@@ -15,8 +18,18 @@
   justify-content: center;
 }
 
-.icon {
+/* Kutuyu ikon boyunda tutan iki sarmal: belirme ölçeği ve başlatma zıplaması
+   ayrı katmanlarda, büyütmenin transform'u ile çakışmasın. */
+.pop,
+.lift {
   flex: none;
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+.icon {
+  position: relative;
+  isolation: isolate;
   width: var(--icon-size);
   height: var(--icon-size);
   display: grid;
@@ -26,8 +39,25 @@
   will-change: transform;
 }
 
-[data-edge="bottom"] .icon {
+[data-edge="bottom"] .icon,
+[data-edge="bottom"] .pop {
   transform-origin: bottom center;
+}
+
+/* Hover: ikonun arkasında yarı saydam yuvarlak kare; ikonla birlikte büyür. */
+.icon::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  z-index: -1;
+  border-radius: calc(var(--icon-size) * 0.24);
+  background: var(--icon-hover);
+  opacity: 0;
+  transition: opacity var(--t-fast) ease;
+}
+
+.icon:hover::before {
+  opacity: 1;
 }
 
 .icon:active {
@@ -39,7 +69,7 @@
   height: 100%;
   object-fit: contain;
   pointer-events: none;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+  filter: var(--icon-shadow);
 }
 
 /* İkonu alınamayan uygulamalar için yedek kare. */
@@ -57,32 +87,175 @@
     inset 0 0 0 1px var(--hairline);
 }
 
-/* Açık uygulama noktaları: ekran kenarı tarafında. İki nokta = birden çok pencere. */
-.dots {
+/* --- açık uygulama göstergesi: 4 px nokta, odaktaysa 12 px çizgi --------------- */
+
+.indicator {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 50%;
   top: -4px;
-  display: flex;
-  justify-content: center;
-  gap: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transform: translateX(-50%);
+  transition: width var(--t-med) var(--ease-out);
   pointer-events: none;
 }
 
-[data-edge="bottom"] .dots {
+[data-edge="bottom"] .indicator {
   top: auto;
   bottom: -4px;
 }
 
-.dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--text-2);
+.indicator[data-focused] {
+  width: 12px;
 }
 
-/* (7.4'te vurgu renkli nokta → çizgi olacak.) */
-.dots[data-focused="true"] .dot {
-  background: var(--text);
-  box-shadow: 0 0 6px var(--text-2);
+/* --- isim balonu ---------------------------------------------------------------- */
+
+.tooltip {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--icon-size) * var(--scale, 1) + 2px);
+  max-width: 200px;
+  padding: 2px 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 6px;
+  background: var(--tooltip);
+  box-shadow:
+    0 0 0 1px var(--glass-border),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+  font-size: var(--fs-sm);
+  line-height: 14px;
+  color: var(--text);
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-fast) ease;
+}
+
+/* Büyüyen ikonun hemen üstünde; pencerenin büyütme payı içinde kalır. */
+[data-edge="bottom"] .tooltip {
+  top: auto;
+  bottom: calc(var(--icon-size) * var(--scale, 1) + 2px);
+}
+
+.slot:hover .tooltip {
+  opacity: 1;
+  transition-delay: 400ms;
+}
+
+/* --- ayraç (sabitlenenler │ açık uygulamalar) ----------------------------------- */
+
+/* Boşluğun ortasında, düzeni değiştirmeden: büyütme hesabı aynı kalır. */
+.divider {
+  position: absolute;
+  left: calc(var(--icon-gap) / -2 - 0.5px);
+  top: 8px;
+}
+
+/* --- belirme / kaybolma / başlatma --------------------------------------------- */
+
+/* Genişlik (komşular yumuşakça itilsin) + ölçek, yay eğrisiyle. Animasyon
+   bitince büyütücünün yazdığı satır içi genişlik yeniden geçerli olur. */
+.slot[data-entering] {
+  animation: slot-in 350ms var(--ease-spring);
+}
+
+.slot[data-entering] .pop {
+  animation: pop-in 350ms var(--ease-spring);
+}
+
+.slot[data-leaving] {
+  pointer-events: none;
+  animation: slot-out 250ms var(--ease-out) forwards;
+}
+
+.slot[data-leaving] .pop {
+  animation: pop-out 250ms var(--ease-out) forwards;
+}
+
+.slot[data-leaving] .indicator,
+.slot[data-leaving] .tooltip {
+  display: none;
+}
+
+@keyframes slot-in {
+  from {
+    width: 0;
+    margin-right: calc(-1 * var(--icon-gap));
+  }
+  to {
+    width: var(--icon-size);
+    margin-right: 0;
+  }
+}
+
+@keyframes slot-out {
+  to {
+    width: 0;
+    margin-right: calc(-1 * var(--icon-gap));
+  }
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0);
+  }
+}
+
+@keyframes pop-out {
+  to {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.lift[data-launching] {
+  animation: bounce 700ms ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-8px);
+  }
+}
+
+[data-edge="top"] .lift[data-launching] {
+  animation-name: bounce-down;
+}
+
+@keyframes bounce-down {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(10px);
+  }
+  60% {
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot[data-entering],
+  .slot[data-entering] .pop,
+  .lift[data-launching] {
+    animation: none;
+  }
+
+  .slot[data-leaving],
+  .slot[data-leaving] .pop {
+    animation-duration: 1ms;
+  }
 }

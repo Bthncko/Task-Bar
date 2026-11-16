@@ -3,6 +3,7 @@ pub mod focus;
 pub mod placement;
 pub mod popup;
 pub mod settings;
+pub mod window_fx;
 pub mod taskbar;
 pub mod window_style;
 
@@ -39,4 +40,6 @@ pub fn id_to_hwnd(id: isize) -> HWND {
 pub fn shutdown() {
     appbar::remove();
     taskbar::cleanup();
+    // Uygulama pencerelerinde kapattığımız Windows geçişlerini geri aç.
+    window_fx::shutdown();
 }

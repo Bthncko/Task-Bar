@@ -18,6 +18,8 @@ export type Config = {
   version: number;
   position: "top" | "bottom";
   hideWindowsTaskbar: boolean;
+  /** Küçültülen pencere dock ikonuna girer / dock'tan açılınca çıkar. */
+  minimizeToDock: boolean;
   theme: { accent: string; opacity: number; radius: number };
   layout: { left: WidgetRef[]; center: WidgetRef[]; right: WidgetRef[] };
   widgets: {
@@ -114,6 +116,9 @@ export const commands = {
   pinApp: (id: string) => invoke<void>("pin_app", { id }),
   unpinApp: (id: string) => invoke<void>("unpin_app", { id }),
   showAppMenu: (id: string) => invoke<void>("show_app_menu", { id }),
+  /** İkonların dinlenme konumları (dock CSS pikseli): küçültme animasyonunun hedefi. */
+  setAppIconRects: (rects: { id: string; x: number; y: number; size: number }[]) =>
+    invoke<void>("set_app_icon_rects", { rects }),
   openStart: () => invoke<void>("open_start"),
 
   getMedia: () => invoke<MediaState>("get_media"),

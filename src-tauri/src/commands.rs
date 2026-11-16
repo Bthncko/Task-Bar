@@ -130,13 +130,23 @@ pub fn get_config(config: State<ConfigStore>) -> Config {
 
 #[tauri::command]
 pub fn set_config(app: AppHandle, config: State<ConfigStore>, value: Config) -> CmdResult {
-    let hide_before = config.get().hide_windows_taskbar;
+    let before = config.get();
     let hide_after = value.hide_windows_taskbar;
+    let fx_after = value.minimize_to_dock;
     config.update(|c| *c = value).map_err(String::from)?;
-    if hide_before != hide_after {
+    if before.hide_windows_taskbar != hide_after {
         crate::apply_hide_taskbar(&app, hide_after);
     }
+    if before.minimize_to_dock != fx_after {
+        crate::win::window_fx::set_enabled(fx_after);
+    }
     Ok(())
+}
+
+/// Uygulama ikonlarının dinlenme konumları (dock CSS pikseli); küçültme animasyonu hedefi.
+#[tauri::command]
+pub fn set_app_icon_rects(rects: Vec<crate::win::window_fx::IconRect>) {
+    crate::win::window_fx::set_icon_rects(rects);
 }
 
 // --- uygulamalar -----------------------------------------------------------

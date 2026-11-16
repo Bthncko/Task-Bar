@@ -95,7 +95,17 @@ fn icon_data_url(item: &IShellItem) -> Option<String> {
         let rgba = bitmap_to_rgba(bitmap);
         let _ = DeleteObject(HGDIOBJ(bitmap.0));
         let (w, h, pixels) = rgba?;
-        let image = image::RgbaImage::from_raw(w, h, pixels)?;
+        let mut image = image::RgbaImage::from_raw(w, h, pixels)?;
+        // SIIGBF_BIGGERSIZEOK daha büyüğünü (çoğu zaman 256) döndürebilir; en
+        // büyük gösterim 72 px (40 × 1.8), 128 yeter ve bellekte 4 kat küçük (7.4).
+        if w > ICON_PX as u32 || h > ICON_PX as u32 {
+            image = image::imageops::resize(
+                &image,
+                ICON_PX as u32,
+                ICON_PX as u32,
+                image::imageops::FilterType::CatmullRom,
+            );
+        }
         let mut png = Vec::new();
         image
             .write_to(&mut Cursor::new(&mut png), image::ImageFormat::Png)

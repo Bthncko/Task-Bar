@@ -32,6 +32,11 @@ pub fn activate(id: isize) {
     let hwnd = id_to_hwnd(id);
     unsafe {
         if IsIconic(hwnd).as_bool() {
+            // Ayar açıksa pencere ikondan çıkarak açılır; animasyon iş parçacığı
+            // bitince pencereyi açıp bu işlevi yeniden çağırır.
+            if super::window_fx::restore_animated(id) {
+                return;
+            }
             let _ = ShowWindowAsync(hwnd, SW_RESTORE);
         }
         let ok = || GetForegroundWindow() == hwnd;

@@ -7,7 +7,7 @@ export function StartBar() {
   return (
     <Tile
       as="button"
-      variant="plain"
+      variant="dark"
       className={styles.start}
       title="Başlat"
       aria-label="Başlat"

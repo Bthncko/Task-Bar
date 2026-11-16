@@ -300,6 +300,8 @@ fn build(app: &AppHandle, cache: &mut PollerCache) -> (Vec<AppItem>, HashMap<Str
     // 1) Pencereleri uygulamalara grupla (z sırası korunur).
     let raws = windows_list::list(own_pid);
     let alive: HashSet<(isize, u32)> = raws.iter().map(|r| (r.hwnd, r.pid)).collect();
+    // Dock'taki pencerelerde Windows'un küçültme geçişini kapat (ikona girme animasyonu).
+    crate::win::window_fx::track(&raws.iter().map(|r| r.hwnd).collect::<Vec<_>>());
     cache.windows.retain(|k, _| alive.contains(k));
 
     let mut groups: HashMap<String, Vec<WindowInfo>> = HashMap::new();
