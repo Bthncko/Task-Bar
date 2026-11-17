@@ -329,7 +329,7 @@ fn get(object: &IWbemClassObject, name: PCWSTR) -> Result<VARIANT, String> {
     Ok(value)
 }
 
-fn brightness() -> Result<u8, String> {
+pub fn brightness() -> Result<u8, String> {
     let services = wmi()?;
     let row = first(
         &services,

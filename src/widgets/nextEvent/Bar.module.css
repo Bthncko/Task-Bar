@@ -1,0 +1,35 @@
+.tile {
+  gap: 7px;
+  font-size: var(--fs-md);
+  max-width: 280px;
+}
+
+.title {
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status {
+  flex: none;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.status::before {
+  content: "·";
+  margin-right: 7px;
+}
+
+/* Vurgulu (10 dk kala): yazı vurgu renginin üstünde okunur. */
+.tile[data-soon] .status {
+  color: inherit;
+  opacity: 0.85;
+}
+
+/* Sürüyor: kalan süre vurgu renginde. */
+.tile[data-ongoing] .status {
+  color: var(--accent);
+}

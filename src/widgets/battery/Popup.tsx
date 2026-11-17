@@ -216,7 +216,7 @@ export function BatteryPopup() {
  * Parlaklık kaydırıcısı: sürüklerken yerel değer. Bir istek sürerken gelen
  * değerlerden yalnızca sonuncusu, istek bitince gönderilir (WMI çağrısı yavaş).
  */
-function Brightness({
+export function Brightness({
   value,
   onChange,
 }: {
@@ -224,6 +224,12 @@ function Brightness({
   onChange: (v: number) => Promise<void>;
 }) {
   const [local, setLocal] = useState<number | null>(null);
+  // Dışarıdan yeni değer (ör. klavye tuşları, yeniden okuma) gelince yerel değer bırakılır.
+  const [seen, setSeen] = useState(value);
+  if (seen !== value) {
+    setSeen(value);
+    setLocal(null);
+  }
   const busy = useRef(false);
   const pending = useRef<number | null>(null);
   const shown = local ?? value;

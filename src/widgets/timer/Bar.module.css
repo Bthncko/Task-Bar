@@ -1,0 +1,57 @@
+.tile {
+  gap: 7px;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.ring {
+  flex: none;
+  transform: rotate(-90deg);
+}
+
+.track,
+.progress {
+  fill: none;
+  stroke-width: 2.4;
+}
+
+.track {
+  stroke: var(--tile-press);
+}
+
+.progress {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 250ms linear;
+}
+
+.tile[data-paused] .time,
+.tile[data-paused] .progress {
+  opacity: 0.55;
+}
+
+/* Süre doldu: karo vurgu renginde nabız gibi yanıp söner (tıklanınca durur). */
+.tile[data-finished] {
+  animation: flash 1s ease-in-out infinite alternate;
+}
+
+.tile[data-finished] .track {
+  stroke: color-mix(in srgb, var(--on-accent) 30%, transparent);
+}
+
+.tile[data-finished] .progress {
+  stroke: var(--on-accent);
+}
+
+@keyframes flash {
+  to {
+    filter: brightness(1.25);
+    opacity: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile[data-finished] {
+    animation: none;
+  }
+}

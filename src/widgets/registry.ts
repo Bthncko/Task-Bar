@@ -1,15 +1,21 @@
 import type { WidgetDefinition } from "./types";
 import { appsWidget } from "./apps";
 import { batteryWidget } from "./battery";
+import { brightnessWidget } from "./brightness";
 import { clockWidget } from "./clock";
+import { keyboardWidget } from "./keyboard";
 import { mediaWidget } from "./media";
 import { micWidget } from "./mic";
+import { nextEventWidget } from "./nextEvent";
 import { radiosWidget } from "./radios";
+import { recycleBinWidget } from "./recycleBin";
 import { startWidget } from "./start";
 import { sysmonWidget } from "./sysmon";
 import { systemWidget } from "./system";
+import { timerWidget } from "./timer";
 import { volumeWidget } from "./volume";
 import { weatherWidget } from "./weather";
+import { worldClockWidget } from "./worldClock";
 
 // Yeni widget = yeni klasör + buraya bir satır.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,4 +31,11 @@ export const registry: Record<string, WidgetDefinition<any>> = {
   [batteryWidget.id]: batteryWidget,
   [systemWidget.id]: systemWidget,
   [sysmonWidget.id]: sysmonWidget,
+  // 8.8 küçük widget'lar (varsayılan olarak yerleşimde değil).
+  [timerWidget.id]: timerWidget,
+  [nextEventWidget.id]: nextEventWidget,
+  [worldClockWidget.id]: worldClockWidget,
+  [recycleBinWidget.id]: recycleBinWidget,
+  [brightnessWidget.id]: brightnessWidget,
+  [keyboardWidget.id]: keyboardWidget,
 };

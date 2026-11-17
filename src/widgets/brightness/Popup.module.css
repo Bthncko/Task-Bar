@@ -1,0 +1,13 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  padding: 14px 18px;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--text-2);
+}

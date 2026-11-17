@@ -5,6 +5,7 @@ import {
   ChevronUpIcon,
   ClipboardIcon,
   DesktopIcon,
+  MoonIcon,
   QuickSettingsIcon,
   SearchIcon,
   SnipIcon,
@@ -31,4 +32,10 @@ export const SYSTEM_BUTTONS: {
   { id: "clipboard", name: "Pano geçmişi", keys: "Win+V", icon: <ClipboardIcon size={17} /> },
   { id: "snip", name: "Ekran alıntısı", keys: "Win+Shift+S", icon: <SnipIcon size={17} /> },
   { id: "desktop", name: "Masaüstünü göster", keys: "Win+D", icon: <DesktopIcon size={17} /> },
+  {
+    id: "nightLight",
+    name: "Gece ışığı ayarları",
+    keys: "ayar sayfası",
+    icon: <MoonIcon size={16} />,
+  },
 ];

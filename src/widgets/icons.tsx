@@ -170,6 +170,38 @@ export const MoonIcon = (p: IconProps) => (
   </Svg>
 );
 
+/** Zamanlayıcı: kronometre. */
+export const TimerIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="13.5" r="7.5" />
+    <path d="M12 9.5v4l2.5 1.5M10 2.5h4M12 2.5V6" />
+  </Svg>
+);
+
+/** Geri dönüşüm kutusu. */
+export const TrashIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 6.5h16M9.5 6.5V4.5h5v2M6 6.5l1 13a1.5 1.5 0 0 0 1.5 1.4h7a1.5 1.5 0 0 0 1.5-1.4l1-13" />
+    <path d="M10 10.5v6.5M14 10.5v6.5" />
+  </Svg>
+);
+
+/** Dünya saati: küre. */
+export const GlobeIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z" />
+  </Svg>
+);
+
+/** Takvim: sıradaki etkinlik. */
+export const CalendarIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+    <path d="M3.5 10h17M8 3v4M16 3v4" />
+  </Svg>
+);
+
 // --- Wi-Fi / Bluetooth / pil panelleri ---------------------------------------------
 
 export const LockIcon = (p: IconProps) => (

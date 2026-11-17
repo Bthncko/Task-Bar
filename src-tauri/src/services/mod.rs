@@ -9,15 +9,18 @@ pub mod file_drop;
 pub mod icons;
 pub mod ics;
 pub mod jumplist;
+pub mod keyboard;
 pub mod launcher;
 pub mod media;
 pub mod notifications;
 pub mod power;
 pub mod power_mode;
 pub mod radios;
+pub mod recycle;
 pub mod runner;
 pub mod spotify;
 pub mod sysmon;
+pub mod timer;
 pub mod updater;
 pub mod windows_list;
 pub mod wireless;
@@ -45,6 +48,12 @@ pub fn sync_active(app: &AppHandle, config: &Config) {
     }
     if let Some(s) = app.try_state::<sysmon::SysmonService>() {
         s.set_active(on("sysmon"));
+    }
+    if let Some(s) = app.try_state::<recycle::RecycleService>() {
+        s.set_active(on("recycleBin"));
+    }
+    if let Some(s) = app.try_state::<keyboard::KeyboardService>() {
+        s.set_active(on("keyboard"));
     }
     // Düz zeminde duvar kâğıdı şeridi kullanılmaz.
     if let Some(s) = app.try_state::<backdrop::BackdropService>() {

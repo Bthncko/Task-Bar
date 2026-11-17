@@ -1,0 +1,9 @@
+.tile {
+  gap: 6px;
+  font-size: var(--fs-md);
+}
+
+.value {
+  min-width: 3ch;
+  font-variant-numeric: tabular-nums;
+}

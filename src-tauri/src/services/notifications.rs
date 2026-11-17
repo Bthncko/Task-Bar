@@ -15,7 +15,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Mutex, OnceLock, mpsc};
 use std::time::{Duration, Instant};
 
@@ -27,6 +27,7 @@ use windows::UI::Notifications::Management::{
 };
 use windows::UI::Notifications::{KnownNotificationBindings, NotificationKinds, UserNotification};
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
+use windows::Win32::Media::Audio::{PlaySoundW, SND_ALIAS, SND_ASYNC, SND_NODEFAULT};
 use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
 use windows::Win32::System::Registry::{
     HKEY, HKEY_CURRENT_USER, KEY_NOTIFY, REG_NOTIFY_CHANGE_LAST_SET, RegNotifyChangeKeyValue,
@@ -72,6 +73,8 @@ struct State {
 }
 
 static ENABLED: AtomicBool = AtomicBool::new(false);
+/// Kendi kartlarımız (zamanlayıcı ...): Windows bildirim kimlikleriyle çakışmasın.
+static LOCAL_ID: AtomicU32 = AtomicU32::new(0xF000_0000);
 /// Dinleyici çalışıyor (izin var). Değilse kutucuklar asla kapatılmaz: yoksa
 /// bildirimler hiçbir yerde görünmezdi.
 static WORKING: AtomicBool = AtomicBool::new(false);
@@ -413,6 +416,29 @@ fn notice(n: &UserNotification, id: u32) -> Option<Notice> {
         title: texts.next().unwrap_or_default(),
         body: texts.collect::<Vec<_>>().join("\n"),
     })
+}
+
+/// Dock'un kendi bildirimi (ör. zamanlayıcı bitti): kart + Windows'un
+/// bildirim sesi (kullanıcının seçtiği ses).
+pub fn show_local(app: &AppHandle, app_name: &str, title: &str, body: &str) {
+    let id = LOCAL_ID.fetch_add(1, Ordering::Relaxed);
+    let _ = app.emit(
+        NOTIFY_SHOW,
+        Notice {
+            id,
+            app: app_name.to_string(),
+            icon: None,
+            title: title.to_string(),
+            body: body.to_string(),
+        },
+    );
+    unsafe {
+        let _ = PlaySoundW(
+            windows::core::w!("Notification.Default"),
+            None,
+            SND_ALIAS | SND_ASYNC | SND_NODEFAULT,
+        );
+    }
 }
 
 /// Karta tıklandı: gönderen uygulamanın AUMID'si; bildirim merkezden de kalkar

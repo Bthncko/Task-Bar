@@ -124,6 +124,13 @@ pub fn run() {
             commands::set_power_timeout,
             commands::get_tray,
             commands::tray_click,
+            commands::timer_get,
+            commands::timer_control,
+            commands::get_recycle,
+            commands::open_recycle_bin,
+            commands::empty_recycle_bin,
+            commands::get_keyboard,
+            commands::get_brightness,
             commands::notify_layout,
             commands::notify_activate,
             commands::wifi_scan,
@@ -178,6 +185,9 @@ pub fn run() {
             services::power::spawn(app.handle());
             services::radios::spawn(app.handle());
             services::sysmon::spawn(app.handle());
+            services::recycle::spawn(app.handle());
+            services::keyboard::spawn(app.handle());
+            services::timer::init(app.handle());
             services::backdrop::spawn(app.handle());
             services::accent::spawn(app.handle());
             // Servisler kapalı başlar; yerleşimdeki widget'larınki açılır (8.1).

@@ -38,6 +38,7 @@ pub fn open_system_settings(page: String) -> CmdResult {
         "sound-mixer" => "ms-settings:apps-volume",
         "battery" => "ms-settings:batterysaver",
         "power" => "ms-settings:powersleep",
+        "nightlight" => "ms-settings:nightlight",
         // Dış bağlantılar da yalnızca bilinen adreslerle (frontend keyfi URL açtıramaz).
         "spotify-dashboard" => "https://developer.spotify.com/dashboard",
         _ => return Err(format!("bilinmeyen sayfa: {page}")),
@@ -593,6 +594,64 @@ pub fn notify_activate(apps: State<AppsService>, id: u32) -> CmdResult {
         Some(aumid) => apps.bring_aumid(&aumid).map_err(Into::into),
         None => Ok(()),
     }
+}
+
+// --- küçük widget'lar (8.8) --------------------------------------------------------
+
+#[tauri::command]
+pub fn timer_get() -> crate::services::timer::TimerState {
+    crate::services::timer::get()
+}
+
+/// `action`: "start" (`seconds` ile), "pause", "resume", "reset".
+#[tauri::command]
+pub fn timer_control(action: String, seconds: Option<u32>) -> CmdResult {
+    use crate::services::timer;
+    match action.as_str() {
+        "start" => timer::start(seconds.unwrap_or(25 * 60)),
+        "pause" => timer::pause(),
+        "resume" => timer::resume(),
+        "reset" => timer::reset(),
+        _ => return Err(format!("bilinmeyen zamanlayıcı eylemi: {action}")),
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_recycle(
+    recycle: State<crate::services::recycle::RecycleService>,
+) -> Option<crate::services::recycle::RecycleState> {
+    recycle.get()
+}
+
+#[tauri::command]
+pub fn open_recycle_bin() -> CmdResult {
+    crate::services::recycle::open()?;
+    Ok(())
+}
+
+/// Windows'un onay penceresi açılır; arka planda beklenir.
+#[tauri::command]
+pub async fn empty_recycle_bin(app: AppHandle) -> CmdResult {
+    tauri::async_runtime::spawn_blocking(crate::services::recycle::empty)
+        .await
+        .map_err(|e| e.to_string())?;
+    app.state::<crate::services::recycle::RecycleService>()
+        .wake();
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_keyboard(
+    keyboard: State<crate::services::keyboard::KeyboardService>,
+) -> Option<crate::services::keyboard::KeyboardState> {
+    keyboard.get()
+}
+
+/// Parlaklık widget'ı (8.8): dizüstü ekranı (WMI); yoksa `None`.
+#[tauri::command]
+pub async fn get_brightness() -> CmdResult<Option<u8>> {
+    blocking_str(|| Ok(battery_settings::brightness().ok())).await
 }
 
 /// Kendi tepsimizdeki simgeler (`win::tray_host`).

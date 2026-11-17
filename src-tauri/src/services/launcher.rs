@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT,
     KEYEVENTF_KEYUP, SendInput, VIRTUAL_KEY, VK_A, VK_B, VK_CONTROL, VK_D, VK_LSHIFT, VK_LWIN,
-    VK_MENU, VK_N, VK_RETURN, VK_RWIN, VK_S, VK_SHIFT, VK_TAB, VK_V,
+    VK_MENU, VK_N, VK_RETURN, VK_RWIN, VK_S, VK_SHIFT, VK_SPACE, VK_TAB, VK_V,
 };
 use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetForegroundWindow, SW_SHOWNORMAL};
@@ -142,6 +142,8 @@ pub fn system_shortcut(action: &str) -> AppResult<()> {
         // istiyor. Kısayol her sürümde aynı alıntı katmanını açar.
         "snip" => &[VK_LWIN, VK_LSHIFT, VK_S],
         "desktop" => &[VK_LWIN, VK_D],
+        // Giriş dili / klavye düzeni değiştirici (8.8).
+        "inputSwitch" => &[VK_LWIN, VK_SPACE],
         "tray" => return open_tray(),
         _ => return Err(AppError::Win32(format!("bilinmeyen kısayol: {action}"))),
     };

@@ -146,6 +146,35 @@ pub struct Widgets {
     pub clock: ClockConfig,
     pub system: SystemConfig,
     pub sysmon: SysmonConfig,
+    pub world_clock: WorldClockConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WorldClockConfig {
+    /// Gösterilen şehirler (8.8); saat dilimi IANA adı ("Europe/London").
+    pub cities: Vec<WorldCity>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct WorldCity {
+    pub label: String,
+    pub tz: String,
+}
+
+impl Default for WorldClockConfig {
+    fn default() -> Self {
+        let city = |label: &str, tz: &str| WorldCity {
+            label: label.into(),
+            tz: tz.into(),
+        };
+        Self {
+            cities: vec![
+                city("Londra", "Europe/London"),
+                city("New York", "America/New_York"),
+            ],
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

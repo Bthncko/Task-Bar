@@ -43,6 +43,7 @@ export type Config = {
     clock: { showSeconds: boolean };
     system: { buttons: SystemButton[] };
     sysmon: { view: SysmonView };
+    worldClock: { cities: WorldCity[] };
   } & Record<string, unknown>;
 };
 
@@ -55,7 +56,22 @@ export type SystemButton =
   | "clipboard"
   | "snip"
   | "desktop"
-  | "tray";
+  | "tray"
+  | "nightLight"
+  | "inputSwitch";
+
+/** Dünya saati (8.8): IANA saat dilimi ("Europe/London"). */
+export type WorldCity = { label: string; tz: string };
+
+/** Zamanlayıcı (8.8). Çalışırken `endsAt` (Unix ms) dolu; geri sayım sayfada. */
+export type TimerState = {
+  total: number;
+  remainingMs: number;
+  endsAt: number | null;
+  finished: boolean;
+};
+export type RecycleState = { items: number; bytes: number };
+export type KeyboardState = { short: string; name: string };
 
 /** Pencere önizlemesi (8.3). */
 export type PreviewOpen = { appId: string; seq: number };
@@ -179,6 +195,9 @@ export const events = {
   /** Rust kapanma istiyor (odak kaybı, ikinci tıklama): animasyonla kapat. */
   popupClose: "popup://close",
   sysmon: "sysmon://changed",
+  timer: "timer://changed",
+  recycle: "recycle://changed",
+  keyboard: "keyboard://changed",
   /** Yalnızca bildirim penceresine: yeni kart (Notice) / kaldırılan bildirim (id). */
   notifyShow: "notify://show",
   notifyGone: "notify://gone",
@@ -237,7 +256,14 @@ export const commands = {
   setDockExpanded: (expanded: boolean) => invoke<void>("set_dock_expanded", { expanded }),
   openSystemSettings: (
     page:
-      "wifi" | "bluetooth" | "sound" | "sound-mixer" | "battery" | "power" | "spotify-dashboard",
+      | "wifi"
+      | "bluetooth"
+      | "sound"
+      | "sound-mixer"
+      | "battery"
+      | "power"
+      | "nightlight"
+      | "spotify-dashboard",
   ) => invoke<void>("open_system_settings", { page }),
   /** Windows'un hızlı ayarlar paneli; "wifi" doğrudan ağ listesini açar. */
   openQuickSettings: (panel: "wifi" | "bluetooth" | "battery") =>
@@ -347,6 +373,14 @@ export const commands = {
   setPowerTimeout: (kind: "screen" | "sleep", seconds: number) =>
     invoke<void>("set_power_timeout", { kind, seconds }),
   getTray: () => invoke<TrayState>("get_tray"),
+  timerGet: () => invoke<TimerState>("timer_get"),
+  timerControl: (action: "start" | "pause" | "resume" | "reset", seconds?: number) =>
+    invoke<void>("timer_control", { action, seconds }),
+  getRecycle: () => invoke<RecycleState | null>("get_recycle"),
+  openRecycleBin: () => invoke<void>("open_recycle_bin"),
+  emptyRecycleBin: () => invoke<void>("empty_recycle_bin"),
+  getKeyboard: () => invoke<KeyboardState | null>("get_keyboard"),
+  getBrightness: () => invoke<number | null>("get_brightness"),
   notifyLayout: (width: number, height: number) => invoke<void>("notify_layout", { width, height }),
   notifyActivate: (id: number) => invoke<void>("notify_activate", { id }),
   trayClick: (id: string, button: "left" | "double" | "right") =>

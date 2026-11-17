@@ -28,6 +28,9 @@ export function SystemBar({ config }: { config: SystemConfig }) {
                     : commands.openTray({ x: r.left, width: r.width }),
                 )
                 .catch(report("open_tray"));
+            } else if (b.id === "nightLight") {
+              // Gece ışığını açıp kapatan açık bir API yok (8.8): ayar sayfası.
+              commands.openSystemSettings("nightlight").catch(report("open_system_settings"));
             } else {
               commands.systemShortcut(b.id).catch(report("system_shortcut"));
             }
