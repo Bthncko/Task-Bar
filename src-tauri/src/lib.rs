@@ -98,6 +98,7 @@ pub fn run() {
             commands::sysmon_detail,
             commands::open_task_manager,
             commands::system_shortcut,
+            commands::open_tray,
             commands::get_media,
             commands::media_toggle,
             commands::media_next,

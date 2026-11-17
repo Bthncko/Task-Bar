@@ -14,6 +14,6 @@ export const systemWidget: WidgetDefinition<SystemConfig> = {
   description: "Bildirim merkezi, hızlı ayarlar, arama gibi Windows panellerini açar.",
   defaultSection: "right",
   Bar: SystemBar,
-  defaultConfig: { buttons: ["notifications", "quickSettings"] },
+  defaultConfig: { buttons: ["tray", "notifications", "quickSettings"] },
   Settings: SystemSettings,
 };

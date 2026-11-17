@@ -199,6 +199,13 @@ export const TaskViewIcon = (p: IconProps) => (
   </Svg>
 );
 
+/** Tepsi taşma penceresi ("gizli simgeler"). */
+export const ChevronUpIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6 14.5l6-6 6 6" />
+  </Svg>
+);
+
 export const SearchIcon = (p: IconProps) => (
   <Svg {...p}>
     <circle cx="10.5" cy="10.5" r="6" />

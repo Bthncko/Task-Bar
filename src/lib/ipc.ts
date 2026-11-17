@@ -46,7 +46,14 @@ export type Config = {
 
 /** Sistem düğmeleri (8.2); her biri Windows'un kendi panelini açar. */
 export type SystemButton =
-  "notifications" | "quickSettings" | "taskView" | "search" | "clipboard" | "snip" | "desktop";
+  | "notifications"
+  | "quickSettings"
+  | "taskView"
+  | "search"
+  | "clipboard"
+  | "snip"
+  | "desktop"
+  | "tray";
 
 /** Pencere önizlemesi (8.3). */
 export type PreviewOpen = { appId: string; seq: number };
@@ -250,6 +257,8 @@ export const commands = {
   hidePreview: () => invoke<void>("hide_preview"),
   activateWindow: (hwnd: number) => invoke<void>("activate_window", { hwnd }),
   systemShortcut: (action: SystemButton) => invoke<void>("system_shortcut", { action }),
+  /** Tepsi taşma penceresi, düğmenin üstünde (8.6). */
+  openTray: (anchor: { x: number; width: number }) => invoke<void>("open_tray", { anchor }),
 
   getMedia: () => invoke<MediaState>("get_media"),
   mediaToggle: () => invoke<void>("media_toggle"),

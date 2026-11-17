@@ -14,7 +14,14 @@ export function SystemBar({ config }: { config: SystemConfig }) {
           key={b.id}
           aria-label={b.name}
           title={`${b.name} (${b.keys})`}
-          onClick={() => commands.systemShortcut(b.id).catch(report("system_shortcut"))}
+          onClick={(e) => {
+            if (b.id === "tray") {
+              const r = e.currentTarget.getBoundingClientRect();
+              commands.openTray({ x: r.left, width: r.width }).catch(report("open_tray"));
+            } else {
+              commands.systemShortcut(b.id).catch(report("system_shortcut"));
+            }
+          }}
         >
           {b.icon}
         </IconButton>

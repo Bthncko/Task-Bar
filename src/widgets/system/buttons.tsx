@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { SystemButton } from "../../lib/ipc";
 import {
   BellIcon,
+  ChevronUpIcon,
   ClipboardIcon,
   DesktopIcon,
   QuickSettingsIcon,
@@ -17,6 +18,7 @@ export const SYSTEM_BUTTONS: {
   keys: string;
   icon: ReactNode;
 }[] = [
+  { id: "tray", name: "Gizli simgeler (tepsi)", keys: "Win+B", icon: <ChevronUpIcon size={17} /> },
   { id: "notifications", name: "Bildirim merkezi", keys: "Win+N", icon: <BellIcon size={17} /> },
   {
     id: "quickSettings",

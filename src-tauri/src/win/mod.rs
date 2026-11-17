@@ -6,6 +6,7 @@ pub mod preview;
 pub mod settings;
 pub mod window_fx;
 pub mod taskbar;
+pub mod tray;
 pub mod window_style;
 
 use windows::Win32::Foundation::HWND;

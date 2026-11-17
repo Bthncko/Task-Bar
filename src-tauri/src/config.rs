@@ -163,14 +163,18 @@ impl Default for SysmonConfig {
 #[serde(rename_all = "camelCase", default)]
 pub struct SystemConfig {
     /// Gösterilen sistem düğmeleri (8.2): "notifications", "quickSettings",
-    /// "taskView", "search", "clipboard", "snip", "desktop".
+    /// "taskView", "search", "clipboard", "snip", "desktop", "tray".
     pub buttons: Vec<String>,
 }
 
 impl Default for SystemConfig {
     fn default() -> Self {
         Self {
-            buttons: vec!["notifications".into(), "quickSettings".into()],
+            buttons: vec![
+                "tray".into(),
+                "notifications".into(),
+                "quickSettings".into(),
+            ],
         }
     }
 }

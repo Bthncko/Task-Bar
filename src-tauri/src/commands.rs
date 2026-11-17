@@ -354,6 +354,15 @@ pub fn open_task_manager() -> CmdResult {
     launcher::shell_open("taskmgr.exe", "", "").map_err(Into::into)
 }
 
+/// Tepsi düğmesi (8.6): Windows'un taşma penceresini açar, düğmenin üstüne taşır.
+#[tauri::command]
+pub async fn open_tray(app: AppHandle, anchor: crate::win::tray::Anchor) -> CmdResult {
+    tauri::async_runtime::spawn_blocking(move || crate::win::tray::open(&app, anchor))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(Into::into)
+}
+
 /// Sistem düğmeleri (8.2). Değiştirici tuş bekleyebileceği için ana iş
 /// parçacığında değil.
 #[tauri::command]

@@ -4,11 +4,11 @@ use std::time::{Duration, Instant};
 
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT,
-    KEYEVENTF_KEYUP, SendInput, VIRTUAL_KEY, VK_A, VK_CONTROL, VK_D, VK_LSHIFT, VK_LWIN, VK_MENU,
-    VK_N, VK_RWIN, VK_S, VK_SHIFT, VK_TAB, VK_V,
+    KEYEVENTF_KEYUP, SendInput, VIRTUAL_KEY, VK_A, VK_B, VK_CONTROL, VK_D, VK_LSHIFT, VK_LWIN,
+    VK_MENU, VK_N, VK_RETURN, VK_RWIN, VK_S, VK_SHIFT, VK_TAB, VK_V,
 };
 use windows::Win32::UI::Shell::ShellExecuteW;
-use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetForegroundWindow, SW_SHOWNORMAL};
 use windows::core::{PCWSTR, w};
 
 use crate::error::{AppError, AppResult};
@@ -142,9 +142,42 @@ pub fn system_shortcut(action: &str) -> AppResult<()> {
         // istiyor. Kısayol her sürümde aynı alıntı katmanını açar.
         "snip" => &[VK_LWIN, VK_LSHIFT, VK_S],
         "desktop" => &[VK_LWIN, VK_D],
+        "tray" => return open_tray(),
         _ => return Err(AppError::Win32(format!("bilinmeyen kısayol: {action}"))),
     };
     send_chord(keys)
+}
+
+/// Tepsi taşma penceresi ("gizli simgeler", 8.6). Denendi (bu makinede,
+/// Windows çubuğu gizliyken): Win+B klavye odağını gizli çubuktaki "Gizli
+/// simgeleri göster" okuna getirir; ok Enter ile aç / kapa çalışır. Pencere
+/// dock'un üstünde, sağda açılır ve fareyle kullanılır. Bazen Win+B pencereyi
+/// kendisi açıp öne getirir; o zaman Enter gönderilmez (yoksa içindeki ilk
+/// simge çalışır). Pencerenin açık olup olmadığı görünürlüğünden anlaşılmıyor
+/// (kapalıyken de "görünür"), bu yüzden ön plandaki pencereye bakılır.
+pub fn open_tray() -> AppResult<()> {
+    const WAIT: Duration = Duration::from_millis(450);
+    send_chord(&[VK_LWIN, VK_B])?;
+    let start = Instant::now();
+    loop {
+        std::thread::sleep(Duration::from_millis(50));
+        let class = foreground_class();
+        if class == "TopLevelWindowForOverflowXamlIsland" {
+            return Ok(()); // kendisi açıldı
+        }
+        if start.elapsed() >= WAIT {
+            if class == "Shell_TrayWnd" {
+                send_chord(&[VK_RETURN])?; // odak okta: aç
+            }
+            return Ok(());
+        }
+    }
+}
+
+fn foreground_class() -> String {
+    let mut buf = [0u16; 128];
+    let len = unsafe { GetClassNameW(GetForegroundWindow(), &mut buf) };
+    String::from_utf16_lossy(&buf[..len.max(0) as usize])
 }
 
 /// Kullanıcının basılı tuttuğu Ctrl / Shift / Alt / Win kombinasyonu bozar
