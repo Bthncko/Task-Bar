@@ -102,6 +102,27 @@ struct Watched {
     volume: IAudioEndpointVolume,
 }
 
+/// Servisin Windows kayıtları; bırakılınca (servis durunca, 8.1) silinir.
+struct Subscriptions {
+    enumerator: Option<IMMDeviceEnumerator>,
+    devices: IMMNotificationClient,
+    on_volume: IAudioEndpointVolumeCallback,
+    watched: Option<Watched>,
+}
+
+impl Drop for Subscriptions {
+    fn drop(&mut self) {
+        unsafe {
+            if let Some(w) = self.watched.take() {
+                let _ = w.volume.UnregisterControlChangeNotify(&self.on_volume);
+            }
+            if let Some(e) = &self.enumerator {
+                let _ = e.UnregisterEndpointNotificationCallback(&self.devices);
+            }
+        }
+    }
+}
+
 pub fn spawn(app: &AppHandle) {
     runner::spawn(
         app,
@@ -110,17 +131,25 @@ pub fn spawn(app: &AppHandle) {
         POLL,
         None,
         |waker: Waker<AudioCmd>| {
-            let mut enumerator: Option<IMMDeviceEnumerator> = None;
-            let devices: IMMNotificationClient = DevicesChanged(waker.clone()).into();
-            let on_volume: IAudioEndpointVolumeCallback = VolumeChanged(waker).into();
-            let mut watched: Option<Watched> = None;
+            let mut subs = Subscriptions {
+                enumerator: None,
+                devices: DevicesChanged(waker.clone()).into(),
+                on_volume: VolumeChanged(waker).into(),
+                watched: None,
+            };
             move |cmd: Option<AudioCmd>| {
+                let Subscriptions {
+                    enumerator,
+                    devices,
+                    on_volume,
+                    watched,
+                } = &mut subs;
                 if enumerator.is_none() {
-                    enumerator =
+                    *enumerator =
                         unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) }.ok();
                     if let Some(e) = &enumerator
                         && let Err(err) =
-                            unsafe { e.RegisterEndpointNotificationCallback(&devices) }
+                            unsafe { e.RegisterEndpointNotificationCallback(&*devices) }
                     {
                         eprintln!("[audio] aygıt bildirimi kaydedilemedi: {err}");
                     }
@@ -138,14 +167,14 @@ pub fn spawn(app: &AppHandle) {
                 if watched.as_ref().map(|w| &w.id) != Some(&id) {
                     // Varsayılan aygıt değişti: seviye bildirimini yenisine taşı.
                     if let Some(old) = watched.take() {
-                        let _ = unsafe { old.volume.UnregisterControlChangeNotify(&on_volume) };
+                        let _ = unsafe { old.volume.UnregisterControlChangeNotify(&*on_volume) };
                     }
                     let volume: IAudioEndpointVolume =
                         unsafe { device.Activate(CLSCTX_ALL, None) }.ok()?;
-                    if let Err(err) = unsafe { volume.RegisterControlChangeNotify(&on_volume) } {
+                    if let Err(err) = unsafe { volume.RegisterControlChangeNotify(&*on_volume) } {
                         eprintln!("[audio] seviye bildirimi kaydedilemedi: {err}");
                     }
-                    watched = Some(Watched { id, volume });
+                    *watched = Some(Watched { id, volume });
                 }
                 let volume = &watched.as_ref()?.volume;
                 unsafe {

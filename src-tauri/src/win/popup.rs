@@ -160,7 +160,6 @@ pub fn ready(app: &AppHandle, seq: u64, width: f64, height: f64) -> AppResult<Op
     let mut dock_rect = RECT::default();
     unsafe { GetWindowRect(dock_hwnd, &mut dock_rect)? };
     let bar = placement::reserved_rect().unwrap_or(dock_rect);
-    let monitor = placement::primary_monitor_rect();
 
     let pad = (SHADOW_PAD * scale).round() as i32;
     let w = (width * scale).round() as i32 + 2 * pad;
@@ -170,6 +169,8 @@ pub fn ready(app: &AppHandle, seq: u64, width: f64, height: f64) -> AppResult<Op
 
     // Paneli widget'ın ortasına hizala; panel ekran dışına taşmasın (gölge taşabilir).
     let center = dock_rect.left + ((anchor.x + anchor.width / 2.0) * scale).round() as i32;
+    // Widget'ın bulunduğu monitör (8.1; şimdilik dock yalnızca birincilde).
+    let monitor = placement::monitor_rect_at(center, (bar.top + bar.bottom) / 2);
     let min_x = monitor.left + margin - pad;
     let max_x = (monitor.right - margin + pad - w).max(min_x);
     let x = (center - w / 2).clamp(min_x, max_x);

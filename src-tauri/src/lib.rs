@@ -144,6 +144,8 @@ pub fn run() {
             services::radios::spawn(app.handle());
             services::backdrop::spawn(app.handle());
             services::accent::spawn(app.handle());
+            // Servisler kapalı başlar; yerleşimdeki widget'larınki açılır (8.1).
+            services::sync_active(app.handle(), &app.state::<ConfigStore>().get());
 
             let dock = app
                 .get_webview_window("dock")

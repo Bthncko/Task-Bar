@@ -19,8 +19,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::Graphics::Gdi::{
-    CreateRectRgn, GetMonitorInfoW, MONITOR_DEFAULTTOPRIMARY, MONITORINFO, MonitorFromPoint,
-    RDW_ALLCHILDREN, RDW_INVALIDATE, RDW_UPDATENOW, RedrawWindow, SetWindowRgn,
+    CreateRectRgn, GetMonitorInfoW, MONITOR_DEFAULTTONEAREST, MONITOR_DEFAULTTOPRIMARY,
+    MONITORINFO, MonitorFromPoint, RDW_ALLCHILDREN, RDW_INVALIDATE, RDW_UPDATENOW, RedrawWindow,
+    SetWindowRgn,
 };
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
 use windows::Win32::UI::WindowsAndMessaging::{SWP_NOACTIVATE, SWP_NOZORDER, SetWindowPos};
@@ -172,6 +173,19 @@ fn edge_strip(monitor: RECT, thickness: i32) -> RECT {
 pub fn primary_monitor_rect() -> RECT {
     unsafe {
         let monitor = MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY);
+        let mut info = MONITORINFO {
+            cbSize: size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        let _ = GetMonitorInfoW(monitor, &mut info);
+        info.rcMonitor
+    }
+}
+
+/// Noktanın bulunduğu (ya da en yakın) monitörün dikdörtgeni (8.1: çoklu monitöre hazırlık).
+pub fn monitor_rect_at(x: i32, y: i32) -> RECT {
+    unsafe {
+        let monitor = MonitorFromPoint(POINT { x, y }, MONITOR_DEFAULTTONEAREST);
         let mut info = MONITORINFO {
             cbSize: size_of::<MONITORINFO>() as u32,
             ..Default::default()

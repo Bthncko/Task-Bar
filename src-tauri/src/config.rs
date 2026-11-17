@@ -113,6 +113,16 @@ pub struct Layout {
     pub right: Vec<WidgetRef>,
 }
 
+impl Layout {
+    /// Widget üç bölümden birinde mi.
+    pub fn contains(&self, id: &str) -> bool {
+        [&self.left, &self.center, &self.right]
+            .into_iter()
+            .flatten()
+            .any(|w| w.id == id)
+    }
+}
+
 impl Default for Layout {
     fn default() -> Self {
         Self {
@@ -260,6 +270,7 @@ impl ConfigStore {
         };
         if let Some(app) = self.app.get() {
             let _ = app.emit(CONFIG_CHANGED, &next);
+            crate::services::sync_active(app, &next);
         }
         Ok(())
     }

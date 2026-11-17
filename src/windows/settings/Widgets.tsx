@@ -1,8 +1,8 @@
 import type { Config } from "../../lib/ipc";
 import { updateConfig } from "../../lib/store";
 import { registry } from "../../widgets/registry";
-import type { DockSection } from "../../widgets/types";
-import { Section } from "./controls";
+import { CATEGORIES, type DockSection, type WidgetCategory } from "../../widgets/types";
+import { Card, Row, Section } from "./controls";
 import { SortableLists, type SortList } from "./SortableLists";
 import styles from "./Settings.module.css";
 
@@ -45,6 +45,20 @@ export function Widgets({ config }: { config: Config }) {
       },
     }));
 
+  /** Katalogdan ekle: widget'ın varsayılan bölümünün sonuna. */
+  const add = (id: string) => {
+    const section = registry[id].defaultSection ?? "right";
+    updateConfig((c) => ({
+      ...c,
+      layout: { ...c.layout, [section]: [...c.layout[section], { id }] },
+    }));
+  };
+
+  // Katalog: kategoriye göre gruplu (8.1); boş kategori gösterilmez.
+  const groups = (Object.keys(CATEGORIES) as WidgetCategory[])
+    .map((cat) => [cat, Object.values(registry).filter((w) => w.category === cat)] as const)
+    .filter(([, defs]) => defs.length > 0);
+
   /** × düğmesi: sürüklemeden kapatma. */
   const remove = (id: string) =>
     save(
@@ -75,6 +89,26 @@ export function Widgets({ config }: { config: Config }) {
           )
         }
       />
+
+      <h3 className={styles.subTitle}>Widget ekle</h3>
+      {groups.map(([cat, defs]) => (
+        <div key={cat} className={styles.listBox}>
+          <h4 className={styles.listTitle}>{CATEGORIES[cat]}</h4>
+          <Card>
+            {defs.map((w) => (
+              <Row key={w.id} label={w.name} hint={w.description}>
+                {used.has(w.id) ? (
+                  <span className={styles.inUse}>Dock'ta</span>
+                ) : (
+                  <button type="button" className={styles.button} onClick={() => add(w.id)}>
+                    Ekle
+                  </button>
+                )}
+              </Row>
+            ))}
+          </Card>
+        </div>
+      ))}
     </Section>
   );
 }

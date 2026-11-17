@@ -2,7 +2,7 @@
 
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT, KEYEVENTF_KEYUP, SendInput,
-    VK_LWIN,
+    VIRTUAL_KEY, VK_LWIN,
 };
 use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
@@ -91,17 +91,27 @@ pub fn open_uri(uri: &str) -> AppResult<()> {
 
 /// Windows'un kendi Başlat menüsü: Win tuşuna basıp bırak.
 pub fn open_start() -> AppResult<()> {
-    let key = |flags: KEYBD_EVENT_FLAGS| INPUT {
+    send_chord(&[VK_LWIN])
+}
+
+/// Tuş kombinasyonu gönderir (8.1): tuşlar sırayla basılır, ters sırayla
+/// bırakılır. Ör. bildirim merkezi `send_chord(&[VK_LWIN, VK_N])`.
+pub fn send_chord(keys: &[VIRTUAL_KEY]) -> AppResult<()> {
+    let key = |vk: VIRTUAL_KEY, flags: KEYBD_EVENT_FLAGS| INPUT {
         r#type: INPUT_KEYBOARD,
         Anonymous: INPUT_0 {
             ki: KEYBDINPUT {
-                wVk: VK_LWIN,
+                wVk: vk,
                 dwFlags: flags,
                 ..Default::default()
             },
         },
     };
-    let inputs = [key(KEYBD_EVENT_FLAGS(0)), key(KEYEVENTF_KEYUP)];
+    let inputs: Vec<INPUT> = keys
+        .iter()
+        .map(|&vk| key(vk, KEYBD_EVENT_FLAGS(0)))
+        .chain(keys.iter().rev().map(|&vk| key(vk, KEYEVENTF_KEYUP)))
+        .collect();
     let sent = unsafe { SendInput(&inputs, size_of::<INPUT>() as i32) };
     if sent as usize == inputs.len() {
         Ok(())

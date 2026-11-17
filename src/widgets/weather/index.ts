@@ -12,6 +12,9 @@ export interface WeatherConfig {
 export const weatherWidget: WidgetDefinition<WeatherConfig> = {
   id: "weather",
   name: "Hava durumu",
+  category: "info",
+  description: "Anlık hava; tıklayınca saatlik ve 7 günlük tahmin.",
+  defaultSection: "center",
   Bar: WeatherBar,
   Popup: WeatherPopup,
   popupSize: { width: 340, height: 500 },

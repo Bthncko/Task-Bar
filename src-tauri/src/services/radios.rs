@@ -56,6 +56,24 @@ pub struct SetRadio {
 
 pub type RadiosService = runner::ServiceHandle<RadiosState, SetRadio>;
 
+/// Olay abonelikleri; bırakılınca (servis durunca, 8.1) silinir.
+#[derive(Default)]
+struct Subscriptions {
+    radios: Vec<(Radio, i64)>,
+    network: Option<i64>,
+}
+
+impl Drop for Subscriptions {
+    fn drop(&mut self) {
+        for (radio, token) in &self.radios {
+            let _ = radio.RemoveStateChanged(*token);
+        }
+        if let Some(t) = self.network {
+            let _ = NetworkInformation::RemoveNetworkStatusChanged(t);
+        }
+    }
+}
+
 pub fn spawn(app: &AppHandle) {
     runner::spawn(
         app,
@@ -65,16 +83,16 @@ pub fn spawn(app: &AppHandle) {
         RadiosState::default(),
         |waker: Waker<SetRadio>| {
             let mut access_requested = false;
-            // Olaylarına abone olunan radyolar: nesne yaşadıkça abonelik sürer.
-            let mut watched: Vec<Radio> = Vec::new();
+            let mut subs = Subscriptions::default();
             let w = waker.clone();
-            if let Err(e) = NetworkInformation::NetworkStatusChanged(
-                &NetworkStatusChangedEventHandler::new(move |_| {
+            match NetworkInformation::NetworkStatusChanged(&NetworkStatusChangedEventHandler::new(
+                move |_| {
                     w.wake();
                     Ok(())
-                }),
-            ) {
-                eprintln!("[radios] ağ bildirimi kaydedilemedi: {e}");
+                },
+            )) {
+                Ok(t) => subs.network = Some(t),
+                Err(e) => eprintln!("[radios] ağ bildirimi kaydedilemedi: {e}"),
             }
             move |cmd: Option<SetRadio>| {
                 if !access_requested {
@@ -82,8 +100,8 @@ pub fn spawn(app: &AppHandle) {
                     let _ = Radio::RequestAccessAsync().and_then(|op| op.join());
                     access_requested = true;
                 }
-                if watched.is_empty() {
-                    watched = subscribe(&waker);
+                if subs.radios.is_empty() {
+                    subs.radios = subscribe(&waker);
                 }
                 let radios = list_radios();
                 if let Some(cmd) = cmd {
@@ -102,20 +120,21 @@ pub fn spawn(app: &AppHandle) {
     );
 }
 
-/// Her radyonun durum değişimine abone olur; abone olunanları döndürür.
-fn subscribe(waker: &Waker<SetRadio>) -> Vec<Radio> {
+/// Her radyonun durum değişimine abone olur; radyo ve jetonu döndürür.
+fn subscribe(waker: &Waker<SetRadio>) -> Vec<(Radio, i64)> {
     list_radios()
         .into_iter()
-        .filter(|radio| {
+        .filter_map(|radio| {
             let w = waker.clone();
-            radio
+            let token = radio
                 .StateChanged(&TypedEventHandler::<Radio, IInspectable>::new(
                     move |_, _| {
                         w.wake();
                         Ok(())
                     },
                 ))
-                .is_ok()
+                .ok()?;
+            Some((radio, token))
         })
         .collect()
 }

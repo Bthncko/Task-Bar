@@ -11,6 +11,9 @@ export interface ClockConfig {
 export const clockWidget: WidgetDefinition<ClockConfig> = {
   id: "clock",
   name: "Saat",
+  category: "info",
+  description: "Saat ve tarih; tıklayınca takvim ve etkinlikler.",
+  defaultSection: "center",
   Bar: ClockBar,
   Popup: CalendarPopup,
   popupSize: { width: 620, height: 380 },

@@ -100,25 +100,50 @@ impl Drop for Watched {
     }
 }
 
+/// Oturum yöneticisi ve olay jetonları; bırakılınca (servis durunca, 8.1) abonelikler silinir.
+struct Opened {
+    manager: Manager,
+    current: Option<i64>,
+    sessions: Option<i64>,
+}
+
+impl Drop for Opened {
+    fn drop(&mut self) {
+        if let Some(t) = self.current {
+            let _ = self.manager.RemoveCurrentSessionChanged(t);
+        }
+        if let Some(t) = self.sessions {
+            let _ = self.manager.RemoveSessionsChanged(t);
+        }
+    }
+}
+
 /// Yöneticiyi alır ve oturum listesi / geçerli oturum değişimlerine abone olur.
-fn open_manager(waker: &Waker<MediaCmd>) -> Option<Manager> {
+fn open_manager(waker: &Waker<MediaCmd>) -> Option<Opened> {
     let manager = Manager::RequestAsync().and_then(|op| op.join()).ok()?;
     let w = waker.clone();
-    let _ = manager.CurrentSessionChanged(&TypedEventHandler::<
-        Manager,
-        CurrentSessionChangedEventArgs,
-    >::new(move |_, _| {
-        w.wake();
-        Ok(())
-    }));
+    let current = manager
+        .CurrentSessionChanged(
+            &TypedEventHandler::<Manager, CurrentSessionChangedEventArgs>::new(move |_, _| {
+                w.wake();
+                Ok(())
+            }),
+        )
+        .ok();
     let w = waker.clone();
-    let _ = manager.SessionsChanged(
-        &TypedEventHandler::<Manager, SessionsChangedEventArgs>::new(move |_, _| {
-            w.wake();
-            Ok(())
-        }),
-    );
-    Some(manager)
+    let sessions = manager
+        .SessionsChanged(
+            &TypedEventHandler::<Manager, SessionsChangedEventArgs>::new(move |_, _| {
+                w.wake();
+                Ok(())
+            }),
+        )
+        .ok();
+    Some(Opened {
+        manager,
+        current,
+        sessions,
+    })
 }
 
 pub fn spawn(app: &AppHandle) {
@@ -129,7 +154,7 @@ pub fn spawn(app: &AppHandle) {
         POLL,
         None,
         |waker: Waker<MediaCmd>| {
-            let mut manager: Option<Manager> = None;
+            let mut manager: Option<Opened> = None;
             let mut watched: Option<Watched> = None;
             // Kapak resmini parça değişmedikçe yeniden okuma.
             let mut artwork_key = String::new();
@@ -138,7 +163,7 @@ pub fn spawn(app: &AppHandle) {
                 if manager.is_none() {
                     manager = open_manager(&waker);
                 }
-                let Some(session) = manager.as_ref()?.GetCurrentSession().ok() else {
+                let Some(session) = manager.as_ref()?.manager.GetCurrentSession().ok() else {
                     watched = None;
                     return None;
                 };
