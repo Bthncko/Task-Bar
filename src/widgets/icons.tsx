@@ -79,6 +79,48 @@ export const PrevIcon = (p: IconProps) => (
   </Svg>
 );
 
+/** Beğen; `filled` iken dolu kalp. */
+export const HeartIcon = ({ filled, ...p }: IconProps & { filled?: boolean }) => (
+  <Svg {...p}>
+    <path
+      d="M12 19.5s-7-4.3-7-9.6A3.9 3.9 0 0 1 12 7.6a3.9 3.9 0 0 1 7 2.3c0 5.3-7 9.6-7 9.6z"
+      fill={filled ? "currentColor" : "none"}
+    />
+  </Svg>
+);
+
+export const PlusIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 5.5v13M5.5 12h13" />
+  </Svg>
+);
+
+/** Sıranın başına al: üstte çizgi, yukarı ok. */
+export const PlayNextIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6 5h12" />
+    <path d="M12 19.5V9.5M8 13l4-4 4 4" />
+  </Svg>
+);
+
+/** Çalma listesi: satırlar + nota. */
+export const PlaylistIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 6.5h11M4 11h11M4 15.5h6" />
+    <path d="M16.5 19.5v-6.8l3.5-.9" />
+    <circle cx="15" cy="19.5" r="1.6" />
+  </Svg>
+);
+
+/** Spotify cihazı: hoparlör kutusu. */
+export const SpeakerBoxIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="6" y="3" width="12" height="18" rx="2.5" />
+    <circle cx="12" cy="14.5" r="3" />
+    <path d="M12 7.2h.01" strokeWidth={2.2} />
+  </Svg>
+);
+
 // --- ses -------------------------------------------------------------------------
 
 export function SpeakerIcon({ level, muted, ...p }: IconProps & { level: number; muted: boolean }) {

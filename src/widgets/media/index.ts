@@ -6,10 +6,11 @@ export const mediaWidget: WidgetDefinition<Record<string, never>> = {
   id: "media",
   name: "Müzik",
   category: "media",
-  description: "Çalan şarkı ve kontroller; tıklayınca sıradakiler paneli.",
+  description:
+    "Çalan şarkı ve kontroller; tıklayınca müzik paneli (Spotify: sıra, arama, ses, cihaz). Karonun üstünde tekerlek Spotify sesini değiştirir.",
   defaultSection: "center",
   Bar: MediaBar,
   Popup: MediaPopup,
-  popupSize: { width: 360, height: 520 },
+  popupSize: { width: 380, height: 640 },
   defaultConfig: {},
 };

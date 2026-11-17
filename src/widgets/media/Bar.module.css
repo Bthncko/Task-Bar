@@ -117,6 +117,30 @@
   }
 }
 
+/* Tekerlekle ses: başlığın yerinde kısa süre "Spotify sesi %45". */
+.card {
+  position: relative;
+}
+
+.osd {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  right: 6px;
+  height: 15px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 15px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Karonun degradesi üstünde okunaklı: altındaki başlığı örter. */
+  background: color-mix(in srgb, var(--tile-color) 82%, black);
+  border-radius: 4px;
+  animation: fadeIn var(--t-fast) ease-out;
+}
+
 /* --- kontroller ---------------------------------------------------------------- */
 
 .controls {

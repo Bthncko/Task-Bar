@@ -38,10 +38,56 @@ function useCrossfade(label: string) {
   return [state.cur, state.prev, clear] as const;
 }
 
+/** Tekerlek adımı (yüzde) ve göstergenin kalma süresi. */
+const WHEEL_STEP = 5;
+const OSD_MS = 1200;
+
+/**
+ * Spotify çalarken (ve bağlıyken) tekerlek Spotify sesini değiştirir. Hızlı
+ * çevirmede adımlar birikir; aynı anda tek istek gider.
+ */
+function useWheelVolume(enabled: boolean) {
+  const [osd, setOsd] = useState<{ text: string; key: number } | null>(null);
+  const pending = useRef(0);
+  const busy = useRef(false);
+  const hide = useRef(0);
+
+  const show = (text: string) => {
+    setOsd((o) => ({ text, key: (o?.key ?? 0) + 1 }));
+    window.clearTimeout(hide.current);
+    hide.current = window.setTimeout(() => setOsd(null), OSD_MS);
+  };
+
+  const flush = () => {
+    if (busy.current || pending.current === 0) return;
+    const delta = pending.current;
+    pending.current = 0;
+    busy.current = true;
+    commands
+      .spotifyVolumeStep(delta)
+      .then((v) => show(`Spotify sesi %${v}`))
+      .catch((e) => show(String(e)))
+      .finally(() => {
+        busy.current = false;
+        flush();
+      });
+  };
+
+  const onWheel = (e: React.WheelEvent) => {
+    if (!enabled || e.deltaY === 0) return;
+    pending.current += e.deltaY < 0 ? WHEEL_STEP : -WHEEL_STEP;
+    flush();
+  };
+
+  return { osd, onWheel };
+}
+
 export function MediaBar() {
   const live = useService(commands.getMedia, events.media);
+  const spotify = useService(commands.spotifyStatus, events.spotify);
   const [media, leaving, gone] = useLingering(live);
   const tint = useCoverTint(media?.artwork ?? null);
+  const wheel = useWheelVolume(!!spotify?.connected && !!media && /spotify/i.test(media.sourceApp));
 
   if (!media) return null;
 
@@ -51,6 +97,7 @@ export function MediaBar() {
       color={tint}
       className={styles.card}
       data-leaving={leaving || undefined}
+      onWheel={wheel.onWheel}
       // Kontrollerin dışına tıklama: müzik paneli (sıradakiler).
       onClick={(e) => {
         if (!(e.target as Element).closest("button")) togglePopup("media", e.currentTarget);
@@ -60,6 +107,11 @@ export function MediaBar() {
       }}
     >
       <Title title={media.title} artist={media.artist} />
+      {wheel.osd && (
+        <span key={wheel.osd.key} className={styles.osd} role="status">
+          {wheel.osd.text}
+        </span>
+      )}
       <div className={styles.controls}>
         <IconButton
           className={styles.control}

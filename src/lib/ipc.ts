@@ -154,6 +154,8 @@ export type SpotifyStatus = {
   account: string | null;
   /** Spotify panelinde kayıtlı olması gereken yönlendirme adresi. */
   redirectUri: string;
+  /** Eski bağlantı: yeni özelliklerin (beğen, listeler) izinleri yok. */
+  needsReconnect: boolean;
 };
 
 export type QueueItem = {
@@ -162,9 +164,47 @@ export type QueueItem = {
   artist: string;
   image: string | null;
   durationMs: number;
+  /** Spotify sırasındaki yeri (gizlenenler dahil). */
+  position: number;
+  /** Aynı şarkının sıradaki kaçıncı geçişi. */
+  occurrence: number;
 };
 
-export type SpotifyQueue = { current: QueueItem | null; items: QueueItem[] };
+export type SpotifyQueue = {
+  current: QueueItem | null;
+  items: QueueItem[];
+  /** Panelden kaldırılıp gizlenenler. */
+  hidden: number;
+};
+
+export type SpotifyDevice = {
+  id: string;
+  name: string;
+  /** "Computer", "Smartphone", "Speaker" ... */
+  kind: string;
+  active: boolean;
+  volume: number | null;
+  supportsVolume: boolean;
+};
+
+export type SpotifyPlayer = {
+  uri: string | null;
+  playing: boolean;
+  progressMs: number;
+  durationMs: number;
+  /** Ölçüm anı (epoch ms). */
+  at: number;
+  device: SpotifyDevice | null;
+  liked: boolean | null;
+} | null;
+
+export type SpotifyPlaylist = {
+  uri: string;
+  name: string;
+  owner: string;
+  image: string | null;
+  total: number | null;
+};
 
 export type UpdateStatus =
   | { state: "idle" | "checking" | "upToDate" }
@@ -344,9 +384,36 @@ export const commands = {
   spotifyConnect: (clientId: string) => invoke<SpotifyStatus>("spotify_connect", { clientId }),
   spotifyDisconnect: () => invoke<SpotifyStatus>("spotify_disconnect"),
   spotifyQueue: () => invoke<SpotifyQueue>("spotify_queue"),
-  /** Sıradakilerdeki öğeyi doğrudan çal (`index` 0 = sıradaki). */
-  spotifyPlayItem: (index: number, uri: string) =>
-    invoke<void>("spotify_play_item", { index, uri }),
+  /** Sıradakilerdeki öğeyi doğrudan çal (`position`: Spotify sırasındaki yeri). */
+  spotifyPlayItem: (position: number, uri: string) =>
+    invoke<void>("spotify_play_item", { position, uri }),
+  /** Listede gizle; çalmaya başlarsa hemen geçilir. */
+  spotifyQueueRemove: (item: QueueItem) =>
+    invoke<void>("spotify_queue_remove", {
+      uri: item.uri,
+      occurrence: item.occurrence,
+      title: item.title,
+    }),
+  /** Sıranın başının istenen hâli (sürükle-bırak, "sıradaki yap"). */
+  spotifyQueueReorder: (order: QueueItem[]) =>
+    invoke<void>("spotify_queue_reorder", {
+      order: order.map((i) => ({ position: i.position, uri: i.uri, title: i.title })),
+    }),
+  spotifyQueueReset: () => invoke<void>("spotify_queue_reset"),
+  spotifyPlayer: () => invoke<SpotifyPlayer>("spotify_player"),
+  spotifySetVolume: (percent: number) => invoke<number>("spotify_set_volume", { percent }),
+  spotifyVolumeStep: (delta: number) => invoke<number>("spotify_volume_step", { delta }),
+  spotifyToggleMute: (current: number) => invoke<number>("spotify_toggle_mute", { current }),
+  spotifySeek: (positionMs: number) => invoke<void>("spotify_seek", { positionMs }),
+  spotifyDevices: () => invoke<SpotifyDevice[]>("spotify_devices"),
+  spotifyTransfer: (deviceId: string) => invoke<void>("spotify_transfer", { deviceId }),
+  spotifySearch: (query: string) => invoke<QueueItem[]>("spotify_search", { query }),
+  spotifyAddToQueue: (uri: string) => invoke<void>("spotify_add_to_queue", { uri }),
+  spotifyPlayUri: (uri: string) => invoke<void>("spotify_play_uri", { uri }),
+  spotifyPlayContext: (uri: string) => invoke<void>("spotify_play_context", { uri }),
+  spotifySetLiked: (uri: string, liked: boolean) =>
+    invoke<void>("spotify_set_liked", { uri, liked }),
+  spotifyPlaylists: () => invoke<SpotifyPlaylist[]>("spotify_playlists"),
 
   getUpdateInfo: () => invoke<UpdateInfo>("get_update_info"),
   /** Sonuç `events.update` ile gelir; yeni sürüm varsa kurulur (uygulama yeniden açılır). */

@@ -10,7 +10,9 @@ use crate::services::backdrop::{Backdrop, BackdropService};
 use crate::services::media::{MediaCmd, MediaService, MediaState};
 use crate::services::power::{PowerService, PowerState};
 use crate::services::radios::{RadiosService, RadiosState, SetRadio};
-use crate::services::spotify::{Queue, Spotify, SpotifyStatus};
+use crate::services::spotify::{
+    Device, Player, Playlist, Queue, QueueItem, Slot, Spotify, SpotifyStatus,
+};
 use crate::services::sysmon::SysState;
 use crate::services::updater::{self, UpdateInfo, Updater};
 use crate::services::{battery_settings, ics, launcher, wireless};
@@ -173,10 +175,103 @@ pub async fn spotify_queue(app: AppHandle) -> CmdResult<Queue> {
     blocking(move || app.state::<Spotify>().queue(&app)).await
 }
 
-/// Sıradakiler listesindeki öğeyi doğrudan çal (`index` 0 = sıradaki).
+/// Sıradakiler listesindeki öğeyi doğrudan çal (`position`: Spotify sırasındaki yeri).
 #[tauri::command]
-pub async fn spotify_play_item(app: AppHandle, index: u32, uri: String) -> CmdResult {
-    blocking(move || app.state::<Spotify>().play_item(&app, index, &uri)).await
+pub async fn spotify_play_item(app: AppHandle, position: u32, uri: String) -> CmdResult {
+    blocking(move || app.state::<Spotify>().play_item(&app, position, &uri)).await
+}
+
+/// Sıradan kaldır: listede gizlenir, çalmaya başlarsa geçilir.
+#[tauri::command]
+pub async fn spotify_queue_remove(
+    app: AppHandle,
+    uri: String,
+    occurrence: u32,
+    title: String,
+) -> CmdResult {
+    blocking(move || {
+        app.state::<Spotify>()
+            .queue_remove(&app, &uri, occurrence, &title)
+    })
+    .await
+}
+
+/// Sürükle-bırak / "sıradaki yap": sıranın başının istenen hâli.
+#[tauri::command]
+pub async fn spotify_queue_reorder(app: AppHandle, order: Vec<Slot>) -> CmdResult {
+    blocking(move || app.state::<Spotify>().queue_reorder(&app, &order)).await
+}
+
+/// Panelden kaldırılanları geri getir.
+#[tauri::command]
+pub fn spotify_queue_reset(spotify: State<Spotify>) {
+    spotify.queue_reset();
+}
+
+#[tauri::command]
+pub async fn spotify_player(app: AppHandle) -> CmdResult<Option<Player>> {
+    blocking(move || app.state::<Spotify>().player(&app)).await
+}
+
+#[tauri::command]
+pub async fn spotify_set_volume(app: AppHandle, percent: u8) -> CmdResult<u8> {
+    blocking(move || app.state::<Spotify>().set_volume(&app, percent)).await
+}
+
+/// Müzik karosunda tekerlek: yeni ses yüzdesi döner.
+#[tauri::command]
+pub async fn spotify_volume_step(app: AppHandle, delta: i32) -> CmdResult<u8> {
+    blocking(move || app.state::<Spotify>().volume_step(&app, delta)).await
+}
+
+#[tauri::command]
+pub async fn spotify_toggle_mute(app: AppHandle, current: u8) -> CmdResult<u8> {
+    blocking(move || app.state::<Spotify>().toggle_mute(&app, current)).await
+}
+
+#[tauri::command]
+pub async fn spotify_seek(app: AppHandle, position_ms: u64) -> CmdResult {
+    blocking(move || app.state::<Spotify>().seek(&app, position_ms)).await
+}
+
+#[tauri::command]
+pub async fn spotify_devices(app: AppHandle) -> CmdResult<Vec<Device>> {
+    blocking(move || app.state::<Spotify>().devices(&app)).await
+}
+
+#[tauri::command]
+pub async fn spotify_transfer(app: AppHandle, device_id: String) -> CmdResult {
+    blocking(move || app.state::<Spotify>().transfer(&app, &device_id)).await
+}
+
+#[tauri::command]
+pub async fn spotify_search(app: AppHandle, query: String) -> CmdResult<Vec<QueueItem>> {
+    blocking(move || app.state::<Spotify>().search(&app, &query)).await
+}
+
+#[tauri::command]
+pub async fn spotify_add_to_queue(app: AppHandle, uri: String) -> CmdResult {
+    blocking(move || app.state::<Spotify>().add_to_queue(&app, &uri)).await
+}
+
+#[tauri::command]
+pub async fn spotify_play_uri(app: AppHandle, uri: String) -> CmdResult {
+    blocking(move || app.state::<Spotify>().play_uri(&app, &uri)).await
+}
+
+#[tauri::command]
+pub async fn spotify_play_context(app: AppHandle, uri: String) -> CmdResult {
+    blocking(move || app.state::<Spotify>().play_context(&app, &uri)).await
+}
+
+#[tauri::command]
+pub async fn spotify_set_liked(app: AppHandle, uri: String, liked: bool) -> CmdResult {
+    blocking(move || app.state::<Spotify>().set_liked(&app, &uri, liked)).await
+}
+
+#[tauri::command]
+pub async fn spotify_playlists(app: AppHandle) -> CmdResult<Vec<Playlist>> {
+    blocking(move || app.state::<Spotify>().playlists(&app)).await
 }
 
 /// Ağ beklemesi ana iş parçacığında olmasın.

@@ -47,7 +47,7 @@ export function Music() {
   return (
     <Section
       title="Müzik"
-      intro="Dock'taki müzik karosuna tıklayınca müzik paneli açılır. Spotify çalarken panelde sıradaki şarkılar görünür; birine tıklayınca o şarkıya geçilir."
+      intro="Dock'taki müzik karosuna tıklayınca müzik paneli açılır. Spotify bağlıyken panelde sıradakileri düzenleyebilir (sıradaki yap, kaldır), şarkı arayıp sıraya ekleyebilir, çalma listelerini açabilir, Spotify sesini ve çalan cihazı değiştirebilirsin. Karonun üstünde tekerlek Spotify sesini değiştirir."
     >
       <h3 className={styles.subTitle}>Spotify</h3>
       {spotify.connected ? (
@@ -55,6 +55,23 @@ export function Music() {
           <Row label="Bağlı" hint={spotify.account ?? "Spotify hesabı"}>
             <button type="button" className={styles.button} onClick={disconnect}>
               Bağlantıyı kes
+            </button>
+          </Row>
+          <Row
+            label="Yeniden bağlan"
+            hint={
+              spotify.needsReconnect
+                ? "Beğenme ve çalma listeleri yeni izin istiyor; tarayıcıda bir kez onayla."
+                : "İzinleri yenilemek gerekirse."
+            }
+          >
+            <button
+              type="button"
+              className={`${styles.button} ${spotify.needsReconnect ? styles.primary : ""}`}
+              disabled={status?.kind === "busy"}
+              onClick={connect}
+            >
+              Yeniden bağlan
             </button>
           </Row>
         </Card>

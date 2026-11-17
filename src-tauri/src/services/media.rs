@@ -147,13 +147,15 @@ fn open_manager(waker: &Waker<MediaCmd>) -> Option<Opened> {
 }
 
 pub fn spawn(app: &AppHandle) {
+    let handle = app.clone();
     runner::spawn(
         app,
         "media",
         MEDIA_CHANGED,
         POLL,
         None,
-        |waker: Waker<MediaCmd>| {
+        move |waker: Waker<MediaCmd>| {
+            let app = handle.clone();
             let mut manager: Option<Opened> = None;
             let mut watched: Option<Watched> = None;
             // Kapak resmini parça değişmedikçe yeniden okuma.
@@ -190,6 +192,10 @@ pub fn spawn(app: &AppHandle) {
                 if key != artwork_key {
                     artwork = props.Thumbnail().ok().and_then(|t| read_artwork(&t));
                     artwork_key = key;
+                    // Panelden sıradan kaldırılan şarkı başladıysa geç.
+                    if source_app.to_lowercase().contains("spotify") {
+                        super::spotify::Spotify::track_changed(&app, &title);
+                    }
                 }
 
                 let playback = session.GetPlaybackInfo().ok();
