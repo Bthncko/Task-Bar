@@ -24,7 +24,7 @@ use windows::Win32::UI::Shell::{
     ABM_GETSTATE, ABM_SETSTATE, ABS_ALWAYSONTOP, ABS_AUTOHIDE, APPBARDATA, SHAppBarMessage,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, FindWindowW, GetClassNameW, IsWindowVisible, SW_HIDE, SW_SHOW, ShowWindow,
+    EnumWindows, FindWindowExW, GetClassNameW, IsWindowVisible, SW_HIDE, SW_SHOW, ShowWindow,
     ShowWindowAsync,
 };
 use windows::core::{BOOL, w};
@@ -170,8 +170,16 @@ fn hide_bars() {
     }
 }
 
+/// Explorer'ın çubuğu (aynı sınıftaki kendi tepsi penceremiz hariç, `tray_host`).
 fn tray_window() -> Option<HWND> {
-    unsafe { FindWindowW(w!("Shell_TrayWnd"), None).ok() }
+    let mut after = None;
+    loop {
+        let found = unsafe { FindWindowExW(None, after, w!("Shell_TrayWnd"), None) }.ok()?;
+        if !super::is_own_window(found) {
+            return Some(found);
+        }
+        after = Some(found);
+    }
 }
 
 fn current_autohide() -> bool {
@@ -210,7 +218,9 @@ unsafe extern "system" fn collect_bars(hwnd: HWND, lparam: LPARAM) -> BOOL {
     let mut buf = [0u16; 64];
     let n = unsafe { GetClassNameW(hwnd, &mut buf) };
     let class = String::from_utf16_lossy(&buf[..n.max(0) as usize]);
-    if class == "Shell_TrayWnd" || class == "Shell_SecondaryTrayWnd" {
+    if (class == "Shell_TrayWnd" || class == "Shell_SecondaryTrayWnd")
+        && !super::is_own_window(hwnd)
+    {
         // SAFETY: lparam, `taskbar_windows` içindeki yerel Vec; EnumWindows senkron.
         let found = unsafe { &mut *(lparam.0 as *mut Vec<HWND>) };
         found.push(hwnd);

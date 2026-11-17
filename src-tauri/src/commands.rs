@@ -13,7 +13,7 @@ use crate::services::radios::{RadiosService, RadiosState, SetRadio};
 use crate::services::spotify::{Queue, Spotify, SpotifyStatus};
 use crate::services::sysmon::SysState;
 use crate::services::updater::{self, UpdateInfo, Updater};
-use crate::services::{ics, launcher};
+use crate::services::{battery_settings, ics, launcher, wireless};
 use crate::win::{placement, popup, preview};
 
 type CmdResult<T = ()> = Result<T, String>;
@@ -37,6 +37,7 @@ pub fn open_system_settings(page: String) -> CmdResult {
         "sound" => "ms-settings:sound",
         "sound-mixer" => "ms-settings:apps-volume",
         "battery" => "ms-settings:batterysaver",
+        "power" => "ms-settings:powersleep",
         // Dış bağlantılar da yalnızca bilinen adreslerle (frontend keyfi URL açtıramaz).
         "spotify-dashboard" => "https://developer.spotify.com/dashboard",
         _ => return Err(format!("bilinmeyen sayfa: {page}")),
@@ -462,6 +463,98 @@ pub fn get_power(power: State<PowerService>) -> Option<PowerState> {
 }
 
 // --- radyolar --------------------------------------------------------------
+
+// --- Wi-Fi / Bluetooth panelleri ---------------------------------------------
+
+/// Hata metni doğrudan panele gider (ör. "password_required").
+async fn blocking_str<T: Send + 'static>(
+    f: impl FnOnce() -> Result<T, String> + Send + 'static,
+) -> CmdResult<T> {
+    tauri::async_runtime::spawn_blocking(f)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn wifi_scan() -> CmdResult<Vec<wireless::WifiNetwork>> {
+    blocking_str(wireless::scan).await
+}
+
+/// `password` yoksa ve ağ şifre isterse hata "password_required".
+#[tauri::command]
+pub async fn wifi_connect(
+    radios: State<'_, RadiosService>,
+    ssid: String,
+    password: Option<String>,
+) -> CmdResult {
+    let result = blocking_str(move || wireless::connect(&ssid, password.as_deref())).await;
+    radios.wake();
+    result
+}
+
+#[tauri::command]
+pub async fn wifi_disconnect(radios: State<'_, RadiosService>) -> CmdResult {
+    let result = blocking_str(wireless::disconnect).await;
+    radios.wake();
+    result
+}
+
+#[tauri::command]
+pub async fn bt_devices() -> CmdResult<Vec<wireless::BtDevice>> {
+    blocking_str(wireless::bt_devices).await
+}
+
+/// Güç modu (pil paneli): değiştir ve pil servisini hemen okut.
+#[tauri::command]
+pub fn set_power_mode(power: State<PowerService>, mode: String) -> CmdResult {
+    crate::services::power_mode::set(&mode)?;
+    power.wake();
+    Ok(())
+}
+
+/// Pil panelindeki ayarlar (parlaklık, yenileme hızı, süreler). WMI yavaş olabilir.
+#[tauri::command]
+pub async fn get_battery_settings() -> CmdResult<battery_settings::BatterySettings> {
+    blocking_str(|| Ok(battery_settings::read())).await
+}
+
+/// Enerji tasarrufu (pildeyken tek tık): aç / kapat.
+#[tauri::command]
+pub async fn set_energy_saver(power: State<'_, PowerService>, on: bool) -> CmdResult {
+    let percent = power.get().map_or(100, |p| p.percent);
+    let result = blocking_str(move || battery_settings::set_saver(on, percent)).await;
+    power.wake();
+    result
+}
+
+#[tauri::command]
+pub async fn set_brightness(percent: u8) -> CmdResult {
+    blocking_str(move || battery_settings::set_brightness(percent)).await
+}
+
+#[tauri::command]
+pub async fn set_refresh_rate(hz: u32) -> CmdResult {
+    blocking_str(move || battery_settings::set_refresh(hz)).await
+}
+
+/// `kind`: "screen" ya da "sleep"; süre saniye (0 = hiçbir zaman), pildeyken.
+#[tauri::command]
+pub async fn set_power_timeout(kind: String, seconds: u32) -> CmdResult {
+    blocking_str(move || battery_settings::set_timeout(&kind, seconds)).await
+}
+
+/// Kendi tepsimizdeki simgeler (`win::tray_host`).
+#[tauri::command]
+pub fn get_tray() -> crate::win::tray_host::TrayState {
+    crate::win::tray_host::state()
+}
+
+/// `button`: "left", "double" ya da "right".
+#[tauri::command]
+pub fn tray_click(id: String, button: String) -> CmdResult {
+    crate::win::tray_host::click(&id, &button)?;
+    Ok(())
+}
 
 #[tauri::command]
 pub fn get_radios(radios: State<RadiosService>) -> RadiosState {

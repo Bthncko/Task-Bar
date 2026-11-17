@@ -97,9 +97,13 @@ export function PopupWindow() {
     if (config) applyTheme(config.theme, { systemAccent });
   }, [config?.theme, systemAccent]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const widget = open ? registry[open.widgetId] : undefined;
+  // "radios/wifi": widget + sayfa (bir widget'ın birden çok paneli).
+  const [widgetId, page] = open ? open.widgetId.split("/") : [];
+  const widget = widgetId ? registry[widgetId] : undefined;
   const Popup = widget?.Popup;
-  const size = widget?.popupSize ?? DEFAULT_SIZE;
+  const size =
+    (typeof widget?.popupSize === "function" ? widget.popupSize(page) : widget?.popupSize) ??
+    DEFAULT_SIZE;
   // Boyut ayarı (7.9): panel CSS zoom ile büyür; gölge payı (16 px) büyümez,
   // Rust'taki SHADOW_PAD ile eşit kalsın diye zoom yalnızca panelde.
   const zoom = config ? uiScale(config.theme) : 1;
@@ -121,7 +125,7 @@ export function PopupWindow() {
   });
 
   if (!open || !config || !widget || !Popup) return null;
-  const widgetConfig = config.widgets[open.widgetId] ?? widget.defaultConfig;
+  const widgetConfig = config.widgets[widgetId!] ?? widget.defaultConfig;
 
   // Panel tıklanan widget'tan doğru büyür (dock altta: panelin alt kenarı).
   // Rust ekran pikseli verir; panelin içi zoom'suz CSS pikseli.
@@ -144,7 +148,7 @@ export function PopupWindow() {
         style={{ transformOrigin: `${origin} 100%`, zoom } as CSSProperties}
       >
         <PopupCloseProvider value={close}>
-          <Popup config={widgetConfig} />
+          <Popup config={widgetConfig} page={page} />
         </PopupCloseProvider>
       </div>
     </div>

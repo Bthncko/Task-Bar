@@ -1,4 +1,5 @@
 import { commands, events, report, type RadioInfo } from "../../lib/ipc";
+import { togglePopup } from "../../lib/popup";
 import { useService } from "../../lib/useService";
 import { BluetoothIcon, ChevronIcon, WifiIcon } from "../icons";
 import { SplitPill, Tile } from "../ui";
@@ -76,7 +77,7 @@ function Radio({
       icon={icon}
       arrow={<ChevronIcon size={13} />}
       onToggle={() => commands.setRadio(kind, !info.on).catch(report("set_radio"))}
-      onArrow={() => commands.openQuickSettings(kind).catch(report("open_quick_settings"))}
+      onArrow={(e) => togglePopup(`radios/${kind}`, e.currentTarget)}
       onContextMenu={(e) => {
         e.preventDefault();
         commands.openSystemSettings(kind).catch(report("open_system_settings"));

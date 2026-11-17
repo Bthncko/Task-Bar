@@ -1,0 +1,87 @@
+/* Tepsi paneli: dock tarzı simge ızgarası. */
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px 14px 10px 16px;
+  gap: 10px;
+}
+
+.note {
+  flex: 1;
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--text-2);
+}
+
+.grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-auto-rows: 44px;
+  align-content: start;
+  gap: 4px;
+  margin: 0 -4px;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.icon {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  transition:
+    background-color var(--t-fast) ease,
+    transform var(--t-fast) ease;
+}
+
+.icon:hover {
+  background: var(--tile-hover);
+}
+
+.icon:active {
+  background: var(--tile-press);
+  transform: scale(0.94);
+}
+
+.icon:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.icon img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.blank {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--tile-press);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -8px;
+  border-top: 1px solid var(--hairline);
+  padding: 6px 0 0 8px;
+}
+
+.tip {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

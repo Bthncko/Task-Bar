@@ -147,6 +147,60 @@ export const LeafIcon = (p: IconProps) => (
   </Svg>
 );
 
+/** Parlaklık: güneş. */
+export const SunIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" />
+  </Svg>
+);
+
+/** Ekran (yenileme hızı). */
+export const MonitorIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="4" width="18" height="12.5" rx="2" />
+    <path d="M9 20.5h6M12 16.5v4" />
+  </Svg>
+);
+
+/** Süre (ekranı kapat / uyku). */
+export const MoonIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />
+  </Svg>
+);
+
+// --- Wi-Fi / Bluetooth / pil panelleri ---------------------------------------------
+
+export const LockIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="5.5" y="10.5" width="13" height="9.5" rx="2" />
+    <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+  </Svg>
+);
+
+export const RefreshIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" />
+    <path d="M19.5 4.5v4h-4" />
+  </Svg>
+);
+
+/** Klavye / fare gibi giriş aygıtları. */
+export const KeyboardIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="6.5" width="18" height="11" rx="2" />
+    <path d="M7 10h.01M10.5 10h.01M14 10h.01M17 10h.01M8 14h8" />
+  </Svg>
+);
+
+export const PhoneIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="7" y="3" width="10" height="18" rx="2.5" />
+    <path d="M11 18h2" />
+  </Svg>
+);
+
 // --- ses aygıtları (8.5) ---------------------------------------------------------
 
 /** Mikrofon; `muted` iken çapraz çizgi. */

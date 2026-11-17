@@ -1,4 +1,5 @@
 import { commands, report } from "../../lib/ipc";
+import { togglePopup } from "../../lib/popup";
 import { IconButton, Tile } from "../ui";
 import { SYSTEM_BUTTONS } from "./buttons";
 import type { SystemConfig } from "./index";
@@ -16,8 +17,17 @@ export function SystemBar({ config }: { config: SystemConfig }) {
           title={`${b.name} (${b.keys})`}
           onClick={(e) => {
             if (b.id === "tray") {
-              const r = e.currentTarget.getBoundingClientRect();
-              commands.openTray({ x: r.left, width: r.width }).catch(report("open_tray"));
+              // Kendi tepsimiz simgeleri alıyorsa dock paneli; alamadıysa Windows'unki.
+              const el = e.currentTarget;
+              const r = el.getBoundingClientRect();
+              commands
+                .getTray()
+                .then((t) =>
+                  t.active
+                    ? togglePopup("system/tray", el)
+                    : commands.openTray({ x: r.left, width: r.width }),
+                )
+                .catch(report("open_tray"));
             } else {
               commands.systemShortcut(b.id).catch(report("system_shortcut"));
             }

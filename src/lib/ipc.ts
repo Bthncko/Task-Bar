@@ -116,6 +116,9 @@ export type PowerState = {
   charging: boolean;
   /** Enerji / pil tasarrufu açık. */
   saver: boolean;
+  /** Pilde kalan süre (sn); prizde ya da bilinmiyorsa null. */
+  secondsLeft: number | null;
+  mode: PowerMode | null;
 } | null;
 
 export type RadioInfo = { on: boolean; disabled: boolean };
@@ -174,6 +177,8 @@ export const events = {
   /** Rust kapanma istiyor (odak kaybı, ikinci tıklama): animasyonla kapat. */
   popupClose: "popup://close",
   sysmon: "sysmon://changed",
+  /** Kendi tepsimizdeki simgeler (TrayState). */
+  tray: "tray://changed",
   /** Yalnızca önizleme penceresine: hangi uygulamanın pencereleri (PreviewOpen). */
   previewOpen: "preview://open",
   previewClosed: "preview://closed",
@@ -187,7 +192,34 @@ export const events = {
   update: "update://status",
 } as const;
 
+/** `widgetId` "radios/wifi" gibi sayfa içerebilir (bir widget'ın birden çok paneli). */
 export type PopupOpen = { widgetId: string; seq: number };
+
+export type PowerMode = "efficiency" | "balanced" | "performance";
+/** Pil panelindeki ayarlar; okunamayan alan `null`. Süreler saniye (0 = hiçbir zaman). */
+export type BatterySettings = {
+  brightness: number | null;
+  refresh: { current: number; options: number[] } | null;
+  screenOff: number | null;
+  sleep: number | null;
+  saverThreshold: number | null;
+};
+export type TrayIcon = { id: string; tip: string; icon: string | null };
+/** `active: false`: simgeler Windows'ta (kendi tepsimiz açılamadı). */
+export type TrayState = { active: boolean; icons: TrayIcon[] };
+export type WifiNetwork = {
+  ssid: string;
+  bars: number;
+  secured: boolean;
+  enterprise: boolean;
+  saved: boolean;
+  connected: boolean;
+};
+export type BtDevice = {
+  name: string;
+  connected: boolean;
+  kind: "audio" | "input" | "phone" | "other";
+};
 /** `popup_ready` yanıtı: tıklanan widget'ın ortası, panelin sol kenarından (CSS px). */
 export type PopupPlaced = { originX: number } | null;
 
@@ -197,7 +229,8 @@ export const commands = {
   /** Büyütme sırasında görünür bölgeyi açar / bara daraltır (3.2). */
   setDockExpanded: (expanded: boolean) => invoke<void>("set_dock_expanded", { expanded }),
   openSystemSettings: (
-    page: "wifi" | "bluetooth" | "sound" | "sound-mixer" | "battery" | "spotify-dashboard",
+    page:
+      "wifi" | "bluetooth" | "sound" | "sound-mixer" | "battery" | "power" | "spotify-dashboard",
   ) => invoke<void>("open_system_settings", { page }),
   /** Windows'un hızlı ayarlar paneli; "wifi" doğrudan ağ listesini açar. */
   openQuickSettings: (panel: "wifi" | "bluetooth" | "battery") =>
@@ -293,6 +326,23 @@ export const commands = {
 
   getRadios: () => invoke<RadiosState>("get_radios"),
   setRadio: (kind: "wifi" | "bluetooth", on: boolean) => invoke<void>("set_radio", { kind, on }),
+  setPowerMode: (mode: PowerMode) => invoke<void>("set_power_mode", { mode }),
+  getBatterySettings: () => invoke<BatterySettings>("get_battery_settings"),
+  setEnergySaver: (on: boolean) => invoke<void>("set_energy_saver", { on }),
+  setBrightness: (percent: number) => invoke<void>("set_brightness", { percent }),
+  setRefreshRate: (hz: number) => invoke<void>("set_refresh_rate", { hz }),
+  setPowerTimeout: (kind: "screen" | "sleep", seconds: number) =>
+    invoke<void>("set_power_timeout", { kind, seconds }),
+  getTray: () => invoke<TrayState>("get_tray"),
+  trayClick: (id: string, button: "left" | "double" | "right") =>
+    invoke<void>("tray_click", { id, button }),
+  /** Tarama birkaç saniye sürer. */
+  wifiScan: () => invoke<WifiNetwork[]>("wifi_scan"),
+  /** Şifre isteyen kayıtsız ağda `password` yoksa hata "password_required". */
+  wifiConnect: (ssid: string, password?: string) =>
+    invoke<void>("wifi_connect", { ssid, password: password ?? null }),
+  wifiDisconnect: () => invoke<void>("wifi_disconnect"),
+  btDevices: () => invoke<BtDevice[]>("bt_devices"),
 };
 
 /** Komut hatalarını yutmadan konsola yazar; widget ayakta kalır. */

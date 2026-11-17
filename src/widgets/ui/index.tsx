@@ -91,7 +91,7 @@ export function SplitPill({
   icon: ReactNode;
   arrow: ReactNode;
   onToggle: () => void;
-  onArrow: () => void;
+  onArrow: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   title?: string;
 }) {

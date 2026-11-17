@@ -113,6 +113,18 @@ pub fn run() {
             commands::set_default_output,
             commands::get_power,
             commands::get_radios,
+            commands::set_power_mode,
+            commands::get_battery_settings,
+            commands::set_energy_saver,
+            commands::set_brightness,
+            commands::set_refresh_rate,
+            commands::set_power_timeout,
+            commands::get_tray,
+            commands::tray_click,
+            commands::wifi_scan,
+            commands::wifi_connect,
+            commands::wifi_disconnect,
+            commands::bt_devices,
             commands::set_radio,
         ])
         // Tüm menü olayları (tepsi + sağ tık menüleri) buraya gelir.
@@ -156,6 +168,7 @@ pub fn run() {
             services::app_events::spawn(app.handle());
             services::media::spawn(app.handle());
             services::audio::spawn(app.handle());
+            services::battery_settings::init(config_dir.clone());
             services::power::spawn(app.handle());
             services::radios::spawn(app.handle());
             services::sysmon::spawn(app.handle());
@@ -179,6 +192,8 @@ pub fn run() {
 
             // Önceki çökmeden kalan gizli çubuğu da burada onarır.
             win::taskbar::init(config_dir, hide_taskbar);
+            // Tepsi simgelerini kendi panelimizde göstermek için (8.6).
+            win::tray_host::init(app.handle());
 
             // Bu bilgisayarda ilk kez açıldı (kurulumdan sonra): açılışta başlasın.
             if first_run

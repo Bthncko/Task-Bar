@@ -20,8 +20,10 @@ export interface WidgetDefinition<C = unknown> {
   /** Katalogdan eklenince gideceği bölüm (yoksa sağ). */
   defaultSection?: DockSection;
   Bar: FC<{ config: C }>;
-  Popup?: FC<{ config: C }>;
-  popupSize?: { width: number; height: number };
+  /** `page`: aynı widget'ın farklı paneli ("radios/wifi" → "wifi"). */
+  Popup?: FC<{ config: C; page?: string }>;
+  popupSize?:
+    { width: number; height: number } | ((page?: string) => { width: number; height: number });
   defaultConfig: C;
   Settings?: FC<{ config: C; onChange(c: C): void }>;
 }

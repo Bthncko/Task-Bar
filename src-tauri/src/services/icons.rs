@@ -17,6 +17,7 @@ use windows::Win32::UI::Shell::{
     IShellItem, IShellItem2, IShellItemImageFactory, SHCreateItemFromParsingName,
     SIGDN_NORMALDISPLAY, SIIGBF_BIGGERSIZEOK, SIIGBF_ICONONLY,
 };
+use windows::Win32::UI::WindowsAndMessaging::{GetIconInfo, HICON, ICONINFO};
 use windows::core::{Interface, PCWSTR};
 
 use crate::win::{take_pwstr, wide};
@@ -106,17 +107,62 @@ fn icon_data_url(item: &IShellItem) -> Option<String> {
                 image::imageops::FilterType::CatmullRom,
             );
         }
-        let mut png = Vec::new();
-        image
-            .write_to(&mut Cursor::new(&mut png), image::ImageFormat::Png)
-            .ok()?;
-        let b64 = base64::engine::general_purpose::STANDARD.encode(png);
-        Some(format!("data:image/png;base64,{b64}"))
+        png_data_url(&image)
+    }
+}
+
+fn png_data_url(image: &image::RgbaImage) -> Option<String> {
+    let mut png = Vec::new();
+    image
+        .write_to(&mut Cursor::new(&mut png), image::ImageFormat::Png)
+        .ok()?;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(png);
+    Some(format!("data:image/png;base64,{b64}"))
+}
+
+/// Başka bir sürecin ikonu (tepsi, 8.6) → PNG data URL. Alfa kanalı olmayan eski
+/// ikonlarda saydamlık maskeden alınır.
+pub fn hicon_data_url(icon: HICON) -> Option<String> {
+    unsafe {
+        let mut info = ICONINFO::default();
+        GetIconInfo(icon, &mut info).ok()?;
+        let result = (|| {
+            if info.hbmColor.is_invalid() {
+                return None;
+            }
+            let (w, h, mut px) = bitmap_bgra(info.hbmColor)?;
+            if px.as_chunks::<4>().0.iter().all(|p| p[3] == 0)
+                && let Some((mw, _, mask)) = bitmap_bgra(info.hbmMask)
+                && mw == w
+                && mask.len() >= px.len()
+            {
+                for (p, m) in px
+                    .as_chunks_mut::<4>()
+                    .0
+                    .iter_mut()
+                    .zip(mask.as_chunks::<4>().0)
+                {
+                    p[3] = if m[0] == 0 { 255 } else { 0 };
+                }
+            }
+            fix_alpha_and_swizzle(&mut px);
+            png_data_url(&image::RgbaImage::from_raw(w, h, px)?)
+        })();
+        let _ = DeleteObject(HGDIOBJ(info.hbmColor.0));
+        let _ = DeleteObject(HGDIOBJ(info.hbmMask.0));
+        result
     }
 }
 
 /// HBITMAP → üstten alta RGBA piksel dizisi.
 unsafe fn bitmap_to_rgba(bitmap: HBITMAP) -> Option<(u32, u32, Vec<u8>)> {
+    let (w, h, mut buf) = unsafe { bitmap_bgra(bitmap) }?;
+    fix_alpha_and_swizzle(&mut buf);
+    Some((w, h, buf))
+}
+
+/// HBITMAP → üstten alta BGRA (olduğu gibi).
+unsafe fn bitmap_bgra(bitmap: HBITMAP) -> Option<(u32, u32, Vec<u8>)> {
     unsafe {
         let mut bm = BITMAP::default();
         if GetObjectW(
@@ -158,7 +204,6 @@ unsafe fn bitmap_to_rgba(bitmap: HBITMAP) -> Option<(u32, u32, Vec<u8>)> {
         if lines == 0 {
             return None;
         }
-        fix_alpha_and_swizzle(&mut buf);
         Some((w as u32, h as u32, buf))
     }
 }

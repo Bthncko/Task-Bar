@@ -7,10 +7,13 @@ pub mod settings;
 pub mod window_fx;
 pub mod taskbar;
 pub mod tray;
+pub mod tray_host;
 pub mod window_style;
 
 use windows::Win32::Foundation::HWND;
 use windows::Win32::System::Com::CoTaskMemFree;
+use windows::Win32::System::Threading::GetCurrentProcessId;
+use windows::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId;
 use windows::core::PWSTR;
 
 /// Sonu sıfırlı UTF-16 dize.
@@ -37,9 +40,18 @@ pub fn id_to_hwnd(id: isize) -> HWND {
     HWND(id as *mut _)
 }
 
+/// Pencere bu sürecin mi (ör. kendi `Shell_TrayWnd`'ımız, `tray_host`).
+pub fn is_own_window(hwnd: HWND) -> bool {
+    let mut pid = 0;
+    unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
+    pid == unsafe { GetCurrentProcessId() }
+}
+
 /// Temiz çıkış (bölüm 11): AppBar'ı kaldır → Windows çubuğunu geri getir.
 /// Normal çıkışta ve panik kancasında çağrılır; iki kez çağrılması zararsız.
 pub fn shutdown() {
+    // Önce kendi tepsimiz: görev çubuğu iletileri yine Explorer'a gitsin.
+    tray_host::shutdown();
     appbar::remove();
     taskbar::cleanup();
     // Uygulama pencerelerinde kapattığımız Windows geçişlerini geri aç.

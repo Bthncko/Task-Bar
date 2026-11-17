@@ -4,18 +4,21 @@ pub mod apps;
 pub mod audio;
 pub mod audio_devices;
 pub mod backdrop;
+pub mod battery_settings;
 pub mod icons;
 pub mod ics;
 pub mod jumplist;
 pub mod launcher;
 pub mod media;
 pub mod power;
+pub mod power_mode;
 pub mod radios;
 pub mod runner;
 pub mod spotify;
 pub mod sysmon;
 pub mod updater;
 pub mod windows_list;
+pub mod wireless;
 
 use tauri::{AppHandle, Manager};
 

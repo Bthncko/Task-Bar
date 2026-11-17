@@ -52,6 +52,10 @@ pub struct PowerState {
     pub charging: bool,
     /// Enerji / pil tasarrufu açık.
     pub saver: bool,
+    /// Pilde kalan süre (sn); prizde ya da Windows bilmiyorsa `None`.
+    pub seconds_left: Option<u32>,
+    /// Güç modu: "efficiency" / "balanced" / "performance" (`power_mode`).
+    pub mode: Option<&'static str>,
 }
 
 pub type PowerService = runner::ServiceHandle<Option<PowerState>, ()>;
@@ -65,6 +69,8 @@ pub fn spawn(app: &AppHandle) {
                 return None;
             }
             let plugged = status.ACLineStatus == 1;
+            // Bizim açtığımız enerji tasarrufu: prize takılınca asıl eşik geri gelir.
+            super::battery_settings::restore_if_plugged(plugged);
             Some(PowerState {
                 percent: status.BatteryLifePercent.min(100),
                 plugged,
@@ -72,6 +78,10 @@ pub fn spawn(app: &AppHandle) {
                 charging: status.BatteryFlag & 8 != 0,
                 // Hangisinin Windows 11 Enerji tasarrufunu yansıttığı belgede yok: ikisi de.
                 saver: status.SystemStatusFlag == 1 || ENERGY_SAVER.load(Ordering::Relaxed) > 0,
+                // u32::MAX: bilinmiyor (prizde ya da yeni çıkarıldı).
+                seconds_left: (!plugged && status.BatteryLifeTime != u32::MAX)
+                    .then_some(status.BatteryLifeTime),
+                mode: super::power_mode::get(),
             })
         }
     });

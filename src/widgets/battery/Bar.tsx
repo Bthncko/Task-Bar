@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { commands, events, report, type PowerState } from "../../lib/ipc";
 import { useReducedMotion } from "../../lib/motion";
+import { togglePopup } from "../../lib/popup";
 import { useService } from "../../lib/useService";
 import { BoltIcon, LeafIcon } from "../icons";
 import { Tile } from "../ui";
@@ -92,7 +93,7 @@ export function BatteryBar() {
       style={{ "--level": `${pct}%` } as CSSProperties}
       title={`Pil %${power.percent} — ${state}\nSağ tık: pil ayarları`}
       aria-label={`Pil yüzde ${power.percent}, ${state}`}
-      onClick={() => commands.openQuickSettings("battery").catch(report("open_quick_settings"))}
+      onClick={(e) => togglePopup("battery", e.currentTarget)}
       onContextMenu={(e) => {
         e.preventDefault();
         commands.openSystemSettings("battery").catch(report("open_system_settings"));
