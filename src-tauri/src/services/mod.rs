@@ -5,6 +5,7 @@ pub mod audio;
 pub mod backdrop;
 pub mod icons;
 pub mod ics;
+pub mod jumplist;
 pub mod launcher;
 pub mod media;
 pub mod power;

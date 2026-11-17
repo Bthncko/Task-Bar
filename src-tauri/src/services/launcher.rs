@@ -72,6 +72,38 @@ pub fn launch(target: &LaunchTarget) -> AppResult<()> {
     }
 }
 
+/// Programı bağımsız değişkenler ve çalışma klasörüyle açar (atlama listesi görevleri).
+pub fn shell_open(file: &str, params: &str, dir: &str) -> AppResult<()> {
+    let file_w = wide(file);
+    let params_w = wide(params);
+    let dir_w = wide(dir);
+    let opt = |s: &str, w: &[u16]| {
+        if s.is_empty() {
+            PCWSTR::null()
+        } else {
+            PCWSTR(w.as_ptr())
+        }
+    };
+    let result = unsafe {
+        ShellExecuteW(
+            None,
+            w!("open"),
+            PCWSTR(file_w.as_ptr()),
+            opt(params, &params_w),
+            opt(dir, &dir_w),
+            SW_SHOWNORMAL,
+        )
+    };
+    if result.0 as isize > 32 {
+        Ok(())
+    } else {
+        Err(AppError::Win32(format!(
+            "açılamadı (kod {})",
+            result.0 as isize
+        )))
+    }
+}
+
 /// `ms-settings:` gibi bir adresi kabuğa açtırır.
 pub fn open_uri(uri: &str) -> AppResult<()> {
     let uri_w = wide(uri);

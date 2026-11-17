@@ -17,6 +17,7 @@ use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
 
 use super::icons::shell_info;
+use super::jumplist;
 use super::launcher::{self, LaunchTarget, launch_target};
 use super::windows_list::{self, process_aumid, process_image, window_aumid};
 use crate::config::{ConfigStore, PinnedApp};
@@ -181,42 +182,89 @@ impl AppsService {
         Ok(())
     }
 
-    /// Sağ tık: yerel (native) bağlam menüsü, imlecin olduğu yerde.
+    /// Sağ tık: yerel (native) bağlam menüsü, imlecin olduğu yerde. Windows
+    /// görev çubuğundaki gibi: önce uygulamanın atlama listesi (kategoriler,
+    /// görevler), sonra uygulamanın adı (yeni örnek), sabitleme, kapatma.
     pub fn show_menu(&self, window: &WebviewWindow, id: &str) -> AppResult<()> {
         let (item, meta, _) = self.find(id)?;
         let app = window.app_handle();
         let mid = |action: &str| format!("{MENU_PREFIX}:{action}:{id}");
+        let menu = Menu::new(app)?;
 
-        let pin = if item.pinned {
-            MenuItem::with_id(app, mid("unpin"), "Sabitlemeyi kaldır", true, None::<&str>)?
-        } else {
-            MenuItem::with_id(app, mid("pin"), "Sabitle", true, None::<&str>)?
-        };
-        let new_window = MenuItem::with_id(
+        let categories = jumplist::load(meta.exe.as_deref(), meta.aumid.as_deref());
+        let mut targets = Vec::new();
+        for cat in &categories {
+            // Başlık: tıklanamaz satır.
+            menu.append(&MenuItem::new(
+                app,
+                menu_text(&cat.title),
+                false,
+                None::<&str>,
+            )?)?;
+            for entry in &cat.items {
+                let n = targets.len();
+                targets.push(entry.target.clone());
+                menu.append(&MenuItem::with_id(
+                    app,
+                    format!("{MENU_PREFIX}:jump:{n}"),
+                    format!("    {}", menu_text(&entry.title)),
+                    true,
+                    None::<&str>,
+                )?)?;
+            }
+            menu.append(&PredefinedMenuItem::separator(app)?)?;
+        }
+        *JUMP_TARGETS.lock().unwrap() = (meta.exe.clone(), targets);
+
+        menu.append(&MenuItem::with_id(
             app,
             mid("new"),
-            if item.windows.is_empty() {
-                "Aç"
-            } else {
-                "Yeni pencere"
-            },
+            menu_text(&meta.name),
             meta.launch.is_some(),
             None::<&str>,
-        )?;
-        let menu = Menu::with_items(app, &[&new_window, &pin])?;
+        )?)?;
+        let pin = if item.pinned {
+            MenuItem::with_id(app, mid("unpin"), "Dock'tan kaldır", true, None::<&str>)?
+        } else {
+            MenuItem::with_id(app, mid("pin"), "Dock'a sabitle", true, None::<&str>)?
+        };
+        menu.append(&pin)?;
         if !item.windows.is_empty() {
             let close_label = if item.windows.len() == 1 {
                 "Pencereyi kapat".to_string()
             } else {
                 format!("Tüm pencereleri kapat ({})", item.windows.len())
             };
-            let close = MenuItem::with_id(app, mid("close"), close_label, true, None::<&str>)?;
-            menu.append(&PredefinedMenuItem::separator(app)?)?;
-            menu.append(&close)?;
+            menu.append(&MenuItem::with_id(
+                app,
+                mid("close"),
+                close_label,
+                true,
+                None::<&str>,
+            )?)?;
         }
         window.popup_menu(&menu)?;
         Ok(())
     }
+}
+
+/// Son açılan menünün atlama listesi öğeleri (menü kimliğindeki sıra) ve exe.
+static JUMP_TARGETS: Mutex<(Option<String>, Vec<jumplist::Target>)> =
+    Mutex::new((None, Vec::new()));
+
+/// Menü metni: `&` kısayol işareti sayılmasın, çok uzunsa kısalsın.
+fn menu_text(s: &str) -> String {
+    const MAX: usize = 60;
+    let s = s.trim();
+    let short: String = if s.chars().count() > MAX {
+        s.chars()
+            .take(MAX - 1)
+            .chain(std::iter::once('…'))
+            .collect()
+    } else {
+        s.to_string()
+    };
+    short.replace('&', "&&")
 }
 
 /// Menü olayları: `app-menu:<eylem>:<id>`. id içinde ':' olabilir (exe yolu).
@@ -226,6 +274,23 @@ pub fn handle_menu_event(app: &AppHandle, menu_id: &str) {
     else {
         return;
     };
+    if action == "jump" {
+        let (exe, target) = {
+            let jump = JUMP_TARGETS.lock().unwrap();
+            (
+                jump.0.clone(),
+                id.parse::<usize>()
+                    .ok()
+                    .and_then(|n| jump.1.get(n).cloned()),
+            )
+        };
+        if let Some(target) = target
+            && let Err(e) = jumplist::open(&target, exe.as_deref())
+        {
+            eprintln!("atlama listesi öğesi açılamadı: {e}");
+        }
+        return;
+    }
     let apps = app.state::<AppsService>();
     let config = app.state::<ConfigStore>();
     let result = match action {
