@@ -57,6 +57,9 @@ const FORWARD_POST: u32 = WM_USER + 372;
 const TIMER_WATCH: usize = 1;
 const TIMER_REBROADCAST: usize = 2;
 const WATCH_MS: u32 = 250;
+const STARTUP_RESYNC_MS: u32 = 3000;
+/// Explorer öne geçtiğinde simgeleri yeniden isteme sıklığı (en fazla).
+const RESYNC_EVERY: Duration = Duration::from_secs(300);
 /// Kendi yayınımızdan sonra gelen "TaskbarCreated" bizimki sayılır.
 const OWN_BROADCAST: Duration = Duration::from_secs(5);
 /// Explorer'a iletmede en fazla bekleme.
@@ -191,9 +194,9 @@ pub fn shutdown() {
 
 pub fn state() -> TrayState {
     with(|h| TrayState {
-        active: h.tray != 0
-            && unsafe { FindWindowW(w!("Shell_TrayWnd"), None) }
-                .is_ok_and(|f| f.0 as isize == h.tray),
+        // Pencere sırası ölçüt değil: Windows'un çubuğu ara sıra (ölçüm: ~%1)
+        // bir an öne geçiyor, `watch` hemen geri alıyor.
+        active: h.tray != 0,
         icons: h
             .entries
             .iter()
@@ -273,6 +276,8 @@ fn run() {
         make_topmost(tray);
         SetTimer(Some(tray), TIMER_WATCH, WATCH_MS, None);
         broadcast();
+        // Açılışta Windows çubuğu gizlenirken sıra karışabilir: bir kez daha iste.
+        SetTimer(Some(tray), TIMER_REBROADCAST, STARTUP_RESYNC_MS, None);
         eprintln!("[tray] simgeler alınıyor");
 
         let mut msg = MSG::default();
@@ -554,6 +559,12 @@ fn watch(tray: HWND) {
     let first = unsafe { FindWindowW(w!("Shell_TrayWnd"), None) };
     if first.is_ok_and(|f| f != tray) {
         make_topmost(tray);
+        // O arada gelen simge iletileri Explorer'a gitmiş olabilir: seyrek de
+        // olsa simgeleri yeniden iste (her uygulama simgesini baştan ekler).
+        let stale = with(|h| h.broadcast_at.is_none_or(|t| t.elapsed() > RESYNC_EVERY));
+        if stale {
+            broadcast();
+        }
     }
     let (emit, rect_changed) = with(|h| {
         h.ticks = h.ticks.wrapping_add(1);
