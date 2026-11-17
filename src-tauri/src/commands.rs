@@ -782,3 +782,18 @@ pub async fn set_radio(radios: State<'_, RadiosService>, kind: String, on: bool)
         .recv_timeout(Duration::from_secs(8))
         .map_err(|_| "radyo yanıt vermedi".to_string())?
 }
+
+// --- AI kullanımı (8.9) ---------------------------------------------------------
+
+#[tauri::command]
+pub fn get_ai_usage(
+    usage: State<crate::services::ai_usage::AiUsageService>,
+) -> Option<crate::services::ai_usage::AiUsage> {
+    usage.get()
+}
+
+/// Panel açıldı: beklemeden yeniden oku (sonuç `ai-usage://changed` ile).
+#[tauri::command]
+pub fn ai_usage_refresh(usage: State<crate::services::ai_usage::AiUsageService>) {
+    usage.send(crate::services::ai_usage::Refresh);
+}

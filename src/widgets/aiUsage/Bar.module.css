@@ -1,0 +1,50 @@
+.tile {
+  gap: 8px;
+  padding-inline: 10px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.icon {
+  flex: none;
+  color: var(--text-2);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.1;
+}
+
+.label {
+  width: 40px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.meter {
+  width: 44px;
+  height: 4px;
+}
+
+.value {
+  min-width: 32px;
+  font-size: var(--fs-sm);
+  text-align: right;
+}
+
+.row[data-high] .value,
+.row[data-high] .label {
+  color: var(--warn);
+}
+
+.row[data-high] .meter > * {
+  background: var(--warn);
+}

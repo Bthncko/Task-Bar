@@ -89,6 +89,14 @@ export const HeartIcon = ({ filled, ...p }: IconProps & { filled?: boolean }) =>
   </Svg>
 );
 
+/** AI: dört köşeli parıltı. */
+export const SparkleIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 3.5c.6 4.3 2.2 5.9 6.5 6.5-4.3.6-5.9 2.2-6.5 6.5-.6-4.3-2.2-5.9-6.5-6.5 4.3-.6 5.9-2.2 6.5-6.5z" />
+    <path d="M18.5 15.5c.25 1.7.8 2.25 2.5 2.5-1.7.25-2.25.8-2.5 2.5-.25-1.7-.8-2.25-2.5-2.5 1.7-.25 2.25-.8 2.5-2.5z" />
+  </Svg>
+);
+
 export const PlusIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M12 5.5v13M5.5 12h13" />

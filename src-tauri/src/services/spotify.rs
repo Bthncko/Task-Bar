@@ -37,21 +37,15 @@ use base64::engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
-use windows::Foundation::Uri;
-use windows::Storage::Streams::UnicodeEncoding;
-use windows::Web::Http::Filters::{
-    HttpBaseProtocolFilter, HttpCacheReadBehavior, HttpCacheWriteBehavior,
-};
-use windows::Web::Http::{HttpClient, HttpMethod, HttpRequestMessage, HttpStringContent};
 use windows::Win32::Foundation::{HLOCAL, LocalFree};
 use windows::Win32::Security::Cryptography::{
     BCRYPT_SHA256_ALG_HANDLE, BCRYPT_USE_SYSTEM_PREFERRED_RNG, BCryptGenRandom, BCryptHash,
     CRYPT_INTEGER_BLOB, CRYPTPROTECT_UI_FORBIDDEN, CryptProtectData, CryptUnprotectData,
 };
-use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
-use windows::core::{HSTRING, w};
+use windows::core::w;
 
 use crate::error::{AppError, AppResult};
+use crate::services::http::{self, Body, Response};
 use crate::services::launcher;
 
 pub const SPOTIFY_CHANGED: &str = "spotify://changed";
@@ -1246,68 +1240,12 @@ fn callback_page(ok: bool) -> String {
 
 // --- yardımcılar -------------------------------------------------------------------
 
-struct Response {
-    status: u16,
-    body: String,
-}
-
-/// İstek gövdesi.
-enum Body<'a> {
-    Form(&'a str),
-    Json(&'a str),
-}
-
 /// Bekleyen bir iş parçacığında çağrılmalı.
 fn http(method: &str, url: &str, bearer: Option<&str>, body: Option<Body>) -> AppResult<Response> {
-    // SAFETY: bu iş parçacığı için COM başlatma; zaten başlatılmışsa zararsız.
-    unsafe {
-        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
-    }
-    let filter = HttpBaseProtocolFilter::new()?;
-    let cache = filter.CacheControl()?;
-    cache.SetReadBehavior(HttpCacheReadBehavior::NoCache)?;
-    cache.SetWriteBehavior(HttpCacheWriteBehavior::NoCache)?;
-    let client = HttpClient::Create(&filter)?;
-    let has_body = method != "GET";
-    let method = match method {
-        "POST" => HttpMethod::Post()?,
-        "PUT" => HttpMethod::Put()?,
-        "DELETE" => HttpMethod::Delete()?,
-        _ => HttpMethod::Get()?,
-    };
-    let request = HttpRequestMessage::Create(&method, &Uri::CreateUri(&HSTRING::from(url))?)?;
-    if let Some(token) = bearer {
-        request.Headers()?.TryAppendWithoutValidation(
-            &HSTRING::from("Authorization"),
-            &HSTRING::from(format!("Bearer {token}")),
-        )?;
-    }
-    if let Some(body) = body {
-        let (text, media_type) = match body {
-            Body::Form(t) => (t, "application/x-www-form-urlencoded"),
-            Body::Json(t) => (t, "application/json"),
-        };
-        let content = HttpStringContent::CreateFromStringWithEncodingAndMediaType(
-            &HSTRING::from(text),
-            UnicodeEncoding::Utf8,
-            &HSTRING::from(media_type),
-        )?;
-        request.SetContent(&content)?;
-    } else if has_body {
-        // Gövdesiz POST/PUT: Spotify Content-Length ister (yoksa 411).
-        request.SetContent(&HttpStringContent::CreateFromString(&HSTRING::new())?)?;
-    }
-    let response = client
-        .SendRequestAsync(&request)?
-        .join()
-        .map_err(|e| AppError::InvalidInput(format!("Spotify'a ulaşılamadı: {}", e.message())))?;
-    let status = response.StatusCode()?.0 as u16;
-    let body = response
-        .Content()?
-        .ReadAsStringAsync()?
-        .join()?
-        .to_string_lossy();
-    Ok(Response { status, body })
+    let auth = bearer.map(|t| format!("Bearer {t}"));
+    let headers: Vec<(&str, &str)> = auth.iter().map(|a| ("Authorization", a.as_str())).collect();
+    http::request(method, url, &headers, body)
+        .map_err(|e| AppError::InvalidInput(format!("Spotify'a ulaşılamadı: {}", e.message())))
 }
 
 /// `application/x-www-form-urlencoded` (sorgu dizesi için de).

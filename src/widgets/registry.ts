@@ -16,6 +16,7 @@ import { timerWidget } from "./timer";
 import { volumeWidget } from "./volume";
 import { weatherWidget } from "./weather";
 import { worldClockWidget } from "./worldClock";
+import { aiUsageWidget } from "./aiUsage";
 
 // Yeni widget = yeni klasör + buraya bir satır.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,4 +39,6 @@ export const registry: Record<string, WidgetDefinition<any>> = {
   [recycleBinWidget.id]: recycleBinWidget,
   [brightnessWidget.id]: brightnessWidget,
   [keyboardWidget.id]: keyboardWidget,
+  // 8.9
+  [aiUsageWidget.id]: aiUsageWidget,
 };

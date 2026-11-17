@@ -146,6 +146,8 @@ pub fn run() {
             commands::open_recycle_bin,
             commands::empty_recycle_bin,
             commands::get_keyboard,
+            commands::get_ai_usage,
+            commands::ai_usage_refresh,
             commands::get_brightness,
             commands::notify_layout,
             commands::notify_activate,
@@ -203,6 +205,7 @@ pub fn run() {
             services::sysmon::spawn(app.handle());
             services::recycle::spawn(app.handle());
             services::keyboard::spawn(app.handle());
+            services::ai_usage::spawn(app.handle());
             services::timer::init(app.handle());
             services::backdrop::spawn(app.handle());
             services::accent::spawn(app.handle());

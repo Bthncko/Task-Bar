@@ -238,6 +238,7 @@ export const events = {
   timer: "timer://changed",
   recycle: "recycle://changed",
   keyboard: "keyboard://changed",
+  aiUsage: "ai-usage://changed",
   /** Yalnızca bildirim penceresine: yeni kart (Notice) / kaldırılan bildirim (id). */
   notifyShow: "notify://show",
   notifyGone: "notify://gone",
@@ -272,6 +273,37 @@ export type BatterySettings = {
 export type Notice = { id: number; app: string; icon: string | null; title: string; body: string };
 export type TrayIcon = { id: string; tip: string; icon: string | null };
 /** `active: false`: simgeler Windows'ta (kendi tepsimiz açılamadı). */
+/** AI kullanımı (8.9): Claude hesabındaki limitler (`/usage` ile aynı). */
+export type AiLimit = {
+  label: string;
+  /** 0–100. */
+  percent: number;
+  /** Sıfırlanma (epoch ms); pencere başlamadıysa null. */
+  resetsAt: number | null;
+  /** Claude'un kendi uyarı eşiği aşıldı. */
+  warning: boolean;
+};
+export type AiUsage = {
+  /** Hiç alınamadıysa null. */
+  limits: {
+    session: AiLimit | null;
+    weekly: AiLimit | null;
+    other: AiLimit[];
+    fetchedAt: number;
+  } | null;
+  /** Son deneme başarısızsa nedeni (önceki değer gösterilmeye devam eder). */
+  limitsError: string | null;
+  /** Bu bilgisayardaki Claude Code kayıtları (son 7 gün); yoksa null. */
+  activity: {
+    /** Son 8 günün saatlik ağırlıkları: [saat başı (epoch ms), ağırlık]; yalnızca oran için. */
+    hourly: [number, number][];
+    /** share: son 7 günkü pay (%). */
+    models: { name: string; share: number; requests: number }[];
+    tokens: { input: number; output: number; cacheRead: number; cacheWrite: number };
+    requests: number;
+  } | null;
+} | null;
+
 export type TrayState = { active: boolean; icons: TrayIcon[] };
 export type WifiNetwork = {
   ssid: string;
@@ -453,6 +485,9 @@ export const commands = {
   openRecycleBin: () => invoke<void>("open_recycle_bin"),
   emptyRecycleBin: () => invoke<void>("empty_recycle_bin"),
   getKeyboard: () => invoke<KeyboardState | null>("get_keyboard"),
+  getAiUsage: () => invoke<AiUsage>("get_ai_usage"),
+  /** Beklemeden yeniden oku; sonuç `events.aiUsage` ile gelir. */
+  aiUsageRefresh: () => invoke<void>("ai_usage_refresh"),
   getBrightness: () => invoke<number | null>("get_brightness"),
   notifyLayout: (width: number, height: number) => invoke<void>("notify_layout", { width, height }),
   notifyActivate: (id: number) => invoke<void>("notify_activate", { id }),

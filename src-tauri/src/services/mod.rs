@@ -6,9 +6,11 @@ pub mod audio_devices;
 pub mod backdrop;
 pub mod battery_settings;
 pub mod file_drop;
+pub mod http;
 pub mod icons;
 pub mod ics;
 pub mod jumplist;
+pub mod ai_usage;
 pub mod keyboard;
 pub mod launcher;
 pub mod media;
@@ -54,6 +56,9 @@ pub fn sync_active(app: &AppHandle, config: &Config) {
     }
     if let Some(s) = app.try_state::<keyboard::KeyboardService>() {
         s.set_active(on("keyboard"));
+    }
+    if let Some(s) = app.try_state::<ai_usage::AiUsageService>() {
+        s.set_active(on("aiUsage"));
     }
     // Düz zeminde duvar kâğıdı şeridi kullanılmaz.
     if let Some(s) = app.try_state::<backdrop::BackdropService>() {
