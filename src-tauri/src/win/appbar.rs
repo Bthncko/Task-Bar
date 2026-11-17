@@ -386,10 +386,14 @@ unsafe extern "system" fn subclass_proc(
             unsafe { SHAppBarMessage(ABM_WINDOWPOSCHANGED, &mut abd) };
         }
         WM_DISPLAYCHANGE | WM_DPICHANGED => post_reposition(hwnd),
-        m if Some(&m) == TASKBAR_CREATED.get() => {
+        // Kendi tepsimizin yayını (`tray_host`) Explorer'ın yeniden başlaması değil.
+        m if Some(&m) == TASKBAR_CREATED.get() && !super::tray_host::own_broadcast() => {
             // Explorer yeniden başladı: kayıt kayboldu, baştan kaydol.
-            REGISTERED.store(false, Ordering::SeqCst);
+            let was = REGISTERED.swap(false, Ordering::SeqCst);
             if let Err(e) = new_appbar(hwnd) {
+                // Kayıt aslında sürüyorsa (ABM_NEW "zaten kayıtlı" der) durum korunur:
+                // yoksa çıkışta ABM_REMOVE atlanır, ayrılan şerit kalırdı.
+                REGISTERED.store(was, Ordering::SeqCst);
                 eprintln!("AppBar yeniden kaydı başarısız: {e}");
             }
             post_reposition(hwnd);

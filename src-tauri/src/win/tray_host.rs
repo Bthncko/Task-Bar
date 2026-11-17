@@ -317,6 +317,12 @@ fn make_topmost(tray: HWND) {
     }
 }
 
+/// Az önce "TaskbarCreated"ı biz yayınladık mı (dock'un AppBar'ı bunu Explorer'ın
+/// yeniden başlaması sanmasın).
+pub fn own_broadcast() -> bool {
+    with(|h| h.broadcast_at.is_some_and(|t| t.elapsed() < OWN_BROADCAST))
+}
+
 /// Uygulamalara "görev çubuğu yeniden oluştu, simgelerini ekle" de.
 fn broadcast() {
     let Some(&msg) = TASKBAR_CREATED.get() else {

@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock, mpsc};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
@@ -26,7 +26,14 @@ use windows::UI::Notifications::Management::{
     UserNotificationListener, UserNotificationListenerAccessStatus,
 };
 use windows::UI::Notifications::{KnownNotificationBindings, NotificationKinds, UserNotification};
+use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
 use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
+use windows::Win32::System::Registry::{
+    HKEY, HKEY_CURRENT_USER, KEY_NOTIFY, REG_NOTIFY_CHANGE_LAST_SET, RegNotifyChangeKeyValue,
+    RegOpenKeyExW,
+};
+use windows::Win32::System::Threading::{CreateEventW, INFINITE, WaitForSingleObject};
+use windows::core::PCWSTR;
 use windows_registry::CURRENT_USER;
 
 pub const NOTIFY_SHOW: &str = "notify://show";
@@ -35,9 +42,16 @@ pub const NOTIFY_GONE: &str = "notify://gone";
 const SETTINGS_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings";
 const SHOW_BANNER: &str = "ShowBanner";
 const SAVED_FILE: &str = "notification-banners.json";
-/// Olay yoksa yoklama; olay varsa yalnızca yedek.
-const POLL: Duration = Duration::from_millis(700);
-const POLL_WITH_EVENTS: Duration = Duration::from_secs(5);
+/// Bir okuma (`GetNotificationsAsync`) arka planda ~150-200 ms işlemci harcıyor:
+/// sık yoklama boşta tek çekirdeğin %20-30'u demek. Bu yüzden yalnızca bir şey
+/// değişince okunur (`watch_registry`). Yedek yoklama seyrek.
+const SAFETY_POLL: Duration = Duration::from_secs(30);
+/// Ne olay ne kayıt izleme varsa.
+const FALLBACK_POLL: Duration = Duration::from_secs(3);
+/// Değişiklikten sonra okuma; değer bildirim okunabilir olmadan önce
+/// yazılabilir diye bir kez daha (`FOLLOWUP` sonra).
+const SETTLE: Duration = Duration::from_millis(150);
+const FOLLOWUP: Duration = Duration::from_secs(1);
 
 #[derive(Serialize, Clone)]
 pub struct Notice {
@@ -58,6 +72,9 @@ struct State {
 }
 
 static ENABLED: AtomicBool = AtomicBool::new(false);
+/// Dinleyici çalışıyor (izin var). Değilse kutucuklar asla kapatılmaz: yoksa
+/// bildirimler hiçbir yerde görünmezdi.
+static WORKING: AtomicBool = AtomicBool::new(false);
 static STATE: Mutex<Option<State>> = Mutex::new(None);
 static LISTENER: OnceLock<UserNotificationListener> = OnceLock::new();
 
@@ -68,17 +85,26 @@ fn with<R>(f: impl FnOnce(&mut State) -> R) -> Option<R> {
 
 pub fn spawn(app: &AppHandle, config_dir: PathBuf, enabled: bool) {
     let saved_path = config_dir.join(SAVED_FILE);
+    // Anahtarlar küçük harfle (kayıt defteri ve AUMID'ler büyük/küçük harf duyarsız).
     let saved = std::fs::read_to_string(&saved_path)
         .ok()
-        .and_then(|t| serde_json::from_str(&t).ok())
-        .unwrap_or_default();
+        .and_then(|t| serde_json::from_str::<HashMap<String, Option<u32>>>(&t).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
     *STATE.lock().unwrap_or_else(|e| e.into_inner()) = Some(State {
         saved_path,
         saved,
         senders: HashMap::new(),
         icons: HashMap::new(),
     });
-    set_enabled(enabled);
+    // Kutucuklar dinleyici çalışınca kapanır (`run`); kapalıysa önceki
+    // oturumdan (çökme) kalanlar geri yüklenir.
+    ENABLED.store(enabled, Ordering::Relaxed);
+    if !enabled {
+        restore_all();
+    }
     let app = app.clone();
     std::thread::Builder::new()
         .name("notifications".into())
@@ -89,7 +115,11 @@ pub fn spawn(app: &AppHandle, config_dir: PathBuf, enabled: bool) {
 /// Ayar değişti: kutucukları kapat ya da Windows'unkileri geri getir.
 pub fn set_enabled(on: bool) {
     ENABLED.store(on, Ordering::Relaxed);
-    if on { suppress_all() } else { restore_all() }
+    if !on {
+        restore_all();
+    } else if WORKING.load(Ordering::Relaxed) {
+        suppress_all();
+    }
 }
 
 /// Çıkışta: dock yokken bildirimler yine Windows'ta görünsün.
@@ -120,11 +150,12 @@ fn suppress_all() {
 /// Uygulamanın kutucuğunu kapat. Kullanıcı zaten kapattıysa dokunma (geri
 /// yüklerken açmayalım). `true`: artık kartı biz gösteriyoruz.
 fn suppress(aumid: &str) -> bool {
-    if excluded(aumid) || !ENABLED.load(Ordering::Relaxed) {
+    if excluded(aumid) || !ENABLED.load(Ordering::Relaxed) || !WORKING.load(Ordering::Relaxed) {
         return false;
     }
+    let lower = aumid.to_lowercase();
     with(|s| {
-        if s.saved.contains_key(aumid) {
+        if s.saved.contains_key(&lower) {
             return true;
         }
         let Ok(key) = CURRENT_USER.create(format!("{SETTINGS_KEY}\\{aumid}")) else {
@@ -137,7 +168,7 @@ fn suppress(aumid: &str) -> bool {
         if key.set_u32(SHOW_BANNER, 0).is_err() {
             return false;
         }
-        s.saved.insert(aumid.to_string(), before);
+        s.saved.insert(lower, before);
         persist(s);
         true
     })
@@ -192,6 +223,7 @@ fn run(app: AppHandle) {
         Ok(l) => l,
         Err(e) => {
             eprintln!("[notify] dinleyici yok: {}", e.message());
+            restore_all();
             return;
         }
     };
@@ -203,25 +235,50 @@ fn run(app: AppHandle) {
             .is_ok_and(allowed)
     {
         eprintln!("[notify] bildirimlere erişim izni yok");
+        restore_all();
         return;
     }
     let (tx, rx) = mpsc::channel::<()>();
+    let watching = watch_registry(tx.clone());
     let events = listener
         .NotificationChanged(&TypedEventHandler::new(move |_, _| {
             let _ = tx.send(());
             Ok(())
         }))
         .is_ok();
-    eprintln!("[notify] dinleniyor (olay: {events})");
+    eprintln!("[notify] dinleniyor (olay: {events}, kayıt izleme: {watching})");
     let _ = LISTENER.set(listener.clone());
 
-    let mut seen: HashSet<u32> = toasts(&listener)
-        .map(|l| l.iter().filter_map(|n| n.Id().ok()).collect())
-        .unwrap_or_default();
-    let wait = if events { POLL_WITH_EVENTS } else { POLL };
+    WORKING.store(true, Ordering::Relaxed);
+    if ENABLED.load(Ordering::Relaxed) {
+        suppress_all();
+    }
+
+    // Açılışta merkezde duran bildirimler kart olmaz. İlk okuma başarısızsa ilk
+    // başarılı okuma yalnızca "görüldü" sayılır (hepsi birden kart olmasın).
+    let mut primed = false;
+    let mut seen: HashSet<u32> = HashSet::new();
+    if let Ok(list) = toasts(&listener) {
+        seen = list.iter().filter_map(|n| n.Id().ok()).collect();
+        primed = true;
+    }
+    let idle = if events || watching {
+        SAFETY_POLL
+    } else {
+        FALLBACK_POLL
+    };
+    let mut followup: Option<Instant> = None;
     loop {
-        let _ = rx.recv_timeout(wait);
-        while rx.try_recv().is_ok() {}
+        let timeout = followup.map_or(idle, |t| t.saturating_duration_since(Instant::now()));
+        match rx.recv_timeout(timeout) {
+            Ok(()) => {
+                std::thread::sleep(SETTLE);
+                while rx.try_recv().is_ok() {}
+                followup = Some(Instant::now() + FOLLOWUP);
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => followup = None,
+            Err(mpsc::RecvTimeoutError::Disconnected) => std::thread::sleep(idle),
+        }
         let Ok(list) = toasts(&listener) else {
             continue;
         };
@@ -229,7 +286,8 @@ fn run(app: AppHandle) {
         for n in &list {
             let Ok(id) = n.Id() else { continue };
             now.insert(id);
-            if !seen.contains(&id)
+            if primed
+                && !seen.contains(&id)
                 && let Some(notice) = notice(n, id)
             {
                 let _ = app.emit(NOTIFY_SHOW, notice);
@@ -241,7 +299,59 @@ fn run(app: AppHandle) {
             let _ = app.emit(NOTIFY_GONE, *gone);
         }
         seen = now;
+        primed = true;
     }
+}
+
+/// Bildirim ayarları anahtarı değişince kanala yazar. Windows her yeni
+/// bildirimde gönderen uygulamanın `LastNotificationAddedTime` değerini günceller
+/// (bu makinede denendi); `RegNotifyChangeKeyValue` bunu olay olarak verir.
+/// Kendi `ShowBanner` yazmalarımız da tetikler: yalnızca fazladan bir okuma.
+/// `false`: izlenemiyor.
+fn watch_registry(tx: mpsc::Sender<()>) -> bool {
+    let path = crate::win::wide(SETTINGS_KEY);
+    let mut key = HKEY::default();
+    let opened = unsafe {
+        RegOpenKeyExW(
+            HKEY_CURRENT_USER,
+            PCWSTR(path.as_ptr()),
+            None,
+            KEY_NOTIFY,
+            &mut key,
+        )
+    };
+    if opened.is_err() {
+        return false;
+    }
+    let Ok(event) = (unsafe { CreateEventW(None, false, false, None) }) else {
+        return false;
+    };
+    // Tutamaçlar iş parçacıkları arasında sayı olarak taşınır.
+    let (key, event) = (key.0 as isize, event.0 as isize);
+    std::thread::Builder::new()
+        .name("notify-watch".into())
+        .spawn(move || {
+            let (key, event) = (HKEY(key as *mut _), HANDLE(event as *mut _));
+            // Eşzamansız kayıt, kaydeden iş parçacığı yaşadıkça geçerli: döngü burada.
+            loop {
+                let armed = unsafe {
+                    RegNotifyChangeKeyValue(
+                        key,
+                        true,
+                        REG_NOTIFY_CHANGE_LAST_SET,
+                        Some(event),
+                        true,
+                    )
+                };
+                if armed.is_err()
+                    || unsafe { WaitForSingleObject(event, INFINITE) } != WAIT_OBJECT_0
+                    || tx.send(()).is_err()
+                {
+                    break;
+                }
+            }
+        })
+        .is_ok()
 }
 
 fn toasts(listener: &UserNotificationListener) -> windows::core::Result<Vec<UserNotification>> {
@@ -262,7 +372,7 @@ fn notice(n: &UserNotification, id: u32) -> Option<Notice> {
         .and_then(|i| i.AppUserModelId().ok())
         .map(|h| h.to_string())
         .unwrap_or_default();
-    let ours = with(|s| s.saved.contains_key(&aumid)).unwrap_or(false);
+    let ours = with(|s| s.saved.contains_key(&aumid.to_lowercase())).unwrap_or(false);
     if !ours {
         // İlk kez görülen uygulama: bunu Windows gösterdi, sonrakiler bizim.
         suppress(&aumid);
