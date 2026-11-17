@@ -2,6 +2,7 @@ pub mod appbar;
 pub mod focus;
 pub mod placement;
 pub mod popup;
+pub mod preview;
 pub mod settings;
 pub mod window_fx;
 pub mod taskbar;

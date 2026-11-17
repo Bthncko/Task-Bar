@@ -7,6 +7,7 @@ import "./styles/tokens.css";
 import "./styles/global.css";
 import { DockWindow } from "./windows/DockWindow";
 import { PopupWindow } from "./windows/PopupWindow";
+import { PreviewWindow } from "./windows/PreviewWindow";
 import { SettingsWindow } from "./windows/SettingsWindow";
 
 // Her Tauri penceresi aynı paketi yükler; hangisi olduğunu pencere etiketi söyler
@@ -15,6 +16,8 @@ function pickWindow() {
   switch (getCurrentWindow().label) {
     case "popup":
       return <PopupWindow />;
+    case "preview":
+      return <PreviewWindow />;
     case "settings":
       return <SettingsWindow />;
     default:

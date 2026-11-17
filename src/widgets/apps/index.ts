@@ -3,6 +3,8 @@ import { AppsBar } from "./Bar";
 
 export interface AppsConfig {
   magnify: number;
+  previews: boolean;
+  previewDelayMs: number;
 }
 
 export const appsWidget: WidgetDefinition<AppsConfig> = {
@@ -12,5 +14,5 @@ export const appsWidget: WidgetDefinition<AppsConfig> = {
   description: "Sabitlenen ve açık uygulamalar; üzerine gelince büyür.",
   defaultSection: "left",
   Bar: AppsBar,
-  defaultConfig: { magnify: 1.8 },
+  defaultConfig: { magnify: 1.8, previews: true, previewDelayMs: 350 },
 };

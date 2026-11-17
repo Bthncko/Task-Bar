@@ -1,14 +1,19 @@
 import { commands, events, type Config } from "../../lib/ipc";
 import { updateConfig } from "../../lib/store";
 import { useService } from "../../lib/useService";
-import { Card, Row, Section, Slider } from "./controls";
+import { Card, Row, Section, Segmented, Slider, Toggle } from "./controls";
 import { SortableLists } from "./SortableLists";
 import styles from "./Settings.module.css";
 
 const PINNED = "pinned";
 
 export function Apps({ config }: { config: Config }) {
-  const { pinned, magnify } = config.widgets.apps;
+  const { pinned, magnify, previews, previewDelayMs } = config.widgets.apps;
+  const setApps = (patch: Partial<Config["widgets"]["apps"]>) =>
+    updateConfig((c) => ({
+      ...c,
+      widgets: { ...c.widgets, apps: { ...c.widgets.apps, ...patch } },
+    }));
   // İkonlar dock'un uygulama listesinden (sabitlenenler orada her zaman var).
   const apps = useService(commands.getApps, events.apps) ?? [];
   const iconOf = new Map(apps.map((a) => [a.id, a.icon]));
@@ -50,6 +55,30 @@ export function Apps({ config }: { config: Config }) {
             }
           />
         </Row>
+        <Row
+          label="Pencere önizlemesi"
+          hint="Açık bir uygulamanın ikonunda bekleyince pencerelerinin küçük resimleri."
+        >
+          <Toggle
+            label="Pencere önizlemesi"
+            checked={previews ?? true}
+            onChange={(on) => setApps({ previews: on })}
+          />
+        </Row>
+        {(previews ?? true) && (
+          <Row label="Önizleme gecikmesi" hint="İkonda ne kadar bekleyince açılsın.">
+            <Segmented
+              label="Önizleme gecikmesi"
+              value={String(previewDelayMs ?? 350)}
+              options={[
+                { value: "200", label: "Kısa" },
+                { value: "350", label: "Normal" },
+                { value: "600", label: "Uzun" },
+              ]}
+              onChange={(v) => setApps({ previewDelayMs: Number(v) })}
+            />
+          </Row>
+        )}
       </Card>
 
       <h3 className={styles.subTitle}>Sabitlenenler</h3>

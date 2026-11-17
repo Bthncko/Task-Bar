@@ -115,8 +115,12 @@ function useIconSize(group: React.RefObject<HTMLDivElement | null>, count: numbe
   return fit;
 }
 
+const noPreview = () => Promise.resolve(null);
+
 export function AppsBar({ config }: { config: AppsConfig }) {
   const apps = useService(commands.getApps, events.apps) ?? NO_APPS;
+  // Önizlemesi açık uygulama (8.3): o sırada isim balonları gizli.
+  const previewing = useService<string | null>(noPreview, events.previewState) ?? null;
   const [entries, drop] = useEntries(apps);
   const [launching, startLaunch] = useLaunching();
   const groupRef = useRef<HTMLDivElement>(null);
@@ -211,6 +215,7 @@ export function AppsBar({ config }: { config: AppsConfig }) {
             } as CSSProperties)
       }
       data-scrolling={scrolling || undefined}
+      data-previewing={previewing ? true : undefined}
       onWheel={(e) => {
         if (scrolling) e.currentTarget.scrollLeft += e.deltaY;
       }}
@@ -240,6 +245,7 @@ export function AppsBar({ config }: { config: AppsConfig }) {
             {hasPinned && i === firstUnpinned && <Divider className={styles.divider} />}
             <AppIcon
               app={app}
+              previews={config.previews ?? true}
               launching={launching.has(app.id) && app.windows.length === 0}
               onLaunch={startLaunch}
             />
@@ -252,14 +258,17 @@ export function AppsBar({ config }: { config: AppsConfig }) {
 
 const AppIcon = memo(function AppIcon({
   app,
+  previews,
   launching,
   onLaunch,
 }: {
   app: AppItem;
+  previews: boolean;
   launching: boolean;
   onLaunch: (id: string) => void;
 }) {
   const open = app.windows.length > 0;
+  const hidePreview = () => commands.hidePreview().catch(report("hide_preview"));
 
   return (
     <>
@@ -269,6 +278,20 @@ const AppIcon = memo(function AppIcon({
             type="button"
             className={styles.icon}
             aria-label={app.name}
+            // Pencere önizlemesi (8.3): yalnızca açık penceresi olanlarda; kapalı
+            // uygulamaya geçiş açık önizlemeyi kapatır (isim balonu görünür).
+            onPointerEnter={(e) => {
+              if (open && previews && e.buttons === 0) {
+                const r = e.currentTarget.getBoundingClientRect();
+                commands
+                  .previewEnter(app.id, { x: r.left, width: r.width })
+                  .catch(report("preview_enter"));
+              } else {
+                commands.previewLeave().catch(report("preview_leave"));
+              }
+            }}
+            onPointerLeave={() => commands.previewLeave().catch(report("preview_leave"))}
+            onPointerDown={hidePreview}
             onClick={() => {
               if (!open) onLaunch(app.id);
               commands.activateApp(app.id).catch(report("activate_app"));

@@ -171,6 +171,9 @@ pub struct ClockConfig {
 pub struct AppsConfig {
     pub pinned: Vec<PinnedApp>,
     pub magnify: f64,
+    /// İkonda bekleyince pencere önizlemesi (8.3).
+    pub previews: bool,
+    pub preview_delay_ms: u32,
 }
 
 impl Default for AppsConfig {
@@ -178,6 +181,8 @@ impl Default for AppsConfig {
         Self {
             pinned: Vec::new(),
             magnify: 1.8,
+            previews: true,
+            preview_delay_ms: 350,
         }
     }
 }

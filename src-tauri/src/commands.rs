@@ -13,7 +13,7 @@ use crate::services::radios::{RadiosService, RadiosState, SetRadio};
 use crate::services::spotify::{Queue, Spotify, SpotifyStatus};
 use crate::services::updater::{self, UpdateInfo, Updater};
 use crate::services::{ics, launcher};
-use crate::win::{placement, popup};
+use crate::win::{placement, popup, preview};
 
 type CmdResult<T = ()> = Result<T, String>;
 
@@ -250,6 +250,63 @@ pub fn activate_app(apps: State<AppsService>, id: String) -> CmdResult {
 #[tauri::command]
 pub fn launch_app(apps: State<AppsService>, id: String) -> CmdResult {
     apps.launch(&id).map_err(Into::into)
+}
+
+// --- pencere önizlemesi (8.3) ------------------------------------------------
+
+#[tauri::command]
+pub fn preview_enter(app: AppHandle, app_id: String, anchor: preview::Anchor) {
+    preview::enter(&app, app_id, anchor);
+}
+
+#[tauri::command]
+pub fn preview_leave(app: AppHandle) {
+    preview::leave(&app);
+}
+
+#[tauri::command]
+pub fn preview_hover(app: AppHandle, inside: bool) {
+    preview::hover(&app, inside);
+}
+
+#[tauri::command]
+pub fn preview_sizes(
+    app: AppHandle,
+    seq: u64,
+    hwnds: Vec<isize>,
+) -> CmdResult<Vec<preview::SourceSize>> {
+    preview::sizes(&app, seq, hwnds).map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn preview_layout(
+    app: AppHandle,
+    seq: u64,
+    width: f64,
+    height: f64,
+    thumbs: Vec<preview::ThumbRect>,
+    clip: preview::Clip,
+) -> CmdResult {
+    preview::layout(&app, seq, width, height, thumbs, clip).map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn hide_preview(app: AppHandle) {
+    preview::hide(&app);
+    if cfg!(debug_assertions) {
+        eprintln!(
+            "[preview] kapandı, kayıtlı küçük resim: {}",
+            preview::thumb_count()
+        );
+    }
+}
+
+/// Önizlemedeki karta tıklama: o pencere öne gelir.
+#[tauri::command]
+pub fn activate_window(app: AppHandle, apps: State<AppsService>, hwnd: isize) {
+    preview::hide(&app);
+    crate::win::focus::activate(hwnd);
+    apps.refresh_soon();
 }
 
 #[tauri::command]

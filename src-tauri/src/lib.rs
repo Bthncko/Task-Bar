@@ -83,6 +83,13 @@ pub fn run() {
             commands::activate_app,
             commands::launch_app,
             commands::close_window,
+            commands::preview_enter,
+            commands::preview_leave,
+            commands::preview_hover,
+            commands::preview_sizes,
+            commands::preview_layout,
+            commands::hide_preview,
+            commands::activate_window,
             commands::pin_app,
             commands::unpin_app,
             commands::show_app_menu,
@@ -157,6 +164,7 @@ pub fn run() {
             win::placement::reposition(hwnd)?;
             dock.show()?;
             win::popup::init(app.handle())?;
+            win::preview::init(app.handle())?;
             win::window_fx::set_enabled(minimize_to_dock);
             win::window_fx::spawn(app.handle());
 

@@ -1,0 +1,123 @@
+/* Pencere önizlemesi (8.3). Pencere panelden her yönde 16 px büyük (gölge payı;
+   preview.rs → SHADOW_PAD). Küçük resimleri DWM [data-shot] alanlarına çizer;
+   bu yüzden o alanların üstünde HTML bir şey durmaz (kapat düğmesi başlıkta). */
+.root {
+  position: fixed;
+  inset: 0;
+  padding: 16px;
+}
+
+.panel {
+  overflow: hidden;
+  background: var(--panel);
+  border-radius: var(--r-panel);
+  box-shadow:
+    inset 0 0 0 1px var(--hairline),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 6px 12px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.list {
+  display: flex;
+  gap: 4px;
+  height: 100%;
+  padding: 6px;
+  overflow: hidden;
+}
+
+.list[data-scrolls] {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.card {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  padding: 0 8px 8px;
+  border-radius: 10px;
+  cursor: default;
+  transition:
+    background-color var(--t-fast) ease,
+    opacity 160ms ease,
+    transform 160ms var(--ease-out);
+}
+
+.card:hover {
+  background: var(--tile-hover);
+}
+
+.card:active {
+  background: var(--tile-press);
+}
+
+/* Kapatıldı, pencere gidene kadar: küçük resim hemen kalkar, kart söner. */
+.card[data-closing] {
+  opacity: 0;
+  transform: scale(0.94);
+  pointer-events: none;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  min-width: 0;
+}
+
+.icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.close {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-right: -4px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--text-2);
+  opacity: 0;
+  transition:
+    opacity var(--t-fast) ease,
+    background-color var(--t-fast) ease;
+}
+
+.card:hover .close {
+  opacity: 1;
+}
+
+.close:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+
+.area {
+  display: grid;
+  place-items: center;
+}
+
+.fallback {
+  width: 48px;
+  height: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: background-color var(--t-fast) ease;
+  }
+}

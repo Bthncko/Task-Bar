@@ -35,7 +35,7 @@ export type Config = {
   };
   layout: { left: WidgetRef[]; center: WidgetRef[]; right: WidgetRef[] };
   widgets: {
-    apps: { pinned: PinnedApp[]; magnify: number };
+    apps: { pinned: PinnedApp[]; magnify: number; previews: boolean; previewDelayMs: number };
     weather: { lat: number; lon: number; city: string; unit: "C" | "F" };
     calendar: { icsUrls: string[] };
     clock: { showSeconds: boolean };
@@ -46,6 +46,12 @@ export type Config = {
 /** Sistem düğmeleri (8.2); her biri Windows'un kendi panelini açar. */
 export type SystemButton =
   "notifications" | "quickSettings" | "taskView" | "search" | "clipboard" | "snip" | "desktop";
+
+/** Pencere önizlemesi (8.3). */
+export type PreviewOpen = { appId: string; seq: number };
+export type SourceSize = { hwnd: number; width: number; height: number };
+export type ThumbRect = { hwnd: number; x: number; y: number; width: number; height: number };
+export type Rect = { x: number; y: number; width: number; height: number };
 
 export type AppItem = {
   id: string; // gruplama anahtarı
@@ -137,6 +143,11 @@ export const events = {
   popupClosed: "popup://closed",
   /** Rust kapanma istiyor (odak kaybı, ikinci tıklama): animasyonla kapat. */
   popupClose: "popup://close",
+  /** Yalnızca önizleme penceresine: hangi uygulamanın pencereleri (PreviewOpen). */
+  previewOpen: "preview://open",
+  previewClosed: "preview://closed",
+  /** Önizlemesi açık uygulama (`null`: kapalı); dock isim balonunu gizler. */
+  previewState: "preview://state",
   /** Açık ayarlar penceresi: bu bölüme geç. */
   settingsPage: "settings://page",
   /** Spotify bağlandı / bağlantı kesildi ya da düştü (SpotifyStatus). */
@@ -196,6 +207,19 @@ export const commands = {
   setAppIconRects: (rects: { id: string; x: number; y: number; size: number }[]) =>
     invoke<void>("set_app_icon_rects", { rects }),
   openStart: () => invoke<void>("open_start"),
+
+  /** İmleç açık penceresi olan bir ikona girdi; `anchor`: ikonun dock'taki yeri (CSS px). */
+  previewEnter: (appId: string, anchor: { x: number; width: number }) =>
+    invoke<void>("preview_enter", { appId, anchor }),
+  previewLeave: () => invoke<void>("preview_leave"),
+  previewHover: (inside: boolean) => invoke<void>("preview_hover", { inside }),
+  previewSizes: (seq: number, hwnds: number[]) =>
+    invoke<SourceSize[]>("preview_sizes", { seq, hwnds }),
+  /** Kartlar dizildi: pencereyi konumla, küçük resimleri yerleştir, göster. */
+  previewLayout: (seq: number, width: number, height: number, thumbs: ThumbRect[], clip: Rect) =>
+    invoke<void>("preview_layout", { seq, width, height, thumbs, clip }),
+  hidePreview: () => invoke<void>("hide_preview"),
+  activateWindow: (hwnd: number) => invoke<void>("activate_window", { hwnd }),
   systemShortcut: (action: SystemButton) => invoke<void>("system_shortcut", { action }),
 
   getMedia: () => invoke<MediaState>("get_media"),

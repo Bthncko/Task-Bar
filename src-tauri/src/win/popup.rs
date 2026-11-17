@@ -113,6 +113,8 @@ pub fn init(app: &AppHandle) -> AppResult<()> {
 
 /// Widget tıklaması: kapalıysa aç, aynı panel açıksa kapat, başkası açıksa değiştir.
 pub fn toggle(app: &AppHandle, widget_id: String, anchor: Anchor) -> AppResult<()> {
+    // Panel açılırken pencere önizlemesi kapanır (8.3).
+    super::preview::hide(app);
     let seq = {
         let mut s = STATE.lock().unwrap();
         if s.current.as_deref() == Some(widget_id.as_str()) {
@@ -133,6 +135,11 @@ pub fn toggle(app: &AppHandle, widget_id: String, anchor: Anchor) -> AppResult<(
     };
     app.emit_to(LABEL, OPEN_EVENT, OpenPayload { widget_id, seq })?;
     Ok(())
+}
+
+/// Bir panel açık ya da açılmakta (önizleme bu sırada açılmaz, 8.3).
+pub fn is_open() -> bool {
+    STATE.lock().unwrap().current.is_some()
 }
 
 /// Popup sayfası paneli çizdi; `width`/`height` panelin mantıksal boyutu

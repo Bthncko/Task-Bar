@@ -147,6 +147,12 @@
   transition-delay: 400ms;
 }
 
+/* Pencere önizlemesi açıkken (8.3) isim balonu onun yerine geçmez. */
+.group[data-previewing] .tooltip {
+  opacity: 0;
+  transition-delay: 0s;
+}
+
 /* --- ayraç (sabitlenenler │ açık uygulamalar) ----------------------------------- */
 
 /* Boşluğun ortasında, düzeni değiştirmeden: büyütme hesabı aynı kalır. */
