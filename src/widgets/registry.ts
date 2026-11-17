@@ -3,6 +3,7 @@ import { appsWidget } from "./apps";
 import { batteryWidget } from "./battery";
 import { clockWidget } from "./clock";
 import { mediaWidget } from "./media";
+import { micWidget } from "./mic";
 import { radiosWidget } from "./radios";
 import { startWidget } from "./start";
 import { sysmonWidget } from "./sysmon";
@@ -20,6 +21,7 @@ export const registry: Record<string, WidgetDefinition<any>> = {
   [clockWidget.id]: clockWidget,
   [radiosWidget.id]: radiosWidget,
   [volumeWidget.id]: volumeWidget,
+  [micWidget.id]: micWidget,
   [batteryWidget.id]: batteryWidget,
   [systemWidget.id]: systemWidget,
   [sysmonWidget.id]: sysmonWidget,

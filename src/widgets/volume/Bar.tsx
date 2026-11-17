@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { commands, events, report } from "../../lib/ipc";
+import { togglePopup } from "../../lib/popup";
 import { useService } from "../../lib/useService";
 import { SpeakerIcon } from "../icons";
 import { Dim, Meter, Tile } from "../ui";
@@ -77,7 +78,8 @@ export function VolumeBar() {
       variant="soft"
       className={styles.tile}
       data-muted={audio.muted || undefined}
-      title={`${audio.device} — %${audio.volume}${audio.muted ? " (sessiz)" : ""}\nSağ tık: ses ayarları`}
+      data-volume-tile
+      title={`${audio.device} — %${audio.volume}${audio.muted ? " (sessiz)" : ""}\nAygıt adına tıkla: çıkış ve mikrofon · Sağ tık: ses ayarları`}
       onWheel={(e) => push(clamp(value + (e.deltaY < 0 ? WHEEL_STEP : -WHEEL_STEP)))}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -93,7 +95,15 @@ export function VolumeBar() {
         >
           <SpeakerIcon level={shown} muted={silent} size={16} />
         </button>
-        <span className={styles.device}>{audio.device}</span>
+        {/* Aygıt adı: çıkış / mikrofon paneli (8.5). */}
+        <button
+          type="button"
+          className={styles.device}
+          title="Çıkış aygıtı ve mikrofon"
+          onClick={(e) => togglePopup("volume", e.currentTarget.closest("[data-volume-tile]")!)}
+        >
+          {audio.device}
+        </button>
         <span className={styles.percent}>{shown}</span>
       </div>
       <div

@@ -45,7 +45,17 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  border-radius: 4px;
   color: var(--text-2);
+  transition: color var(--t-fast) ease;
+}
+
+.device:hover {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .percent {

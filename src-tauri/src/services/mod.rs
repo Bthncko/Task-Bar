@@ -2,6 +2,7 @@ pub mod accent;
 pub mod app_events;
 pub mod apps;
 pub mod audio;
+pub mod audio_devices;
 pub mod backdrop;
 pub mod icons;
 pub mod ics;
@@ -29,7 +30,7 @@ pub fn sync_active(app: &AppHandle, config: &Config) {
         s.set_active(on("media"));
     }
     if let Some(s) = app.try_state::<audio::AudioService>() {
-        s.set_active(on("volume"));
+        s.set_active(on("volume") || on("mic"));
     }
     if let Some(s) = app.try_state::<power::PowerService>() {
         s.set_active(on("battery"));

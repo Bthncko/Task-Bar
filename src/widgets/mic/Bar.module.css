@@ -1,0 +1,15 @@
+.mic {
+  width: var(--tile-h);
+  padding: 0;
+  justify-content: center;
+}
+
+.mic[data-muted] {
+  color: #fff;
+  background-color: #c42b1c;
+  box-shadow: none;
+}
+
+.mic[data-muted]:hover {
+  background-color: #d13a2a;
+}

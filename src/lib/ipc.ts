@@ -92,7 +92,16 @@ export type MediaState = {
 
 export type RepeatMode = "off" | "list" | "track";
 
-export type AudioState = { volume: number; muted: boolean; device: string } | null;
+export type AudioDevice = { id: string; name: string; default: boolean };
+export type AudioState = {
+  volume: number;
+  muted: boolean;
+  device: string;
+  /** Etkin çıkış aygıtları (8.5). */
+  outputs: AudioDevice[];
+  /** Varsayılan mikrofon. */
+  mic: { name: string; volume: number; muted: boolean } | null;
+} | null;
 
 export type PowerState = {
   percent: number;
@@ -180,8 +189,9 @@ export type PopupPlaced = { originX: number } | null;
 export const commands = {
   /** Büyütme sırasında görünür bölgeyi açar / bara daraltır (3.2). */
   setDockExpanded: (expanded: boolean) => invoke<void>("set_dock_expanded", { expanded }),
-  openSystemSettings: (page: "wifi" | "bluetooth" | "sound" | "battery" | "spotify-dashboard") =>
-    invoke<void>("open_system_settings", { page }),
+  openSystemSettings: (
+    page: "wifi" | "bluetooth" | "sound" | "sound-mixer" | "battery" | "spotify-dashboard",
+  ) => invoke<void>("open_system_settings", { page }),
   /** Windows'un hızlı ayarlar paneli; "wifi" doğrudan ağ listesini açar. */
   openQuickSettings: (panel: "wifi" | "bluetooth" | "battery") =>
     invoke<void>("open_quick_settings", { panel }),
@@ -265,6 +275,10 @@ export const commands = {
   /** v: 0–1 */
   setVolume: (v: number) => invoke<void>("set_volume", { v }),
   setMute: (muted: boolean) => invoke<void>("set_mute", { muted }),
+  setMicVolume: (v: number) => invoke<void>("set_mic_volume", { v }),
+  setMicMute: (muted: boolean) => invoke<void>("set_mic_mute", { muted }),
+  /** Belgelenmemiş API; hata verirse Windows ses ayarları açılmalı. */
+  setDefaultOutput: (id: string) => invoke<void>("set_default_output", { id }),
 
   getPower: () => invoke<PowerState>("get_power"),
 

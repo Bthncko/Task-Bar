@@ -35,6 +35,7 @@ pub fn open_system_settings(page: String) -> CmdResult {
         "wifi" => "ms-settings:network-wifi",
         "bluetooth" => "ms-settings:bluetooth",
         "sound" => "ms-settings:sound",
+        "sound-mixer" => "ms-settings:apps-volume",
         "battery" => "ms-settings:batterysaver",
         // Dış bağlantılar da yalnızca bilinen adreslerle (frontend keyfi URL açtıramaz).
         "spotify-dashboard" => "https://developer.spotify.com/dashboard",
@@ -414,12 +415,34 @@ pub fn get_audio(audio: State<AudioService>) -> Option<AudioState> {
 /// `v`: 0–1.
 #[tauri::command]
 pub fn set_volume(audio: State<AudioService>, v: f32) {
-    audio.send(AudioCmd::SetVolume(v));
+    audio.send(AudioCmd::Volume(v));
 }
 
 #[tauri::command]
 pub fn set_mute(audio: State<AudioService>, muted: bool) {
-    audio.send(AudioCmd::SetMute(muted));
+    audio.send(AudioCmd::Mute(muted));
+}
+
+#[tauri::command]
+pub fn set_mic_volume(audio: State<AudioService>, v: f32) {
+    audio.send(AudioCmd::MicVolume(v));
+}
+
+#[tauri::command]
+pub fn set_mic_mute(audio: State<AudioService>, muted: bool) {
+    audio.send(AudioCmd::MicMute(muted));
+}
+
+/// Çıkış aygıtını değiştir (8.5, belgelenmemiş API). Hata dönerse panel
+/// Windows'un ses ayarlarını açar.
+#[tauri::command]
+pub async fn set_default_output(audio: State<'_, AudioService>, id: String) -> CmdResult {
+    let (tx, rx) = mpsc::channel();
+    audio.send(AudioCmd::DefaultOutput(id, tx));
+    tauri::async_runtime::spawn_blocking(move || rx.recv_timeout(Duration::from_secs(5)))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|_| "ses servisi yanıt vermedi".to_string())?
 }
 
 // --- pil -------------------------------------------------------------------

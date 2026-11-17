@@ -147,6 +147,32 @@ export const LeafIcon = (p: IconProps) => (
   </Svg>
 );
 
+// --- ses aygıtları (8.5) ---------------------------------------------------------
+
+/** Mikrofon; `muted` iken çapraz çizgi. */
+export const MicIcon = ({ muted, ...p }: IconProps & { muted?: boolean }) => (
+  <Svg {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+    {muted && <path d="M4 4l16 16" />}
+  </Svg>
+);
+
+/** Kulaklık (çıkış aygıtı listesi). */
+export const HeadphonesIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 15v-3a8 8 0 0 1 16 0v3" />
+    <rect x="3.5" y="14" width="4" height="6.5" rx="1.5" />
+    <rect x="16.5" y="14" width="4" height="6.5" rx="1.5" />
+  </Svg>
+);
+
+export const CheckIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </Svg>
+);
+
 // --- sistem düğmeleri (8.2) -----------------------------------------------------
 
 export const BellIcon = (p: IconProps) => (
