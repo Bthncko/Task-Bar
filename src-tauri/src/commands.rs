@@ -797,3 +797,21 @@ pub fn get_ai_usage(
 pub fn ai_usage_refresh(usage: State<crate::services::ai_usage::AiUsageService>) {
     usage.send(crate::services::ai_usage::Refresh);
 }
+
+// --- bildirim sesi ---------------------------------------------------------
+
+/// Seçili bildirim sesi: kendi seslerimizden biri, "windows" ya da "custom".
+#[tauri::command]
+pub fn get_notification_sound() -> String {
+    crate::services::notify_sound::current()
+}
+
+#[tauri::command]
+pub fn set_notification_sound(id: String) -> CmdResult {
+    crate::services::notify_sound::set(&id)
+}
+
+#[tauri::command]
+pub fn preview_notification_sound(id: String) {
+    crate::services::notify_sound::preview(&id);
+}

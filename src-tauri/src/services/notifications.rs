@@ -12,6 +12,14 @@
 //!   görülen uygulamanın ilk bildirimini Windows gösterir, sonrakileri biz.
 //! - Windows'un kendi sistem bildirimleri (`Windows.SystemToast.*`: düğmeli
 //!   onaylar, pil uyarısı) dokunulmadan Windows'ta kalır.
+//! - Ses: kendi bildirim seslerimizden biri seçiliyse (`notify_sound`), kartını
+//!   gösterdiğimiz uygulamaların Windows'taki sesi kapatılır ve kart çıkınca
+//!   seçili ses çalınır. Gerekçe: WhatsApp gibi uygulamalar bildirimde kendi ses
+//!   dosyasını ister (`<audio src="ms-appx:///...">`), Windows'un bildirim sesi
+//!   ayarı onlara uygulanmaz. Uygulama başına ses `SoundFile` (REG_SZ): boş
+//!   metin = kapalı, değer yok = açık (Ayarlar'dan açıp kapatarak bu makinede
+//!   doğrulandı, 2026-11-17). Önceki değerler diske yazılır, kutucuklar gibi
+//!   geri yüklenir. Aramalar / alarmlar (zil sesi) Windows'ta kalır.
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -25,7 +33,9 @@ use windows::Foundation::TypedEventHandler;
 use windows::UI::Notifications::Management::{
     UserNotificationListener, UserNotificationListenerAccessStatus,
 };
-use windows::UI::Notifications::{KnownNotificationBindings, NotificationKinds, UserNotification};
+use windows::UI::Notifications::{
+    KnownNotificationBindings, NotificationKinds, ToastNotificationManager, UserNotification,
+};
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
 use windows::Win32::Media::Audio::{PlaySoundW, SND_ALIAS, SND_ASYNC, SND_NODEFAULT};
 use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
@@ -34,7 +44,8 @@ use windows::Win32::System::Registry::{
     RegOpenKeyExW,
 };
 use windows::Win32::System::Threading::{CreateEventW, INFINITE, WaitForSingleObject};
-use windows::core::PCWSTR;
+use windows::Win32::UI::Shell::{QUNS_ACCEPTS_NOTIFICATIONS, SHQueryUserNotificationState};
+use windows::core::{HSTRING, PCWSTR};
 use windows_registry::CURRENT_USER;
 
 pub const NOTIFY_SHOW: &str = "notify://show";
@@ -43,6 +54,10 @@ pub const NOTIFY_GONE: &str = "notify://gone";
 const SETTINGS_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings";
 const SHOW_BANNER: &str = "ShowBanner";
 const SAVED_FILE: &str = "notification-banners.json";
+const SOUND_FILE: &str = "SoundFile";
+const SAVED_SOUNDS_FILE: &str = "notification-sounds.json";
+/// Art arda gelen bildirimlerde (ör. birkaç mesaj birden) tek ses.
+const SOUND_GAP: Duration = Duration::from_millis(1200);
 /// Bir okuma (`GetNotificationsAsync`) arka planda ~150-200 ms işlemci harcıyor:
 /// sık yoklama boşta tek çekirdeğin %20-30'u demek. Bu yüzden yalnızca bir şey
 /// değişince okunur (`watch_registry`). Yedek yoklama seyrek.
@@ -67,12 +82,18 @@ struct State {
     saved_path: PathBuf,
     /// AUMID → kutucuğu kapatmadan önceki `ShowBanner` (`None`: değer yoktu).
     saved: HashMap<String, Option<u32>>,
+    sounds_path: PathBuf,
+    /// AUMID → sesini kapatmadan önceki `SoundFile` (`None`: değer yoktu).
+    sounds: HashMap<String, Option<String>>,
+    last_sound: Option<Instant>,
     /// Kartı gösterilen bildirim → gönderen AUMID (tıklayınca uygulamayı aç).
     senders: HashMap<u32, String>,
     icons: HashMap<String, Option<String>>,
 }
 
 static ENABLED: AtomicBool = AtomicBool::new(false);
+/// Kendi bildirim seslerimizden biri seçili: uygulama seslerini biz çalarız.
+static OWN_SOUND: AtomicBool = AtomicBool::new(false);
 /// Kendi kartlarımız (zamanlayıcı ...): Windows bildirim kimlikleriyle çakışmasın.
 static LOCAL_ID: AtomicU32 = AtomicU32::new(0xF000_0000);
 /// Dinleyici çalışıyor (izin var). Değilse kutucuklar asla kapatılmaz: yoksa
@@ -88,6 +109,11 @@ fn with<R>(f: impl FnOnce(&mut State) -> R) -> Option<R> {
 
 pub fn spawn(app: &AppHandle, config_dir: PathBuf, enabled: bool) {
     let saved_path = config_dir.join(SAVED_FILE);
+    let sounds_path = config_dir.join(SAVED_SOUNDS_FILE);
+    let sounds = std::fs::read_to_string(&sounds_path)
+        .ok()
+        .and_then(|t| serde_json::from_str::<HashMap<String, Option<String>>>(&t).ok())
+        .unwrap_or_default();
     // Anahtarlar küçük harfle (kayıt defteri ve AUMID'ler büyük/küçük harf duyarsız).
     let saved = std::fs::read_to_string(&saved_path)
         .ok()
@@ -99,14 +125,20 @@ pub fn spawn(app: &AppHandle, config_dir: PathBuf, enabled: bool) {
     *STATE.lock().unwrap_or_else(|e| e.into_inner()) = Some(State {
         saved_path,
         saved,
+        sounds_path,
+        sounds,
+        last_sound: None,
         senders: HashMap::new(),
         icons: HashMap::new(),
     });
     // Kutucuklar dinleyici çalışınca kapanır (`run`); kapalıysa önceki
     // oturumdan (çökme) kalanlar geri yüklenir.
     ENABLED.store(enabled, Ordering::Relaxed);
+    OWN_SOUND.store(super::notify_sound::is_ours(), Ordering::Relaxed);
     if !enabled {
         restore_all();
+    } else if !OWN_SOUND.load(Ordering::Relaxed) {
+        restore_sounds();
     }
     let app = app.clone();
     std::thread::Builder::new()
@@ -122,6 +154,20 @@ pub fn set_enabled(on: bool) {
         restore_all();
     } else if WORKING.load(Ordering::Relaxed) {
         suppress_all();
+    }
+}
+
+/// Bildirim sesi seçimi değişti (`notify_sound::set`): kendi sesimizse
+/// uygulama seslerini kapat, Windows'unkiyse geri getir.
+pub fn set_own_sound(on: bool) {
+    OWN_SOUND.store(on, Ordering::Relaxed);
+    if !on {
+        restore_sounds();
+    } else if ENABLED.load(Ordering::Relaxed) && WORKING.load(Ordering::Relaxed) {
+        let apps: Vec<String> = with(|s| s.saved.keys().cloned().collect()).unwrap_or_default();
+        for aumid in apps {
+            mute(&aumid);
+        }
     }
 }
 
@@ -147,6 +193,7 @@ fn suppress_all() {
     let names: Vec<String> = names.collect();
     for name in names {
         suppress(&name);
+        mute(&name);
     }
 }
 
@@ -179,6 +226,7 @@ fn suppress(aumid: &str) -> bool {
 }
 
 fn restore_all() {
+    restore_sounds();
     with(|s| {
         // Geri yüklenemeyen (ör. erişim hatası) kayıtta kalır, sonra yeniden denenir.
         s.saved.retain(|aumid, before| {
@@ -214,6 +262,154 @@ fn persist(s: &State) {
     {
         eprintln!("[notify] kutucuk ayarları kaydedilemedi: {e}");
     }
+}
+
+// --- ses ---------------------------------------------------------------------------------
+
+/// Kartını gösterdiğimiz uygulamanın Windows'taki sesini kapat (sesi biz
+/// çalacağız). Kullanıcı sesi zaten kapattıysa dokunma (o zaman biz de çalmayız).
+fn mute(aumid: &str) {
+    if excluded(aumid)
+        || !OWN_SOUND.load(Ordering::Relaxed)
+        || !ENABLED.load(Ordering::Relaxed)
+        || !WORKING.load(Ordering::Relaxed)
+    {
+        return;
+    }
+    let lower = aumid.to_lowercase();
+    let wanted = with(|s| s.saved.contains_key(&lower) && !s.sounds.contains_key(&lower));
+    if wanted != Some(true) || rings(aumid) {
+        return;
+    }
+    with(|s| {
+        let Ok(key) = CURRENT_USER.create(format!("{SETTINGS_KEY}\\{aumid}")) else {
+            return;
+        };
+        let before = key.get_string(SOUND_FILE).ok();
+        if before.as_deref() == Some("") || key.set_string(SOUND_FILE, "").is_err() {
+            return;
+        }
+        s.sounds.insert(lower, before);
+        persist_sounds(s);
+    });
+}
+
+/// Zil çalan uygulama (arama, alarm): sesi Windows'ta kalır.
+fn rings(aumid: &str) -> bool {
+    aumid.to_lowercase().contains("calling")
+        || history(aumid).iter().any(|xml| {
+            xml.contains("scenario=\"incomingCall\"")
+                || xml.contains("scenario=\"alarm\"")
+                || xml.contains("loop=\"true\"")
+        })
+}
+
+fn restore_sounds() {
+    with(|s| {
+        s.sounds.retain(|aumid, before| {
+            let key = CURRENT_USER
+                .options()
+                .read()
+                .write()
+                .open(format!("{SETTINGS_KEY}\\{aumid}"));
+            let Ok(key) = key else {
+                return false;
+            };
+            let result = match before {
+                Some(v) => key.set_string(SOUND_FILE, v.as_str()),
+                None => key.remove_value(SOUND_FILE),
+            };
+            if let Err(e) = &result {
+                eprintln!("[notify] ses ayarı geri yüklenemedi: {}", e.message());
+            }
+            result.is_err()
+        });
+        if s.sounds.is_empty() {
+            let _ = std::fs::remove_file(&s.sounds_path);
+        } else {
+            persist_sounds(s);
+        }
+    });
+}
+
+fn persist_sounds(s: &State) {
+    if let Ok(text) = serde_json::to_string(&s.sounds)
+        && let Err(e) = std::fs::write(&s.sounds_path, text)
+    {
+        eprintln!("[notify] ses ayarları kaydedilemedi: {e}");
+    }
+}
+
+/// Uygulamanın bildirim merkezindeki bildirimleri (XML), eskiden yeniye.
+/// İçerik yalnızca ses / senaryo için okunur, hiçbir yere yazılmaz.
+fn history(aumid: &str) -> Vec<String> {
+    ToastNotificationManager::History()
+        .and_then(|h| h.GetHistoryWithId(&HSTRING::from(aumid)))
+        .map(|list| {
+            list.into_iter()
+                .filter_map(|t| t.Content().and_then(|c| c.GetXml()).ok())
+                .map(|x| x.to_string())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// `<audio ... silent="true">`: uygulama bildirimi bilerek sessiz gönderdi.
+fn is_silent(xml: &str) -> bool {
+    xml.split("<audio")
+        .nth(1)
+        .and_then(|a| a.split('>').next())
+        .is_some_and(|a| a.contains("silent=\"true\""))
+}
+
+/// Kartı çıkan bildirim için seçili sesi çal (sesini kapattığımız uygulamalarda).
+fn play_sound(aumid: &str) {
+    if !OWN_SOUND.load(Ordering::Relaxed) {
+        return;
+    }
+    let lower = aumid.to_lowercase();
+    if with(|s| s.sounds.contains_key(&lower)) != Some(true) || !sound_allowed() {
+        return;
+    }
+    // Sessiz gönderildiyse (ör. sohbet zaten açıkken) çalma; en yeni bildirim sonda.
+    if history(aumid).last().is_some_and(|xml| is_silent(xml)) {
+        return;
+    }
+    let now = Instant::now();
+    let due = with(|s| {
+        let due = s.last_sound.is_none_or(|t| now - t >= SOUND_GAP);
+        if due {
+            s.last_sound = Some(now);
+        }
+        due
+    });
+    if due != Some(true) {
+        return;
+    }
+    // Seçili ses `Notification.Default` olayında (notify_sound).
+    unsafe {
+        let _ = PlaySoundW(
+            windows::core::w!("Notification.Default"),
+            None,
+            SND_ALIAS | SND_ASYNC | SND_NODEFAULT,
+        );
+    }
+}
+
+/// Windows bildirim sesi çalardı mı: genel ses ve bildirim ayarı açık;
+/// rahatsız etmeyin, tam ekran uygulama ya da sunu yok.
+fn sound_allowed() -> bool {
+    let setting = |name: &str| {
+        let value = CURRENT_USER
+            .open(SETTINGS_KEY)
+            .and_then(|k| k.get_u32(name));
+        !matches!(value, Ok(0))
+    };
+    let quiet = unsafe { SHQueryUserNotificationState() }
+        .is_ok_and(|state| state != QUNS_ACCEPTS_NOTIFICATIONS);
+    setting("NOC_GLOBAL_SETTING_ALLOW_NOTIFICATION_SOUND")
+        && setting("NOC_GLOBAL_SETTING_TOASTS_ENABLED")
+        && !quiet
 }
 
 // --- okuma -----------------------------------------------------------------------------
@@ -294,6 +490,9 @@ fn run(app: AppHandle) {
                 && let Some(notice) = notice(n, id)
             {
                 let _ = app.emit(NOTIFY_SHOW, notice);
+                if let Some(aumid) = with(|s| s.senders.get(&id).cloned()).flatten() {
+                    play_sound(&aumid);
+                }
             }
         }
         // Bildirim merkezinden silinen (ya da orada tıklanan) bildirimin kartı da gitsin.
@@ -379,6 +578,7 @@ fn notice(n: &UserNotification, id: u32) -> Option<Notice> {
     if !ours {
         // İlk kez görülen uygulama: bunu Windows gösterdi, sonrakiler bizim.
         suppress(&aumid);
+        mute(&aumid);
         return None;
     }
     let texts: Vec<String> = n
@@ -449,4 +649,22 @@ pub fn take_sender(id: u32) -> Option<String> {
         let _ = listener.RemoveNotification(id);
     }
     Some(aumid)
+}
+
+#[cfg(test)]
+mod sound_tests {
+    use super::is_silent;
+
+    #[test]
+    fn detects_silent_toasts() {
+        let loud = r#"<toast><visual/><audio src="ms-appx:///Sounds/a.m4a" /><actions/></toast>"#;
+        let quiet = r#"<toast><audio src="ms-appx:///Sounds/a.m4a" silent="true" /></toast>"#;
+        assert!(!is_silent(loud));
+        assert!(is_silent(quiet));
+        assert!(!is_silent("<toast><visual/></toast>"));
+        // Başka bir öğedeki silent sayılmaz.
+        assert!(!is_silent(
+            r#"<toast><audio src="a"/><x silent="true"/></toast>"#
+        ));
+    }
 }

@@ -10,6 +10,7 @@ import {
 import { updateConfig } from "../../lib/store";
 import { useService } from "../../lib/useService";
 import { Card, Row, Section, Toggle } from "./controls";
+import { NotificationSound } from "./NotificationSound";
 import styles from "./Settings.module.css";
 
 export function General({ config }: { config: Config }) {
@@ -73,6 +74,8 @@ export function General({ config }: { config: Config }) {
           />
         </Row>
       </Card>
+
+      <NotificationSound />
 
       <h3 className={styles.subTitle}>Güncellemeler</h3>
       <Card>

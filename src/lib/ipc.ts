@@ -368,6 +368,11 @@ export const commands = {
   getSystemAccent: () => invoke<string | null>("get_system_accent"),
   getAutostart: () => invoke<AutostartState>("get_autostart"),
   setAutostart: (enabled: boolean) => invoke<AutostartState>("set_autostart", { enabled }),
+  /** Bildirim sesi: kendi seslerimizden biri, "windows" ya da "custom" (Windows'tan seçilmiş başka ses). */
+  getNotificationSound: () => invoke<string>("get_notification_sound"),
+  setNotificationSound: (id: string) => invoke<void>("set_notification_sound", { id }),
+  /** Bir kez çal; hemen döner. */
+  previewNotificationSound: (id: string) => invoke<void>("preview_notification_sound", { id }),
 
   getConfig: () => invoke<Config>("get_config"),
   setConfig: (value: Config) => invoke<void>("set_config", { value }),

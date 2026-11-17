@@ -42,6 +42,7 @@ windows = { version = "0.62", features = [
   "Devices_WiFi",
   "Foundation",
   "ApplicationModel",
+  "Data_Xml_Dom",
   "UI_Notifications_Management",
   "UI_Notifications",
   "Foundation_Collections",

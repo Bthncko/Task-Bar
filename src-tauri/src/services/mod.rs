@@ -15,6 +15,7 @@ pub mod keyboard;
 pub mod launcher;
 pub mod media;
 pub mod notifications;
+pub mod notify_sound;
 pub mod power;
 pub mod power_mode;
 pub mod radios;
