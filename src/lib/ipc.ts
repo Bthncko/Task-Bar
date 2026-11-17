@@ -274,6 +274,12 @@ export const commands = {
   closeWindow: (hwnd: number) => invoke<void>("close_window", { hwnd }),
   pinApp: (id: string) => invoke<void>("pin_app", { id }),
   unpinApp: (id: string) => invoke<void>("unpin_app", { id }),
+  /** Dosyalar uygulama ikonuna bırakıldı (8.7). */
+  openFilesWithApp: (id: string, paths: string[]) =>
+    invoke<void>("open_files_with_app", { id, paths }),
+  /** `.exe` / `.lnk` dock'a bırakıldı: sabitle. */
+  pinPath: (path: string) => invoke<void>("pin_path", { path }),
+  reorderPinned: (ids: string[]) => invoke<void>("reorder_pinned", { ids }),
   showAppMenu: (id: string) => invoke<void>("show_app_menu", { id }),
   /** İkonların dinlenme konumları (dock CSS pikseli): küçültme animasyonunun hedefi. */
   setAppIconRects: (rects: { id: string; x: number; y: number; size: number }[]) =>

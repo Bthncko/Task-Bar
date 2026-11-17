@@ -331,6 +331,38 @@ pub fn unpin_app(apps: State<AppsService>, config: State<ConfigStore>, id: Strin
     apps.unpin(&config, &id).map_err(Into::into)
 }
 
+/// Dosyalar uygulama ikonuna bırakıldı (8.7). COM ve ShellExecute ana iş
+/// parçacığını bekletmesin diye arka planda.
+#[tauri::command]
+pub async fn open_files_with_app(app: AppHandle, id: String, paths: Vec<String>) -> CmdResult {
+    tauri::async_runtime::spawn_blocking(move || app.state::<AppsService>().open_files(&id, &paths))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(Into::into)
+}
+
+/// `.exe` / `.lnk` boş alana bırakıldı: sabitle (8.7).
+#[tauri::command]
+pub async fn pin_path(app: AppHandle, path: String) -> CmdResult {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<AppsService>()
+            .pin_path(&app.state::<ConfigStore>(), &path)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(Into::into)
+}
+
+/// Sabit ikonların yeni sırası (sürükleyerek sıralama, 8.7).
+#[tauri::command]
+pub fn reorder_pinned(
+    apps: State<AppsService>,
+    config: State<ConfigStore>,
+    ids: Vec<String>,
+) -> CmdResult {
+    apps.reorder_pinned(&config, &ids).map_err(Into::into)
+}
+
 #[tauri::command]
 pub fn show_app_menu(window: WebviewWindow, apps: State<AppsService>, id: String) -> CmdResult {
     apps.show_menu(&window, &id).map_err(Into::into)

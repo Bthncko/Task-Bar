@@ -6,6 +6,8 @@ import { useService } from "../../lib/useService";
 import { Divider } from "../ui";
 import type { AppsConfig } from "./index";
 import styles from "./Bar.module.css";
+import { useFileDrop } from "./useFileDrop";
+import { useReorder } from "./useReorder";
 
 const ICON = 40; // tokens.css → --icon-size
 const GAP = 6; // tokens.css → --icon-gap
@@ -126,12 +128,25 @@ export function AppsBar({ config }: { config: AppsConfig }) {
   const groupRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef(new Map<string, HTMLDivElement>());
   const magnifier = useRef<Magnifier | null>(null);
+  // Sıralamadan sonra Rust yeni listeyi gönderene dek gösterilen sıra (8.7).
+  const [optimistic, setOptimistic] = useState<{ source: AppItem[]; order: string[] } | null>(null);
+  const order = optimistic?.source === apps ? optimistic.order : null;
+  const shown = order ? sortPinned(entries, order) : entries;
+  const pinnedIds = shown.filter((e) => e.app.pinned && !e.leaving).map((e) => e.app.id);
   const count = entries.filter((e) => !e.leaving).length;
   const { size: icon, room } = useIconSize(groupRef, count);
   // En küçük boyda da sığmıyor: grup kayar (büyüyen ikonlar kırpılacağı için büyütme kapalı).
   const scrolling = count * (icon + GAP) - GAP > room;
   // Animasyon efektleri kapalıysa büyütme de kapalı (7.7).
   const magnify = useReducedMotion() || scrolling ? 1 : config.magnify;
+  const dropTarget = useFileDrop(groupRef, magnifier, apps);
+  const reorder = useReorder({
+    pinned: pinnedIds,
+    step: icon + GAP,
+    group: groupRef,
+    magnifier,
+    onReorder: (next) => setOptimistic({ source: apps, order: next }),
+  });
 
   useEffect(() => {
     const group = groupRef.current;
@@ -151,9 +166,9 @@ export function AppsBar({ config }: { config: AppsConfig }) {
   }, [magnify, icon]);
 
   // Liste değişince büyütücüye yeni ikon kutularını ver (kaybolanlar hariç).
-  const key = entries.map((e) => `${e.app.id}${e.leaving ? "-" : ""}`).join("|");
+  const key = shown.map((e) => `${e.app.id}${e.leaving ? "-" : ""}`).join("|");
   useEffect(() => {
-    const slots = entries
+    const slots = shown
       .filter((e) => !e.leaving)
       .map((e) => slotRefs.current.get(e.app.id))
       .filter((s): s is HTMLDivElement => !!s);
@@ -162,7 +177,7 @@ export function AppsBar({ config }: { config: AppsConfig }) {
 
   // Pencere küçültme animasyonunun hedefi: ikonların büyütülmemiş konumları.
   // Kutuların o anki (büyümüş olabilecek) yerleri değil, dinlenme düzeni hesaplanır.
-  const ids = entries.filter((e) => !e.leaving).map((e) => e.app.id);
+  const ids = shown.filter((e) => !e.leaving).map((e) => e.app.id);
   const idsKey = ids.join("|");
   useEffect(() => {
     const group = groupRef.current;
@@ -196,8 +211,8 @@ export function AppsBar({ config }: { config: AppsConfig }) {
   }, [idsKey, icon]);
 
   // Sabitlenenler ile yalnızca açık olanlar arasında ayraç: ilk sabitlenmemiş ikon.
-  const firstUnpinned = entries.findIndex((e) => !e.app.pinned && !e.leaving);
-  const hasPinned = entries.some((e) => e.app.pinned && !e.leaving);
+  const firstUnpinned = shown.findIndex((e) => !e.app.pinned && !e.leaving);
+  const hasPinned = pinnedIds.length > 0;
 
   return (
     <div
@@ -220,19 +235,37 @@ export function AppsBar({ config }: { config: AppsConfig }) {
         if (scrolling) e.currentTarget.scrollLeft += e.deltaY;
       }}
       data-hit
-      onPointerMove={(e) => magnifier.current?.move(e.clientX)}
+      data-reordering={reorder.drag ? true : undefined}
+      onPointerMove={(e) => {
+        if (!reorder.drag) magnifier.current?.move(e.clientX);
+      }}
       onPointerLeave={() => magnifier.current?.leave()}
     >
-      {entries.map((entry, i) => {
+      {shown.map((entry, i) => {
         const { app } = entry;
+        const dragged = reorder.drag?.id === app.id;
+        const pinnedIndex = app.pinned && !entry.leaving ? pinnedIds.indexOf(app.id) : -1;
         return (
           <div
             key={entry.leaving ? `${app.id}#leaving` : app.id}
             className={styles.slot}
+            data-app-id={entry.leaving ? undefined : app.id}
             data-entering={entry.entering || undefined}
             data-leaving={entry.leaving || undefined}
+            data-drop-target={dropTarget === app.id || undefined}
+            data-dragged={dragged || undefined}
+            data-unpinning={(dragged && reorder.unpinning) || undefined}
             // Dock açılışında ikonlar 20 ms arayla belirir (Bar.module.css → intro).
-            style={{ "--i": i } as CSSProperties}
+            style={
+              {
+                "--i": i,
+                transform: pinnedIndex >= 0 ? reorder.transform(app.id, pinnedIndex) : undefined,
+              } as CSSProperties
+            }
+            onPointerDown={pinnedIndex >= 0 ? (e) => reorder.start(e, app.id) : undefined}
+            onClickCapture={(e) => {
+              if (reorder.suppressClick.current) e.stopPropagation();
+            }}
             ref={(el) => {
               if (entry.leaving) return;
               if (el) slotRefs.current.set(app.id, el);
@@ -325,6 +358,15 @@ const AppIcon = memo(function AppIcon({
     </>
   );
 });
+
+/** Sabit ikonları verilen sıraya dizer; diğerleri yerinde kalır. */
+function sortPinned(entries: Entry[], order: string[]) {
+  const rank = (e: Entry) => {
+    const i = e.app.pinned ? order.indexOf(e.app.id) : -1;
+    return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+  };
+  return [...entries].sort((a, b) => rank(a) - rank(b));
+}
 
 function initial(name: string) {
   return name.trim().charAt(0).toLocaleUpperCase("tr-TR") || "?";

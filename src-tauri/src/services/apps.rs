@@ -194,6 +194,64 @@ impl AppsService {
         Ok(())
     }
 
+    /// Dock'a sürüklenen dosyalar uygulamanın ikonuna bırakıldı (8.7).
+    pub fn open_files(&self, id: &str, paths: &[String]) -> AppResult<()> {
+        let (_, meta, _) = self.find(id)?;
+        super::file_drop::open_with(meta.exe.as_deref(), meta.aumid.as_deref(), paths)?;
+        self.refresh_soon();
+        Ok(())
+    }
+
+    /// Boş alana bırakılan `.exe` / `.lnk` dock'a sabitlenir (8.7).
+    pub fn pin_path(&self, config: &ConfigStore, path: &str) -> AppResult<()> {
+        let lower = path.to_lowercase();
+        let (exe, aumid) = if lower.ends_with(".lnk") {
+            super::file_drop::resolve_link(path)
+                .ok_or_else(|| AppError::Win32("kısayol bir uygulamayı göstermiyor".into()))?
+        } else if lower.ends_with(".exe") {
+            (Some(path.to_string()), None)
+        } else {
+            return Err(AppError::Win32(
+                "yalnızca uygulamalar sabitlenebilir".into(),
+            ));
+        };
+        // Çalışan pencerelerle aynı gruplama anahtarı (`poll`): AUMID, yoksa exe.
+        let id = match (&aumid, &exe) {
+            (Some(a), _) => a.clone(),
+            (None, Some(e)) => e.to_lowercase(),
+            (None, None) => return Err(AppError::Win32("uygulama bulunamadı".into())),
+        };
+        let stem = std::path::Path::new(path)
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let meta = resolve_meta(aumid.as_deref(), exe.as_deref(), &stem);
+        config.update(|c| {
+            let pinned = &mut c.widgets.apps.pinned;
+            if !pinned.iter().any(|p| p.id.eq_ignore_ascii_case(&id)) {
+                pinned.push(PinnedApp {
+                    id: id.clone(),
+                    name: meta.name.clone(),
+                    exe: meta.exe.clone(),
+                    aumid: meta.aumid.clone(),
+                });
+            }
+        })?;
+        self.refresh_soon();
+        Ok(())
+    }
+
+    /// Sabit ikonlar sürüklenerek sıralandı: `ids` yeni sıra (8.7).
+    pub fn reorder_pinned(&self, config: &ConfigStore, ids: &[String]) -> AppResult<()> {
+        config.update(|c| {
+            let pinned = &mut c.widgets.apps.pinned;
+            // Listede olmayan (ör. bu arada eklenen) sona.
+            pinned.sort_by_key(|p| ids.iter().position(|id| *id == p.id).unwrap_or(usize::MAX));
+        })?;
+        self.refresh_soon();
+        Ok(())
+    }
+
     pub fn unpin(&self, config: &ConfigStore, id: &str) -> AppResult<()> {
         config.update(|c| c.widgets.apps.pinned.retain(|p| p.id != id))?;
         self.refresh_soon();

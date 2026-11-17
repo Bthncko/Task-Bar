@@ -5,6 +5,7 @@ pub mod audio;
 pub mod audio_devices;
 pub mod backdrop;
 pub mod battery_settings;
+pub mod file_drop;
 pub mod icons;
 pub mod ics;
 pub mod jumplist;

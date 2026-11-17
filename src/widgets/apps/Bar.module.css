@@ -324,3 +324,38 @@
 .group[data-scrolling] .tooltip {
   display: none;
 }
+
+/* --- sürükle-bırak (8.7) -------------------------------------------------------- */
+
+/* Sıralama: kayan komşular yumuşak, sürüklenen ikon imleci anında izler. */
+.group[data-reordering] .slot {
+  transition: transform 200ms var(--ease-out);
+}
+
+.group[data-reordering] .slot[data-dragged] {
+  z-index: 2;
+  transition: none;
+}
+
+.group[data-reordering] .tooltip {
+  opacity: 0;
+}
+
+.slot[data-dragged] .icon {
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+}
+
+/* Yukarı çekildi: bırakınca sabitten kalkar. */
+.slot[data-unpinning] .pop {
+  opacity: 0.45;
+  transform: scale(0.8);
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+/* Dosya bu ikonun üstünde: bırakınca bu uygulamayla açılır. */
+.slot[data-drop-target] .icon {
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px var(--accent);
+}
