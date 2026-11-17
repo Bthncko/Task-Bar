@@ -147,6 +147,64 @@ export const LeafIcon = (p: IconProps) => (
   </Svg>
 );
 
+// --- sistem düğmeleri (8.2) -----------------------------------------------------
+
+export const BellIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z" />
+    <path d="M10 20.5a2 2 0 0 0 4 0" />
+  </Svg>
+);
+
+/** Hızlı ayarlar: iki kaydırıcı. */
+export const QuickSettingsIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 8h8.5M17.5 8H20M4 16h2.5M11.5 16H20" />
+    <circle cx="15" cy="8" r="2.5" />
+    <circle cx="9" cy="16" r="2.5" />
+  </Svg>
+);
+
+/** Görev görünümü: üst üste iki pencere. */
+export const TaskViewIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="13.5" height="10.5" rx="2" />
+    <path d="M20 8.5V17a2 2 0 0 1-2 2H7.5" />
+  </Svg>
+);
+
+export const SearchIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="10.5" cy="10.5" r="6" />
+    <path d="m15 15 5 5" />
+  </Svg>
+);
+
+export const ClipboardIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9 4.5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-12a2 2 0 0 0-2-2h-2" />
+    <rect x="9" y="3" width="6" height="3" rx="1" />
+    <path d="M9 11h6M9 15h4" />
+  </Svg>
+);
+
+/** Ekran alıntısı: makas. */
+export const SnipIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="6" cy="7" r="2.5" />
+    <circle cx="6" cy="17" r="2.5" />
+    <path d="M8.2 8.3 19.5 17M8.2 15.7 19.5 7" />
+  </Svg>
+);
+
+/** Masaüstünü göster: ekran. */
+export const DesktopIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="4.5" width="18" height="12" rx="2" />
+    <path d="M9 20h6M12 16.5V20" />
+  </Svg>
+);
+
 // --- radyolar ------------------------------------------------------------------
 
 export function WifiIcon({ bars, off, ...p }: IconProps & { bars: number; off: boolean }) {

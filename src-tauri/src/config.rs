@@ -128,7 +128,7 @@ impl Default for Layout {
         Self {
             left: refs(&["start", "apps"]),
             center: refs(&["media", "weather", "clock"]),
-            right: refs(&["radios", "volume", "battery"]),
+            right: refs(&["radios", "volume", "battery", "system"]),
         }
     }
 }
@@ -140,6 +140,23 @@ pub struct Widgets {
     pub weather: WeatherConfig,
     pub calendar: CalendarConfig,
     pub clock: ClockConfig,
+    pub system: SystemConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SystemConfig {
+    /// Gösterilen sistem düğmeleri (8.2): "notifications", "quickSettings",
+    /// "taskView", "search", "clipboard", "snip", "desktop".
+    pub buttons: Vec<String>,
+}
+
+impl Default for SystemConfig {
+    fn default() -> Self {
+        Self {
+            buttons: vec!["notifications".into(), "quickSettings".into()],
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]

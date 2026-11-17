@@ -87,6 +87,7 @@ pub fn run() {
             commands::unpin_app,
             commands::show_app_menu,
             commands::open_start,
+            commands::system_shortcut,
             commands::get_media,
             commands::media_toggle,
             commands::media_next,

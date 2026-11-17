@@ -277,6 +277,16 @@ pub fn open_start() -> CmdResult {
     launcher::open_start().map_err(Into::into)
 }
 
+/// Sistem düğmeleri (8.2). Değiştirici tuş bekleyebileceği için ana iş
+/// parçacığında değil.
+#[tauri::command]
+pub async fn system_shortcut(action: String) -> CmdResult {
+    tauri::async_runtime::spawn_blocking(move || launcher::system_shortcut(&action))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(Into::into)
+}
+
 // --- müzik -----------------------------------------------------------------
 
 #[tauri::command]

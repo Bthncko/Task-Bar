@@ -39,8 +39,13 @@ export type Config = {
     weather: { lat: number; lon: number; city: string; unit: "C" | "F" };
     calendar: { icsUrls: string[] };
     clock: { showSeconds: boolean };
+    system: { buttons: SystemButton[] };
   } & Record<string, unknown>;
 };
+
+/** Sistem düğmeleri (8.2); her biri Windows'un kendi panelini açar. */
+export type SystemButton =
+  "notifications" | "quickSettings" | "taskView" | "search" | "clipboard" | "snip" | "desktop";
 
 export type AppItem = {
   id: string; // gruplama anahtarı
@@ -191,6 +196,7 @@ export const commands = {
   setAppIconRects: (rects: { id: string; x: number; y: number; size: number }[]) =>
     invoke<void>("set_app_icon_rects", { rects }),
   openStart: () => invoke<void>("open_start"),
+  systemShortcut: (action: SystemButton) => invoke<void>("system_shortcut", { action }),
 
   getMedia: () => invoke<MediaState>("get_media"),
   mediaToggle: () => invoke<void>("media_toggle"),

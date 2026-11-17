@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { commands, report } from "../../lib/ipc";
 import { togglePopup } from "../../lib/popup";
 import { Tile } from "../ui";
 import type { ClockConfig } from "./index";
@@ -42,9 +43,14 @@ export function ClockBar({ config }: { config: ClockConfig }) {
       variant="plain"
       interactive
       className={styles.clock}
-      title={full}
+      title={`${full}\nSağ tık: bildirim merkezi`}
       aria-label={`${full} — takvimi aç`}
       onClick={(e) => togglePopup("clock", e.currentTarget)}
+      // Windows alışkanlığı (8.2): saate sağ tık bildirimleri açar.
+      onContextMenu={(e) => {
+        e.preventDefault();
+        commands.systemShortcut("notifications").catch(report("system_shortcut"));
+      }}
     >
       <span className={styles.top}>
         <span className={styles.time}>{timeFmt.format(now)}</span>

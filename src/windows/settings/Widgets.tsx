@@ -59,6 +59,11 @@ export function Widgets({ config }: { config: Config }) {
     .map((cat) => [cat, Object.values(registry).filter((w) => w.category === cat)] as const)
     .filter(([, defs]) => defs.length > 0);
 
+  // Dock'taki widget'ların kendi ayarları (ör. hangi sistem düğmeleri).
+  const configurable = Object.values(registry).filter((w) => w.Settings && used.has(w.id));
+  const setWidgetConfig = (id: string, next: unknown) =>
+    updateConfig((c) => ({ ...c, widgets: { ...c.widgets, [id]: next } }));
+
   /** × düğmesi: sürüklemeden kapatma. */
   const remove = (id: string) =>
     save(
@@ -89,6 +94,19 @@ export function Widgets({ config }: { config: Config }) {
           )
         }
       />
+
+      {configurable.length > 0 && <h3 className={styles.subTitle}>Widget ayarları</h3>}
+      {configurable.map(({ id, name, Settings, defaultConfig }) => (
+        <div key={id} className={styles.listBox}>
+          <h4 className={styles.listTitle}>{name}</h4>
+          {Settings && (
+            <Settings
+              config={config.widgets[id] ?? defaultConfig}
+              onChange={(next) => setWidgetConfig(id, next)}
+            />
+          )}
+        </div>
+      ))}
 
       <h3 className={styles.subTitle}>Widget ekle</h3>
       {groups.map(([cat, defs]) => (

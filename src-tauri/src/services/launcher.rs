@@ -1,8 +1,11 @@
 //! Uygulama başlatma ve Başlat menüsü (bölüm 5.5).
 
+use std::time::{Duration, Instant};
+
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT, KEYEVENTF_KEYUP, SendInput,
-    VIRTUAL_KEY, VK_LWIN,
+    GetAsyncKeyState, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT,
+    KEYEVENTF_KEYUP, SendInput, VIRTUAL_KEY, VK_A, VK_CONTROL, VK_D, VK_LSHIFT, VK_LWIN, VK_MENU,
+    VK_N, VK_RWIN, VK_S, VK_SHIFT, VK_TAB, VK_V,
 };
 use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
@@ -94,9 +97,45 @@ pub fn open_start() -> AppResult<()> {
     send_chord(&[VK_LWIN])
 }
 
+/// Sistem düğmeleri (8.2): Windows'un kendi panelini açan kısayol.
+pub fn system_shortcut(action: &str) -> AppResult<()> {
+    let keys: &[VIRTUAL_KEY] = match action {
+        "notifications" => &[VK_LWIN, VK_N],
+        "quickSettings" => &[VK_LWIN, VK_A],
+        "taskView" => &[VK_LWIN, VK_TAB],
+        "search" => &[VK_LWIN, VK_S],
+        // Pano geçmişi kapalıysa Windows kendi panelinde "Aç" düğmesini gösterir.
+        "clipboard" => &[VK_LWIN, VK_V],
+        // `ms-screenclip:` (adsız) Mayıs 2025'te kaldırıldı; yenisi yanıt adresi
+        // istiyor. Kısayol her sürümde aynı alıntı katmanını açar.
+        "snip" => &[VK_LWIN, VK_LSHIFT, VK_S],
+        "desktop" => &[VK_LWIN, VK_D],
+        _ => return Err(AppError::Win32(format!("bilinmeyen kısayol: {action}"))),
+    };
+    send_chord(keys)
+}
+
+/// Kullanıcının basılı tuttuğu Ctrl / Shift / Alt / Win kombinasyonu bozar
+/// (Win+N, Ctrl+Win+N olur): bırakılmasını en çok `MAX` kadar bekle.
+fn wait_for_modifiers() {
+    const MAX: Duration = Duration::from_millis(1500);
+    let held = || {
+        [VK_CONTROL, VK_SHIFT, VK_MENU, VK_LWIN, VK_RWIN]
+            .iter()
+            // En yüksek bit: tuş şu an basılı.
+            .any(|&vk| unsafe { GetAsyncKeyState(vk.0 as i32) } < 0)
+    };
+    let start = Instant::now();
+    while held() && start.elapsed() < MAX {
+        std::thread::sleep(Duration::from_millis(15));
+    }
+}
+
 /// Tuş kombinasyonu gönderir (8.1): tuşlar sırayla basılır, ters sırayla
-/// bırakılır. Ör. bildirim merkezi `send_chord(&[VK_LWIN, VK_N])`.
+/// bırakılır. Ör. bildirim merkezi `send_chord(&[VK_LWIN, VK_N])`. Basılı
+/// değiştirici tuş varsa önce bırakılması beklenir (8.2).
 pub fn send_chord(keys: &[VIRTUAL_KEY]) -> AppResult<()> {
+    wait_for_modifiers();
     let key = |vk: VIRTUAL_KEY, flags: KEYBD_EVENT_FLAGS| INPUT {
         r#type: INPUT_KEYBOARD,
         Anonymous: INPUT_0 {
