@@ -287,7 +287,13 @@ export type BtDevice = {
   kind: "audio" | "input" | "phone" | "other";
 };
 /** `popup_ready` yanıtı: tıklanan widget'ın ortası, panelin sol kenarından (CSS px). */
-export type PopupPlaced = { originX: number } | null;
+export type PopupPlaced = {
+  originX: number;
+  /** Panelin arkasındaki ekranın bulanık görüntüsü (buzlu cam). */
+  backdrop: string | null;
+  /** O görüntünün ortalama parlaklığı (0–1). */
+  luma: number | null;
+} | null;
 
 // --- komutlar -----------------------------------------------------------------
 

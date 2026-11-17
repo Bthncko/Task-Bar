@@ -46,6 +46,12 @@ export function applyTheme(theme: Config["theme"], options: Options = {}) {
   root.setProperty("--accent", resolveAccent(theme, systemAccent));
   root.setProperty("--glass-opacity", opacity.toFixed(3));
   root.setProperty("--glass-alpha", alpha.toFixed(3));
+  // Bulanıklığı olmayan yüzeyler (bildirim kartı, önizleme, görüntüsü alınamayan
+  // panel): arkadaki pencerenin yazısı karışmasın diye koyu; düzde opak. Buzlu
+  // camlı panel kendi örtüsünü arkasının parlaklığından hesaplar (PopupWindow).
+  const flat = theme.glass === "flat";
+  root.setProperty("--panel-alpha", (flat ? 1 : Math.max(0.88, opacity)).toFixed(3));
+  html.dataset.glass = flat ? "flat" : "glass";
   root.setProperty("--r-bar", `${Math.max(theme.radius, 0)}px`);
   if (theme.font === "system") root.setProperty("--font", SYSTEM_FONT);
   else root.removeProperty("--font");

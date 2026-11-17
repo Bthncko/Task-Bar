@@ -11,13 +11,25 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--panel);
+  background: var(--surface-bg);
   border-radius: var(--r-panel);
   box-shadow:
-    inset 0 0 0 1px var(--hairline),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    var(--surface-edge),
     0 6px 12px rgba(0, 0, 0, 0.4),
     0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Buzlu cam: arkadaki ekranın bulanık görüntüsü (Rust, açılış anında) örtünün
+   altında. --panel-alpha da arkanın parlaklığına göre bu panelde yazılır. */
+.panel[data-backdrop] {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0) 140px),
+    /* Renk yalnızca en alt katmanda olabilir; örtü bu yüzden degrade. */
+    linear-gradient(
+        rgb(var(--glass-tint) / var(--panel-alpha)),
+        rgb(var(--glass-tint) / var(--panel-alpha))
+      ),
+    var(--panel-image) center / 100% 100% no-repeat;
 }
 
 /* Çizildi ama Rust henüz göstermedi. */

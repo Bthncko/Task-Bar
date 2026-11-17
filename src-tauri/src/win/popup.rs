@@ -79,6 +79,10 @@ struct ClosePayload {
 pub struct Placed {
     /// Tıklanan widget'ın ortası, panelin sol kenarından (CSS px).
     origin_x: f64,
+    /// Panelin arkasındaki ekranın bulanık görüntüsü (buzlu cam, `win/glass.rs`).
+    backdrop: Option<String>,
+    /// O görüntünün ortalama parlaklığı (0–1).
+    luma: Option<f64>,
 }
 
 struct State {
@@ -186,11 +190,17 @@ pub fn ready(app: &AppHandle, seq: u64, width: f64, height: f64) -> AppResult<Op
         Edge::Top => bar.bottom + gap - pad,
     };
 
+    // Buzlu cam: panelin geleceği bölge, pencere gösterilmeden önce (başka panel
+    // açıksa sayfa onu zaten boşalttı; yeni panel henüz görünmez).
+    let glass = super::glass::capture(x + pad, y + pad, w - 2 * pad, h - 2 * pad);
+
     unsafe { SetWindowPos(popup_hwnd, Some(HWND_TOPMOST), x, y, w, h, SWP_NOACTIVATE)? };
     popup.show()?;
     focus::activate(hwnd_to_id(popup_hwnd));
     Ok(Some(Placed {
         origin_x: f64::from(center - x - pad) / scale,
+        luma: glass.as_ref().map(|g| g.luma),
+        backdrop: glass.map(|g| g.image),
     }))
 }
 

@@ -30,7 +30,18 @@
   --tile: rgba(255, 255, 255, 0.06);
   --tile-hover: rgba(255, 255, 255, 0.1);
   --tile-press: rgba(255, 255, 255, 0.14);
+  /* Opak panel rengi: açılır liste seçenekleri gibi saydam olmaması gerekenler. */
   --panel: rgba(27, 28, 32, 0.98);
+  /* Yüzen yüzeyler (paneller, bildirim kartları, pencere önizlemesi): dock'un
+     camı, üstte hafif parlama, kenarda dock'taki çizgi. Paneller ayrıca arkalarındaki
+     ekranın bulanık görüntüsünü alır (win/glass.rs, PopupWindow); bulanıklığı
+     olmayanlar okunsun diye koyu (lib/theme.ts → --panel-alpha). */
+  --panel-alpha: 0.88;
+  --panel-glass: rgb(var(--glass-tint) / var(--panel-alpha));
+  --surface-bg:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0) 140px),
+    var(--panel-glass);
+  --surface-edge: inset 0 1px 0 var(--glass-highlight), inset 0 0 0 1px var(--glass-border);
   --panel-inset: rgba(255, 255, 255, 0.045);
   --hairline: rgba(255, 255, 255, 0.07);
 
@@ -88,4 +99,10 @@
   --icon-shadow: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
   --tile-dark: rgba(0, 0, 0, 0.35);
   --tooltip: rgb(var(--glass-tint) / 0.94);
+}
+
+/* Düz zemin (7.9): yüzeyler de opak, parlamasız; yalnızca ince çerçeve. */
+:root[data-glass="flat"] {
+  --surface-bg: var(--panel-glass);
+  --surface-edge: inset 0 0 0 1px var(--glass-border);
 }

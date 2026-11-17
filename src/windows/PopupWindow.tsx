@@ -18,6 +18,21 @@ import styles from "./PopupWindow.module.css";
 const DEFAULT_SIZE = { width: 320, height: 360 };
 /** Kapanış animasyonu (PopupWindow.module.css → exit ile aynı). */
 const CLOSE_MS = 120;
+/**
+ * Bir panelden ötekine geçerken eski panelin ekrandan gitmesi için beklenir:
+ * Rust `popup_ready`'de arkadaki ekranı (buzlu cam) okur, eskisi görünmesin.
+ */
+const SWITCH_SETTLE_MS = 50;
+
+/** Buzlu camın örtüsü: arkası açıksa koyulaşır (yazı okunsun), düzde opak. */
+function glassAlpha(theme: { opacity: number; glass: string }, luma: number) {
+  if (theme.glass === "flat") return 1;
+  const base = 0.42 + 0.4 * Math.min(Math.max(luma, 0), 1);
+  // Saydamlık ayarı yükseldikçe opaklığa yaklaşır.
+  return Math.min(1, base + Math.max(0, theme.opacity - 0.6));
+}
+
+type Backdrop = { image: string; alpha: number };
 
 /**
  * - `pending`: çizildi, Rust henüz göstermedi (görünmez).
@@ -48,9 +63,12 @@ export function PopupWindow() {
   const [open, setOpen] = useState<PopupOpen | null>(null);
   const [phase, setPhase] = useState<Phase>("pending");
   const [originX, setOriginX] = useState<number | null>(null);
+  const [backdrop, setBackdrop] = useState<Backdrop | null>(null);
   const announced = useRef(0);
   const current = useRef<PopupOpen | null>(null);
   const closingSeq = useRef(0);
+  /** Bu açılış başka bir panelin yerine mi (pencere zaten görünür). */
+  const switching = useRef(false);
 
   useEffect(() => {
     current.current = open;
@@ -70,10 +88,12 @@ export function PopupWindow() {
   useEffect(() => {
     const unlisten = [
       listen<PopupOpen>(events.popupOpen, (e) => {
+        switching.current = current.current !== null;
         current.current = e.payload;
         setOpen(e.payload);
         setPhase("pending");
         setOriginX(null);
+        setBackdrop(null);
       }),
       listen<{ seq: number }>(events.popupClose, (e) => {
         if (current.current?.seq === e.payload.seq) close();
@@ -114,14 +134,26 @@ export function PopupWindow() {
     if (!open || !config || !widget?.Popup || announced.current === open.seq) return;
     const seq = open.seq;
     announced.current = seq;
-    commands
-      .popupReady(seq, size.width * zoom, size.height * zoom)
-      .then((placed) => {
-        if (!placed || current.current?.seq !== seq) return;
-        setOriginX(placed.originX);
-        setPhase((p) => (p === "pending" ? "open" : p));
-      })
-      .catch(report("popup_ready"));
+    const theme = config.theme;
+    const announce = () =>
+      commands
+        .popupReady(seq, size.width * zoom, size.height * zoom)
+        .then(async (placed) => {
+          if (!placed || current.current?.seq !== seq) return;
+          if (placed.backdrop && theme.glass !== "flat") {
+            // Görüntü çözülmeden açılırsa ilk kareler camsız görünür.
+            const img = new Image();
+            img.src = placed.backdrop;
+            await img.decode().catch(() => {});
+            if (current.current?.seq !== seq) return;
+            setBackdrop({ image: placed.backdrop, alpha: glassAlpha(theme, placed.luma ?? 0) });
+          }
+          setOriginX(placed.originX);
+          setPhase((p) => (p === "pending" ? "open" : p));
+        })
+        .catch(report("popup_ready"));
+    if (switching.current) window.setTimeout(announce, SWITCH_SETTLE_MS);
+    else announce();
   });
 
   if (!open || !config || !widget || !Popup) return null;
@@ -145,7 +177,17 @@ export function PopupWindow() {
         key={open.seq}
         className={styles.panel}
         data-phase={phase}
-        style={{ transformOrigin: `${origin} 100%`, zoom } as CSSProperties}
+        data-backdrop={backdrop ? "" : undefined}
+        style={
+          {
+            transformOrigin: `${origin} 100%`,
+            zoom,
+            ...(backdrop && {
+              "--panel-image": `url("${backdrop.image}")`,
+              "--panel-alpha": backdrop.alpha.toFixed(3),
+            }),
+          } as CSSProperties
+        }
       >
         <PopupCloseProvider value={close}>
           <Popup config={widgetConfig} page={page} />
