@@ -1,7 +1,6 @@
 /* Pil karosu (7.5): 44×40, doluluk kadar yükselen sıvı, ortada kalın sayı.
    Renk: prizde yeşil; pilde ≤%10 kırmızı, tasarrufta sarı, <%30 turuncu,
-   yoksa vurgu. Dalga hep hareket eder: şarjda hızlı, prizde dolu iken orta,
-   pilde yavaş. */
+   yoksa vurgu. Dalga hep hareket eder (Bar.tsx → useWave). */
 
 /* Renk geçişle değişsin (takınca / çıkarınca). */
 @property --fill-color {
@@ -66,28 +65,7 @@
   fill: var(--fill-color);
 }
 
-/* Dalga kare kare ilerler (saniyede ~8–15 adım): sürekli 60 kare çizim boşta
-   tek çekirdeğin ~%35'ini (GPU + renderer) yiyordu, adımlı hâli ~%4 (7.8 ölçümü).
-   Yavaş dalgada adım 1–2 px olduğundan göze akıcı görünür. */
-.wave {
-  animation: wave 5s steps(40) infinite;
-}
-
-.battery[data-level="plugged"] .wave {
-  animation-duration: 3s;
-  animation-timing-function: steps(24);
-}
-
-.battery[data-charging] .wave {
-  animation-duration: 1.6s;
-  animation-timing-function: steps(24);
-}
-
-@keyframes wave {
-  to {
-    transform: translateX(-50%);
-  }
-}
+/* Dalganın hareketi Bar.tsx → useWave (zamanlayıcı; CSS animasyonu boşta pahalıydı). */
 
 /* Takıldığı an: alttan yukarı geçen parıltı. */
 .shine {
@@ -151,7 +129,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .battery .wave,
   .shine,
   .badge {
     animation: none;

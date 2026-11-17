@@ -1,5 +1,6 @@
-import { useState, type CSSProperties } from "react";
-import { commands, events, report } from "../../lib/ipc";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { commands, events, report, type PowerState } from "../../lib/ipc";
+import { useReducedMotion } from "../../lib/motion";
 import { useService } from "../../lib/useService";
 import { BoltIcon, LeafIcon } from "../icons";
 import { Tile } from "../ui";
@@ -19,9 +20,41 @@ function usePlugPulse(plugged: boolean | undefined) {
   return state.pulse;
 }
 
+/**
+ * Dalga zamanlayıcıyla kare kare kaydırılır (8.0). CSS `steps()` animasyonu
+ * görüntüyü saniyede 8 kez değiştirse de tarayıcı onu her karede (60/sn)
+ * işliyordu: boşta tek çekirdeğin ~%12'si. Zamanlayıcıyla yalnızca adım
+ * anlarında çizilir: ~%2. Hız: şarjda hızlı, prizde orta, pilde yavaş.
+ */
+function useWave(power: PowerState | undefined) {
+  const ref = useRef<SVGSVGElement>(null);
+  const reduced = useReducedMotion();
+  // [tur süresi ms, adım sayısı]: saniyede 15, 8, 8 adım.
+  const [period, steps] = power?.charging ? [1600, 24] : power?.plugged ? [3000, 24] : [5000, 40];
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (reduced) {
+      el.style.transform = "";
+      return;
+    }
+    let i = 0;
+    const id = window.setInterval(() => {
+      i = (i + 1) % steps;
+      // İki kat genişlikteki dalga yarısı kadar kayınca başa döner.
+      el.style.transform = `translateX(${(-50 * i) / steps}%)`;
+    }, period / steps);
+    return () => window.clearInterval(id);
+  }, [reduced, period, steps, !power]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return ref;
+}
+
 export function BatteryBar() {
   const power = useService(commands.getPower, events.power);
   const pulse = usePlugPulse(power?.plugged);
+  const wave = useWave(power);
   // Pil yoksa (masaüstü PC) widget gizlenir.
   if (!power) return null;
 
@@ -66,7 +99,7 @@ export function BatteryBar() {
       }}
     >
       <span className={styles.liquid} aria-hidden>
-        <svg className={styles.wave} viewBox="0 0 40 6" preserveAspectRatio="none">
+        <svg ref={wave} className={styles.wave} viewBox="0 0 40 6" preserveAspectRatio="none">
           <path d={WAVE} />
         </svg>
       </span>
