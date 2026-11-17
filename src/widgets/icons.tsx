@@ -26,6 +26,26 @@ function Svg({ size = 18, className, children }: IconProps & { children: ReactNo
 
 // --- müzik ---------------------------------------------------------------------
 
+/** Karıştır: kesişen iki ok. */
+export const ShuffleIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 7h3.5c2 0 3 1 4.3 3l.4.6M4 17h3.5c2 0 3-1 4.3-3l2.4-3.6c1.3-2 2.3-3 4.3-3H20" />
+    <path d="M14.2 14.6l.3.4c1.3 2 2.3 3 4.3 3H20" />
+    <path d="M17.5 4.5 20 7l-2.5 2.5M17.5 14.5 20 17l-2.5 2.5" />
+  </Svg>
+);
+
+/** Tekrarla; `one` iken ortada "1" (tek şarkı). */
+export const RepeatIcon = ({ one, ...p }: IconProps & { one?: boolean }) => (
+  <Svg {...p}>
+    <path d="M17 3.5 19.5 6 17 8.5" />
+    <path d="M4.5 11V9.5A3.5 3.5 0 0 1 8 6h11.5" />
+    <path d="M7 20.5 4.5 18 7 15.5" />
+    <path d="M19.5 13v1.5A3.5 3.5 0 0 1 16 18H4.5" />
+    {one && <path d="M10.6 10.4 12.4 9.2v5.6" strokeWidth={1.8} />}
+  </Svg>
+);
+
 /** Kapaksız şarkı. */
 export const MusicIcon = (p: IconProps) => (
   <Svg {...p}>

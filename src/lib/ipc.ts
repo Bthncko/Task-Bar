@@ -59,7 +59,13 @@ export type MediaState = {
   canPrev: boolean;
   canNext: boolean;
   sourceApp: string;
+  /** Karıştırma; oynatıcı desteklemiyorsa null. */
+  shuffle: boolean | null;
+  /** Tekrar kipi; oynatıcı desteklemiyorsa null. */
+  repeat: RepeatMode | null;
 } | null;
+
+export type RepeatMode = "off" | "list" | "track";
 
 export type AudioState = { volume: number; muted: boolean; device: string } | null;
 
@@ -190,14 +196,17 @@ export const commands = {
   mediaToggle: () => invoke<void>("media_toggle"),
   mediaNext: () => invoke<void>("media_next"),
   mediaPrev: () => invoke<void>("media_prev"),
+  mediaSetShuffle: (on: boolean) => invoke<void>("media_set_shuffle", { on }),
+  mediaSetRepeat: (mode: RepeatMode) => invoke<void>("media_set_repeat", { mode }),
 
   spotifyStatus: () => invoke<SpotifyStatus>("spotify_status"),
   /** Tarayıcıda Spotify onayını bekler (en çok 3 dk). */
   spotifyConnect: (clientId: string) => invoke<SpotifyStatus>("spotify_connect", { clientId }),
   spotifyDisconnect: () => invoke<SpotifyStatus>("spotify_disconnect"),
   spotifyQueue: () => invoke<SpotifyQueue>("spotify_queue"),
-  /** Kuyruktaki `count`. öğeye geç (1 = sıradaki). */
-  spotifySkip: (count: number) => invoke<void>("spotify_skip", { count }),
+  /** Sıradakilerdeki öğeyi doğrudan çal (`index` 0 = sıradaki). */
+  spotifyPlayItem: (index: number, uri: string) =>
+    invoke<void>("spotify_play_item", { index, uri }),
 
   getUpdateInfo: () => invoke<UpdateInfo>("get_update_info"),
   /** Sonuç `events.update` ile gelir; yeni sürüm varsa kurulur (uygulama yeniden açılır). */

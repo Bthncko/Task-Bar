@@ -169,10 +169,10 @@ pub async fn spotify_queue(app: AppHandle) -> CmdResult<Queue> {
     blocking(move || app.state::<Spotify>().queue(&app)).await
 }
 
-/// Kuyruktaki `count`. öğeye geç (1 = sıradaki).
+/// Sıradakiler listesindeki öğeyi doğrudan çal (`index` 0 = sıradaki).
 #[tauri::command]
-pub async fn spotify_skip(app: AppHandle, count: u32) -> CmdResult {
-    blocking(move || app.state::<Spotify>().skip(&app, count)).await
+pub async fn spotify_play_item(app: AppHandle, index: u32, uri: String) -> CmdResult {
+    blocking(move || app.state::<Spotify>().play_item(&app, index, &uri)).await
 }
 
 /// Ağ beklemesi ana iş parçacığında olmasın.
@@ -297,6 +297,25 @@ pub fn media_next(media: State<MediaService>) {
 #[tauri::command]
 pub fn media_prev(media: State<MediaService>) {
     media.send(MediaCmd::Prev);
+}
+
+#[tauri::command]
+pub fn media_set_shuffle(media: State<MediaService>, on: bool) {
+    media.send(MediaCmd::Shuffle(on));
+}
+
+/// `mode`: "off" | "track" | "list".
+#[tauri::command]
+pub fn media_set_repeat(media: State<MediaService>, mode: String) -> CmdResult {
+    use windows::Media::MediaPlaybackAutoRepeatMode as M;
+    let mode = match mode.as_str() {
+        "off" => M::None,
+        "track" => M::Track,
+        "list" => M::List,
+        _ => return Err(format!("bilinmeyen tekrar kipi: {mode}")),
+    };
+    media.send(MediaCmd::Repeat(mode));
+    Ok(())
 }
 
 // --- ses -------------------------------------------------------------------

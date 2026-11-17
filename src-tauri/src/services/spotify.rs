@@ -175,7 +175,7 @@ impl Spotify {
             inner.stored.account = None;
         }
         // Hesap adı yalnızca gösterim için; alınamazsa bağlantı yine geçerli.
-        match self.call("GET", "/me") {
+        match self.call("GET", "/me", None) {
             Ok(body) => {
                 let me: Value = serde_json::from_str(&body).unwrap_or_default();
                 let name = me["display_name"]
@@ -219,8 +219,39 @@ impl Spotify {
         Ok(Queue { current, items })
     }
 
+    /// Sıradaki listeden bir öğeyi çal (`index` 0 = sıradaki).
+    ///
+    /// Çalan şey bir çalma listesi ya da albümse şarkı o listenin içinde doğrudan
+    /// başlatılır (`PUT /me/player/play`, `context_uri` + `offset.uri`; belgeye
+    /// göre offset yalnızca albüm ve çalma listesinde): araya giren şarkılar tek
+    /// tek geçilmez, listenin devamı korunur. Başka bağlamda (sanatçı, radyo) ya
+    /// da öğe listede yoksa (elle sıraya eklenmiş) eski yol: o öğeye kadar "sonraki".
+    pub fn play_item(&self, app: &AppHandle, index: u32, uri: &str) -> AppResult<()> {
+        let state = self.call_checked(app, "GET", "/me/player")?;
+        let json: Value = serde_json::from_str(&state).unwrap_or_default();
+        let context = &json["context"];
+        if let Some(context_uri) = context["uri"].as_str()
+            && matches!(context["type"].as_str(), Some("album" | "playlist"))
+            && uri.starts_with("spotify:")
+        {
+            let body = serde_json::json!({
+                "context_uri": context_uri,
+                "offset": { "uri": uri },
+            })
+            .to_string();
+            match self.call_json(app, "PUT", "/me/player/play", Some(&body)) {
+                Ok(_) => {
+                    log("liste içinde doğrudan çalındı");
+                    return Ok(());
+                }
+                Err(e) => log(&format!("doğrudan çalınamadı ({e}); sırayla geçiliyor")),
+            }
+        }
+        self.skip(app, index + 1)
+    }
+
     /// Kuyruktaki `count`. öğeye geç (1 = sıradaki).
-    pub fn skip(&self, app: &AppHandle, count: u32) -> AppResult<()> {
+    fn skip(&self, app: &AppHandle, count: u32) -> AppResult<()> {
         let count = count.clamp(1, MAX_SKIP);
         for i in 0..count {
             if i > 0 {
@@ -250,7 +281,17 @@ impl Spotify {
 
     /// Yetki kesildiyse bağlantıyı düşürür, ayarlara haber verir.
     fn call_checked(&self, app: &AppHandle, method: &str, path: &str) -> AppResult<String> {
-        self.call(method, path).inspect_err(|e| {
+        self.call_json(app, method, path, None)
+    }
+
+    fn call_json(
+        &self,
+        app: &AppHandle,
+        method: &str,
+        path: &str,
+        json: Option<&str>,
+    ) -> AppResult<String> {
+        self.call(method, path, json).inspect_err(|e| {
             if matches!(e, AppError::InvalidInput(m) if m == EXPIRED)
                 && self.inner.lock().unwrap().refresh.is_none()
             {
@@ -261,12 +302,12 @@ impl Spotify {
     }
 
     /// Yetkili API çağrısı; 401'de anahtarı bir kez yenileyip tekrar dener.
-    fn call(&self, method: &str, path: &str) -> AppResult<String> {
+    fn call(&self, method: &str, path: &str, json: Option<&str>) -> AppResult<String> {
         let url = format!("{API}{path}");
         let mut retried = false;
         loop {
             let token = self.access_token(retried)?;
-            let res = http(method, &url, Some(&token), None)?;
+            let res = http(method, &url, Some(&token), json.map(Body::Json))?;
             match res.status {
                 200..=299 => return Ok(res.body),
                 401 if !retried => retried = true,
@@ -291,7 +332,7 @@ impl Spotify {
             ("refresh_token", &refresh),
             ("client_id", &inner.stored.client_id),
         ]);
-        let res = http("POST", TOKEN_URL, None, Some(&body))?;
+        let res = http("POST", TOKEN_URL, None, Some(Body::Form(&body)))?;
         let json: Value = serde_json::from_str(&res.body).unwrap_or_default();
         if res.status == 400 && json["error"] == "invalid_grant" {
             // İzin kaldırıldı ya da anahtar geçersiz: yeniden bağlanmak gerek.
@@ -395,7 +436,7 @@ impl Spotify {
             ("client_id", client_id),
             ("code_verifier", &verifier),
         ]);
-        let res = http("POST", TOKEN_URL, None, Some(&body))?;
+        let res = http("POST", TOKEN_URL, None, Some(Body::Form(&body)))?;
         let json: Value = serde_json::from_str(&res.body).unwrap_or_default();
         if !(200..300).contains(&res.status) {
             let detail = json["error_description"]
@@ -539,13 +580,14 @@ struct Response {
     body: String,
 }
 
+/// İstek gövdesi.
+enum Body<'a> {
+    Form(&'a str),
+    Json(&'a str),
+}
+
 /// Bekleyen bir iş parçacığında çağrılmalı.
-fn http(
-    method: &str,
-    url: &str,
-    bearer: Option<&str>,
-    form_body: Option<&str>,
-) -> AppResult<Response> {
+fn http(method: &str, url: &str, bearer: Option<&str>, body: Option<Body>) -> AppResult<Response> {
     // SAFETY: bu iş parçacığı için COM başlatma; zaten başlatılmışsa zararsız.
     unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
@@ -555,11 +597,11 @@ fn http(
     cache.SetReadBehavior(HttpCacheReadBehavior::NoCache)?;
     cache.SetWriteBehavior(HttpCacheWriteBehavior::NoCache)?;
     let client = HttpClient::Create(&filter)?;
-    let post = method == "POST";
-    let method = if post {
-        HttpMethod::Post()?
-    } else {
-        HttpMethod::Get()?
+    let has_body = method != "GET";
+    let method = match method {
+        "POST" => HttpMethod::Post()?,
+        "PUT" => HttpMethod::Put()?,
+        _ => HttpMethod::Get()?,
     };
     let request = HttpRequestMessage::Create(&method, &Uri::CreateUri(&HSTRING::from(url))?)?;
     if let Some(token) = bearer {
@@ -568,15 +610,19 @@ fn http(
             &HSTRING::from(format!("Bearer {token}")),
         )?;
     }
-    if let Some(body) = form_body {
+    if let Some(body) = body {
+        let (text, media_type) = match body {
+            Body::Form(t) => (t, "application/x-www-form-urlencoded"),
+            Body::Json(t) => (t, "application/json"),
+        };
         let content = HttpStringContent::CreateFromStringWithEncodingAndMediaType(
-            &HSTRING::from(body),
+            &HSTRING::from(text),
             UnicodeEncoding::Utf8,
-            &HSTRING::from("application/x-www-form-urlencoded"),
+            &HSTRING::from(media_type),
         )?;
         request.SetContent(&content)?;
-    } else if post {
-        // Gövdesiz POST: Spotify Content-Length ister (yoksa 411).
+    } else if has_body {
+        // Gövdesiz POST/PUT: Spotify Content-Length ister (yoksa 411).
         request.SetContent(&HttpStringContent::CreateFromString(&HSTRING::new())?)?;
     }
     let response = client

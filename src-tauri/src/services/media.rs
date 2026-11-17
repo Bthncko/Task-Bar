@@ -19,6 +19,7 @@ use windows::Media::Control::{
     GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus,
     MediaPropertiesChangedEventArgs, PlaybackInfoChangedEventArgs, SessionsChangedEventArgs,
 };
+use windows::Media::MediaPlaybackAutoRepeatMode;
 use windows::Storage::Streams::{DataReader, IRandomAccessStreamReference};
 use windows::core::Interface;
 use windows_future::IAsyncOperation;
@@ -41,12 +42,18 @@ pub struct MediaState {
     pub can_prev: bool,
     pub can_next: bool,
     pub source_app: String,
+    /// Karıştırma açık mı; oynatıcı desteklemiyorsa yok.
+    pub shuffle: Option<bool>,
+    /// "off" | "track" | "list"; oynatıcı desteklemiyorsa yok.
+    pub repeat: Option<&'static str>,
 }
 
 pub enum MediaCmd {
     Toggle,
     Next,
     Prev,
+    Shuffle(bool),
+    Repeat(MediaPlaybackAutoRepeatMode),
 }
 
 pub type MediaService = runner::ServiceHandle<Option<MediaState>, MediaCmd>;
@@ -170,6 +177,21 @@ pub fn spawn(app: &AppHandle) {
                     controls.as_ref().and_then(|c| f(c).ok()).unwrap_or(false)
                 };
 
+                // Karıştır / tekrarla: Spotify dahil çoğu oynatıcı bildiriyor
+                // (bu makinede Spotify ile denendi). Kapalıysa düğme gösterilmez.
+                let info = playback.as_ref();
+                let shuffle = can(|c| c.IsShuffleEnabled())
+                    .then(|| info.and_then(|p| p.IsShuffleActive().ok()?.Value().ok()))
+                    .flatten();
+                let repeat = can(|c| c.IsRepeatEnabled())
+                    .then(|| info.and_then(|p| p.AutoRepeatMode().ok()?.Value().ok()))
+                    .flatten()
+                    .map(|m| match m {
+                        MediaPlaybackAutoRepeatMode::Track => "track",
+                        MediaPlaybackAutoRepeatMode::List => "list",
+                        _ => "off",
+                    });
+
                 Some(MediaState {
                     title,
                     artist,
@@ -178,6 +200,8 @@ pub fn spawn(app: &AppHandle) {
                     can_prev: can(|c| c.IsPreviousEnabled()),
                     can_next: can(|c| c.IsNextEnabled()),
                     source_app,
+                    shuffle,
+                    repeat,
                 })
             }
         },
@@ -189,6 +213,8 @@ fn run_command(session: &Session, cmd: MediaCmd) {
         MediaCmd::Toggle => session.TryTogglePlayPauseAsync(),
         MediaCmd::Next => session.TrySkipNextAsync(),
         MediaCmd::Prev => session.TrySkipPreviousAsync(),
+        MediaCmd::Shuffle(on) => session.TryChangeShuffleActiveAsync(on),
+        MediaCmd::Repeat(mode) => session.TryChangeAutoRepeatModeAsync(mode),
     };
     let _ = op.and_then(|op| op.join());
     // Oynatıcının durumunu güncellemesine kısa süre tanı.

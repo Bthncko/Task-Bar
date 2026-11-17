@@ -5,10 +5,19 @@ import {
   report,
   type MediaState,
   type QueueItem,
+  type RepeatMode,
   type SpotifyQueue,
 } from "../../lib/ipc";
 import { useService } from "../../lib/useService";
-import { MusicIcon, NextIcon, PauseIcon, PlayIcon, PrevIcon } from "../icons";
+import {
+  MusicIcon,
+  NextIcon,
+  PauseIcon,
+  PlayIcon,
+  PrevIcon,
+  RepeatIcon,
+  ShuffleIcon,
+} from "../icons";
 import { IconButton } from "../ui";
 import { LinkButton, PanelHeader } from "../ui/panel";
 import { usePopupClose } from "../ui/popupClose";
@@ -21,6 +30,14 @@ const REFRESH_MS = 15_000;
 const SETTLE_MS = 400;
 
 const isSpotify = (app: string) => /spotify/i.test(app);
+
+/** Tekrar düğmesi Spotify'daki sırayla döner: kapalı → liste → tek şarkı. */
+const NEXT_REPEAT: Record<RepeatMode, RepeatMode> = { off: "list", list: "track", track: "off" };
+const REPEAT_LABEL: Record<RepeatMode, string> = {
+  off: "Tekrarla: kapalı",
+  list: "Tekrarla: liste",
+  track: "Tekrarla: bu şarkı",
+};
 
 /**
  * Müzik paneli: şu an çalan + (Spotify'da) sıradakiler; listeden birine
@@ -97,6 +114,19 @@ function NowPlaying({ media }: { media: NonNullable<MediaState> }) {
           {media.artist && <span className={styles.nowArtist}>{media.artist}</span>}
         </div>
         <div className={styles.controls}>
+          {media.shuffle !== null && (
+            <IconButton
+              className={`${styles.control} ${styles.toggle}`}
+              aria-label="Karıştır"
+              aria-pressed={media.shuffle}
+              title={media.shuffle ? "Karıştır: açık" : "Karıştır: kapalı"}
+              onClick={() =>
+                commands.mediaSetShuffle(!media.shuffle).catch(report("media_set_shuffle"))
+              }
+            >
+              <ShuffleIcon size={15} />
+            </IconButton>
+          )}
           <IconButton
             className={styles.control}
             aria-label="Önceki"
@@ -123,6 +153,21 @@ function NowPlaying({ media }: { media: NonNullable<MediaState> }) {
           >
             <NextIcon size={16} />
           </IconButton>
+          {media.repeat !== null && (
+            <IconButton
+              className={`${styles.control} ${styles.toggle}`}
+              aria-label={REPEAT_LABEL[media.repeat]}
+              aria-pressed={media.repeat !== "off"}
+              title={REPEAT_LABEL[media.repeat]}
+              onClick={() =>
+                commands
+                  .mediaSetRepeat(NEXT_REPEAT[media.repeat!])
+                  .catch(report("media_set_repeat"))
+              }
+            >
+              <RepeatIcon size={15} one={media.repeat === "track"} />
+            </IconButton>
+          )}
         </div>
       </div>
     </div>
@@ -138,7 +183,7 @@ type QueueState =
 function Queue({ trackKey }: { trackKey: string }) {
   const [state, setState] = useState<QueueState>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
-  /** Geçilen satır (gelene kadar üstündekiler soluk). */
+  /** Çalınmak üzere seçilen satır (gelene kadar üstündekiler soluk). */
   const [pending, setPending] = useState<number | null>(null);
 
   useEffect(() => {
@@ -176,11 +221,11 @@ function Queue({ trackKey }: { trackKey: string }) {
     setPending(null);
   }
 
-  const skipTo = (index: number) => {
+  const play = (index: number, uri: string) => {
     if (pending !== null) return;
     setPending(index);
     commands
-      .spotifySkip(index + 1)
+      .spotifyPlayItem(index, uri)
       .catch((e) => {
         setPending(null);
         setState((s) => ({
@@ -219,7 +264,7 @@ function Queue({ trackKey }: { trackKey: string }) {
                         ? "next"
                         : undefined
                 }
-                onPlay={() => skipTo(i)}
+                onPlay={() => play(i, item.uri)}
               />
             </li>
           ))}
