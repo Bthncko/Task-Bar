@@ -46,6 +46,16 @@ export function General({ config }: { config: Config }) {
           />
         </Row>
         <Row
+          label="Bildirimler dock tarzında"
+          hint="Uygulama bildirimleri sağ üstte sade kartlarla çıkar; Windows'un kutucukları kapanır, bildirimler bildirim merkezinde kalır. Kapatınca (ya da dock kapanınca) Windows'unkiler geri gelir."
+        >
+          <Toggle
+            label="Bildirimler dock tarzında"
+            checked={config.ownNotifications}
+            onChange={(on) => updateConfig((c) => ({ ...c, ownNotifications: on }))}
+          />
+        </Row>
+        <Row
           label="Açılışta başlat"
           hint={
             autostart && !autostart.available

@@ -1,5 +1,6 @@
 pub mod appbar;
 pub mod focus;
+pub mod notify;
 pub mod placement;
 pub mod popup;
 pub mod preview;
@@ -52,6 +53,8 @@ pub fn is_own_window(hwnd: HWND) -> bool {
 pub fn shutdown() {
     // Önce kendi tepsimiz: görev çubuğu iletileri yine Explorer'a gitsin.
     tray_host::shutdown();
+    // Dock yokken bildirimler yine Windows'un kutucuklarında görünsün.
+    crate::services::notifications::shutdown();
     appbar::remove();
     taskbar::cleanup();
     // Uygulama pencerelerinde kapattığımız Windows geçişlerini geri aç.

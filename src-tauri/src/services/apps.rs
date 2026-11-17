@@ -129,6 +129,24 @@ impl AppsService {
         Ok(())
     }
 
+    /// Bildirim kartına tıklama: uygulamanın penceresi varsa öne getir, yoksa
+    /// AUMID ile başlat (bildirimi gönderen uygulama).
+    pub fn bring_aumid(&self, aumid: &str) -> AppResult<()> {
+        let hwnd = {
+            let snap = self.snapshot.lock().unwrap();
+            snap.items
+                .iter()
+                .find(|i| i.id.eq_ignore_ascii_case(aumid))
+                .and_then(|i| i.windows.first().map(|w| w.hwnd))
+        };
+        if let Some(hwnd) = hwnd {
+            focus::activate(hwnd);
+            self.refresh_soon();
+            return Ok(());
+        }
+        super::launcher::shell_open("explorer.exe", &format!("shell:AppsFolder\\{aumid}"), "")
+    }
+
     /// Orta tık / "Yeni pencere".
     pub fn launch(&self, id: &str) -> AppResult<()> {
         let (_, meta, _) = self.find(id)?;

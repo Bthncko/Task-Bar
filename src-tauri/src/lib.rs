@@ -121,6 +121,8 @@ pub fn run() {
             commands::set_power_timeout,
             commands::get_tray,
             commands::tray_click,
+            commands::notify_layout,
+            commands::notify_activate,
             commands::wifi_scan,
             commands::wifi_connect,
             commands::wifi_disconnect,
@@ -154,6 +156,7 @@ pub fn run() {
             config.attach(app.handle().clone());
             let hide_taskbar = config.get().hide_windows_taskbar;
             let minimize_to_dock = config.get().minimize_to_dock;
+            let own_notifications = config.get().own_notifications;
             let first_run = config.is_first_run();
             win::placement::set_ui_scale(config.get().theme.ui_scale());
             app.manage(config);
@@ -187,6 +190,8 @@ pub fn run() {
             dock.show()?;
             win::popup::init(app.handle())?;
             win::preview::init(app.handle())?;
+            win::notify::init(app.handle())?;
+            services::notifications::spawn(app.handle(), config_dir.clone(), own_notifications);
             win::window_fx::set_enabled(minimize_to_dock);
             win::window_fx::spawn(app.handle());
 

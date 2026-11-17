@@ -44,6 +44,22 @@
         "noRedirectionBitmap": true
       },
       {
+        "label": "notify",
+        "title": "Akıllı Dock Bildirimler",
+        "width": 392,
+        "height": 120,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false,
+        "visible": false,
+        "focus": false,
+        "focusable": false,
+        "noRedirectionBitmap": true
+      },
+      {
         "label": "popup",
         "title": "Akıllı Dock Panel",
         "width": 340,

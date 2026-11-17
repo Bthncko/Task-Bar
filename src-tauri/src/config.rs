@@ -27,6 +27,9 @@ pub struct Config {
     pub minimize_to_dock: bool,
     /// Yeni sürüm çıkınca kendiliğinden indirip kur (services/updater.rs).
     pub auto_update: bool,
+    /// Uygulama bildirimleri sağ üstte dock tarzı kartlarla; Windows'un
+    /// kutucukları kapanır (services/notifications.rs).
+    pub own_notifications: bool,
     pub theme: Theme,
     pub layout: Layout,
     pub widgets: Widgets,
@@ -40,6 +43,7 @@ impl Default for Config {
             hide_windows_taskbar: false,
             minimize_to_dock: true,
             auto_update: true,
+            own_notifications: true,
             theme: Theme::default(),
             layout: Layout::default(),
             widgets: Widgets::default(),

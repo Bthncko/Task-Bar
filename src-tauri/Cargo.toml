@@ -31,6 +31,8 @@ tauri-plugin-autostart = "2"
 windows-future = "0.3"
 # COM geri çağrıları (`#[implement]`) bu adla doğrudan bağımlılık ister.
 windows-core = "0.62"
+# Bildirim ayarları (Windows kutucuklarını kapat / geri aç).
+windows-registry = "0.6"
 
 # Uygulama yalnızca Windows için. Tauri ile aynı sürüm (0.62) — HWND tipleri birebir uyuşsun.
 windows = { version = "0.62", features = [
@@ -39,6 +41,9 @@ windows = { version = "0.62", features = [
   "Devices_Radios",
   "Devices_WiFi",
   "Foundation",
+  "ApplicationModel",
+  "UI_Notifications_Management",
+  "UI_Notifications",
   "Foundation_Collections",
   "Media_Control",
   "Networking_Connectivity",

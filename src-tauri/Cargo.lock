@@ -34,6 +34,7 @@ dependencies = [
  "windows",
  "windows-core",
  "windows-future",
+ "windows-registry",
 ]
 
 [[package]]

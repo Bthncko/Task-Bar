@@ -1,0 +1,316 @@
+//! Kendi bildirimlerimiz: uygulama bildirimleri sağ üstte dock tarzı kartlarla.
+//!
+//! - Okuma: `UserNotificationListener` (resmi API). Belgeye göre paketli
+//!   uygulama + `userNotificationListener` yeteneği ister; bu makinede paketsiz
+//!   süreçte de erişim "Allowed" döndü. Olay (`NotificationChanged`) paketsizde
+//!   çalışmayabilir: kayıt başarısızsa kısa aralıkla yoklanır.
+//! - Windows'un kutucuğu: uygulama başına `ShowBanner = 0`
+//!   (HKCU\…\Notifications\Settings\<AUMID>). Bildirim merkezi ve ses kalır.
+//!   Önceki değerler diske yazılır; ayar kapanınca ve dock kapanırken geri
+//!   yüklenir (dock çalışmıyorken Windows'un kutucukları görünsün).
+//! - Kart yalnızca kutucuğunu bizim kapattığımız uygulamalar için çıkar: ilk kez
+//!   görülen uygulamanın ilk bildirimini Windows gösterir, sonrakileri biz.
+//! - Windows'un kendi sistem bildirimleri (`Windows.SystemToast.*`: düğmeli
+//!   onaylar, pil uyarısı) dokunulmadan Windows'ta kalır.
+
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, OnceLock, mpsc};
+use std::time::Duration;
+
+use serde::Serialize;
+use tauri::{AppHandle, Emitter};
+use windows::Foundation::TypedEventHandler;
+use windows::UI::Notifications::Management::{
+    UserNotificationListener, UserNotificationListenerAccessStatus,
+};
+use windows::UI::Notifications::{KnownNotificationBindings, NotificationKinds, UserNotification};
+use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
+use windows_registry::CURRENT_USER;
+
+pub const NOTIFY_SHOW: &str = "notify://show";
+pub const NOTIFY_GONE: &str = "notify://gone";
+
+const SETTINGS_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings";
+const SHOW_BANNER: &str = "ShowBanner";
+const SAVED_FILE: &str = "notification-banners.json";
+/// Olay yoksa yoklama; olay varsa yalnızca yedek.
+const POLL: Duration = Duration::from_millis(700);
+const POLL_WITH_EVENTS: Duration = Duration::from_secs(5);
+
+#[derive(Serialize, Clone)]
+pub struct Notice {
+    pub id: u32,
+    pub app: String,
+    pub icon: Option<String>,
+    pub title: String,
+    pub body: String,
+}
+
+struct State {
+    saved_path: PathBuf,
+    /// AUMID → kutucuğu kapatmadan önceki `ShowBanner` (`None`: değer yoktu).
+    saved: HashMap<String, Option<u32>>,
+    /// Kartı gösterilen bildirim → gönderen AUMID (tıklayınca uygulamayı aç).
+    senders: HashMap<u32, String>,
+    icons: HashMap<String, Option<String>>,
+}
+
+static ENABLED: AtomicBool = AtomicBool::new(false);
+static STATE: Mutex<Option<State>> = Mutex::new(None);
+static LISTENER: OnceLock<UserNotificationListener> = OnceLock::new();
+
+fn with<R>(f: impl FnOnce(&mut State) -> R) -> Option<R> {
+    let mut guard = STATE.lock().unwrap_or_else(|e| e.into_inner());
+    guard.as_mut().map(f)
+}
+
+pub fn spawn(app: &AppHandle, config_dir: PathBuf, enabled: bool) {
+    let saved_path = config_dir.join(SAVED_FILE);
+    let saved = std::fs::read_to_string(&saved_path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default();
+    *STATE.lock().unwrap_or_else(|e| e.into_inner()) = Some(State {
+        saved_path,
+        saved,
+        senders: HashMap::new(),
+        icons: HashMap::new(),
+    });
+    set_enabled(enabled);
+    let app = app.clone();
+    std::thread::Builder::new()
+        .name("notifications".into())
+        .spawn(move || run(app))
+        .expect("notifications başlatılamadı");
+}
+
+/// Ayar değişti: kutucukları kapat ya da Windows'unkileri geri getir.
+pub fn set_enabled(on: bool) {
+    ENABLED.store(on, Ordering::Relaxed);
+    if on { suppress_all() } else { restore_all() }
+}
+
+/// Çıkışta: dock yokken bildirimler yine Windows'ta görünsün.
+pub fn shutdown() {
+    restore_all();
+}
+
+// --- Windows kutucukları ---------------------------------------------------------------
+
+/// Windows'un kendi sistem bildirimleri (düğmeli onaylar vb.) Windows'ta kalır.
+fn excluded(aumid: &str) -> bool {
+    aumid.is_empty()
+        || aumid.starts_with("Windows.SystemToast.")
+        || aumid.starts_with("Windows.ActionCenter.")
+}
+
+fn suppress_all() {
+    let Ok(key) = CURRENT_USER.open(SETTINGS_KEY) else {
+        return;
+    };
+    let Ok(names) = key.keys() else { return };
+    let names: Vec<String> = names.collect();
+    for name in names {
+        suppress(&name);
+    }
+}
+
+/// Uygulamanın kutucuğunu kapat. Kullanıcı zaten kapattıysa dokunma (geri
+/// yüklerken açmayalım). `true`: artık kartı biz gösteriyoruz.
+fn suppress(aumid: &str) -> bool {
+    if excluded(aumid) || !ENABLED.load(Ordering::Relaxed) {
+        return false;
+    }
+    with(|s| {
+        if s.saved.contains_key(aumid) {
+            return true;
+        }
+        let Ok(key) = CURRENT_USER.create(format!("{SETTINGS_KEY}\\{aumid}")) else {
+            return false;
+        };
+        let before = key.get_u32(SHOW_BANNER).ok();
+        if before == Some(0) {
+            return false;
+        }
+        if key.set_u32(SHOW_BANNER, 0).is_err() {
+            return false;
+        }
+        s.saved.insert(aumid.to_string(), before);
+        persist(s);
+        true
+    })
+    .unwrap_or(false)
+}
+
+fn restore_all() {
+    with(|s| {
+        // Geri yüklenemeyen (ör. erişim hatası) kayıtta kalır, sonra yeniden denenir.
+        s.saved.retain(|aumid, before| {
+            let key = CURRENT_USER
+                .options()
+                .read()
+                .write()
+                .open(format!("{SETTINGS_KEY}\\{aumid}"));
+            let Ok(key) = key else {
+                // Anahtar yok (uygulama kaldırılmış): geri yüklenecek bir şey yok.
+                return false;
+            };
+            let result = match before {
+                Some(v) => key.set_u32(SHOW_BANNER, *v),
+                None => key.remove_value(SHOW_BANNER),
+            };
+            if let Err(e) = &result {
+                eprintln!("[notify] kutucuk ayarı geri yüklenemedi: {}", e.message());
+            }
+            result.is_err()
+        });
+        if s.saved.is_empty() {
+            let _ = std::fs::remove_file(&s.saved_path);
+        } else {
+            persist(s);
+        }
+    });
+}
+
+fn persist(s: &State) {
+    if let Ok(text) = serde_json::to_string(&s.saved)
+        && let Err(e) = std::fs::write(&s.saved_path, text)
+    {
+        eprintln!("[notify] kutucuk ayarları kaydedilemedi: {e}");
+    }
+}
+
+// --- okuma -----------------------------------------------------------------------------
+
+fn run(app: AppHandle) {
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+    }
+    let listener = match UserNotificationListener::Current() {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("[notify] dinleyici yok: {}", e.message());
+            return;
+        }
+    };
+    let allowed = |s| s == UserNotificationListenerAccessStatus::Allowed;
+    if !listener.GetAccessStatus().is_ok_and(allowed)
+        && !listener
+            .RequestAccessAsync()
+            .and_then(|op| op.join())
+            .is_ok_and(allowed)
+    {
+        eprintln!("[notify] bildirimlere erişim izni yok");
+        return;
+    }
+    let (tx, rx) = mpsc::channel::<()>();
+    let events = listener
+        .NotificationChanged(&TypedEventHandler::new(move |_, _| {
+            let _ = tx.send(());
+            Ok(())
+        }))
+        .is_ok();
+    eprintln!("[notify] dinleniyor (olay: {events})");
+    let _ = LISTENER.set(listener.clone());
+
+    let mut seen: HashSet<u32> = toasts(&listener)
+        .map(|l| l.iter().filter_map(|n| n.Id().ok()).collect())
+        .unwrap_or_default();
+    let wait = if events { POLL_WITH_EVENTS } else { POLL };
+    loop {
+        let _ = rx.recv_timeout(wait);
+        while rx.try_recv().is_ok() {}
+        let Ok(list) = toasts(&listener) else {
+            continue;
+        };
+        let mut now = HashSet::with_capacity(list.len());
+        for n in &list {
+            let Ok(id) = n.Id() else { continue };
+            now.insert(id);
+            if !seen.contains(&id)
+                && let Some(notice) = notice(n, id)
+            {
+                let _ = app.emit(NOTIFY_SHOW, notice);
+            }
+        }
+        // Bildirim merkezinden silinen (ya da orada tıklanan) bildirimin kartı da gitsin.
+        for gone in seen.difference(&now) {
+            with(|s| s.senders.remove(gone));
+            let _ = app.emit(NOTIFY_GONE, *gone);
+        }
+        seen = now;
+    }
+}
+
+fn toasts(listener: &UserNotificationListener) -> windows::core::Result<Vec<UserNotification>> {
+    let view = listener
+        .GetNotificationsAsync(NotificationKinds::Toast)?
+        .join()?;
+    Ok(view.into_iter().collect())
+}
+
+/// Yeni bildirim → kart. Kutucuğunu Windows gösteriyorsa `None`.
+fn notice(n: &UserNotification, id: u32) -> Option<Notice> {
+    if !ENABLED.load(Ordering::Relaxed) {
+        return None;
+    }
+    let info = n.AppInfo().ok();
+    let aumid = info
+        .as_ref()
+        .and_then(|i| i.AppUserModelId().ok())
+        .map(|h| h.to_string())
+        .unwrap_or_default();
+    let ours = with(|s| s.saved.contains_key(&aumid)).unwrap_or(false);
+    if !ours {
+        // İlk kez görülen uygulama: bunu Windows gösterdi, sonrakiler bizim.
+        suppress(&aumid);
+        return None;
+    }
+    let texts: Vec<String> = n
+        .Notification()
+        .and_then(|t| t.Visual())
+        .and_then(|v| v.GetBinding(&KnownNotificationBindings::ToastGeneric()?))
+        .and_then(|b| b.GetTextElements())
+        .map(|els| {
+            els.into_iter()
+                .filter_map(|e| e.Text().ok())
+                .map(|t| t.to_string())
+                .filter(|t| !t.trim().is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    let app_name = info
+        .as_ref()
+        .and_then(|i| i.DisplayInfo().ok())
+        .and_then(|d| d.DisplayName().ok())
+        .map(|h| h.to_string())
+        .unwrap_or_default();
+    let icon = with(|s| s.icons.get(&aumid).cloned())
+        .flatten()
+        .unwrap_or_else(|| {
+            let icon = super::icons::shell_info(Some(&aumid), None).icon;
+            with(|s| s.icons.insert(aumid.clone(), icon.clone()));
+            icon
+        });
+    with(|s| s.senders.insert(id, aumid.clone()));
+    let mut texts = texts.into_iter();
+    Some(Notice {
+        id,
+        app: app_name,
+        icon,
+        title: texts.next().unwrap_or_default(),
+        body: texts.collect::<Vec<_>>().join("\n"),
+    })
+}
+
+/// Karta tıklandı: gönderen uygulamanın AUMID'si; bildirim merkezden de kalkar
+/// (Windows'ta tıklanan bildirim de kalkar).
+pub fn take_sender(id: u32) -> Option<String> {
+    let aumid = with(|s| s.senders.remove(&id)).flatten()?;
+    if let Some(listener) = LISTENER.get() {
+        let _ = listener.RemoveNotification(id);
+    }
+    Some(aumid)
+}

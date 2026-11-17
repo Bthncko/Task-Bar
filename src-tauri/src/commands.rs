@@ -213,6 +213,7 @@ pub fn set_config(app: AppHandle, config: State<ConfigStore>, value: Config) -> 
     let before = config.get();
     let hide_after = value.hide_windows_taskbar;
     let fx_after = value.minimize_to_dock;
+    let notify_after = value.own_notifications;
     let scale_after = value.theme.ui_scale();
     config.update(|c| *c = value).map_err(String::from)?;
     if before.theme.ui_scale() != scale_after {
@@ -228,6 +229,9 @@ pub fn set_config(app: AppHandle, config: State<ConfigStore>, value: Config) -> 
     }
     if before.minimize_to_dock != fx_after {
         crate::win::window_fx::set_enabled(fx_after);
+    }
+    if before.own_notifications != notify_after {
+        crate::services::notifications::set_enabled(notify_after);
     }
     Ok(())
 }
@@ -541,6 +545,22 @@ pub async fn set_refresh_rate(hz: u32) -> CmdResult {
 #[tauri::command]
 pub async fn set_power_timeout(kind: String, seconds: u32) -> CmdResult {
     blocking_str(move || battery_settings::set_timeout(&kind, seconds)).await
+}
+
+/// Bildirim kartları penceresi: yığının boyu değişti (0 → gizle).
+#[tauri::command]
+pub fn notify_layout(app: AppHandle, width: f64, height: f64) -> CmdResult {
+    crate::win::notify::layout(&app, width, height)?;
+    Ok(())
+}
+
+/// Bildirim kartına tıklandı: gönderen uygulamayı öne getir / aç.
+#[tauri::command]
+pub fn notify_activate(apps: State<AppsService>, id: u32) -> CmdResult {
+    match crate::services::notifications::take_sender(id) {
+        Some(aumid) => apps.bring_aumid(&aumid).map_err(Into::into),
+        None => Ok(()),
+    }
 }
 
 /// Kendi tepsimizdeki simgeler (`win::tray_host`).

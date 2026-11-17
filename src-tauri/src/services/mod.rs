@@ -10,6 +10,7 @@ pub mod ics;
 pub mod jumplist;
 pub mod launcher;
 pub mod media;
+pub mod notifications;
 pub mod power;
 pub mod power_mode;
 pub mod radios;

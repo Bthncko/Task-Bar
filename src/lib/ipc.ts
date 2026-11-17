@@ -22,6 +22,8 @@ export type Config = {
   minimizeToDock: boolean;
   /** Yeni sürüm çıkınca kendiliğinden indirip kur. */
   autoUpdate: boolean;
+  /** Bildirimler sağ üstte dock tarzı kartlarla (Windows'un kutucukları kapanır). */
+  ownNotifications: boolean;
   theme: {
     /** "#rrggbb" ya da "auto" (Windows vurgu rengi). */
     accent: string;
@@ -177,6 +179,9 @@ export const events = {
   /** Rust kapanma istiyor (odak kaybı, ikinci tıklama): animasyonla kapat. */
   popupClose: "popup://close",
   sysmon: "sysmon://changed",
+  /** Yalnızca bildirim penceresine: yeni kart (Notice) / kaldırılan bildirim (id). */
+  notifyShow: "notify://show",
+  notifyGone: "notify://gone",
   /** Kendi tepsimizdeki simgeler (TrayState). */
   tray: "tray://changed",
   /** Yalnızca önizleme penceresine: hangi uygulamanın pencereleri (PreviewOpen). */
@@ -204,6 +209,8 @@ export type BatterySettings = {
   sleep: number | null;
   saverThreshold: number | null;
 };
+/** Uygulama bildirimi (kendi kartımız). */
+export type Notice = { id: number; app: string; icon: string | null; title: string; body: string };
 export type TrayIcon = { id: string; tip: string; icon: string | null };
 /** `active: false`: simgeler Windows'ta (kendi tepsimiz açılamadı). */
 export type TrayState = { active: boolean; icons: TrayIcon[] };
@@ -334,6 +341,8 @@ export const commands = {
   setPowerTimeout: (kind: "screen" | "sleep", seconds: number) =>
     invoke<void>("set_power_timeout", { kind, seconds }),
   getTray: () => invoke<TrayState>("get_tray"),
+  notifyLayout: (width: number, height: number) => invoke<void>("notify_layout", { width, height }),
+  notifyActivate: (id: number) => invoke<void>("notify_activate", { id }),
   trayClick: (id: string, button: "left" | "double" | "right") =>
     invoke<void>("tray_click", { id, button }),
   /** Tarama birkaç saniye sürer. */
