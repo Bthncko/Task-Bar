@@ -1,0 +1,59 @@
+.tile {
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.compact {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.dot,
+.dim {
+  color: var(--text-2);
+}
+
+[data-high] {
+  color: var(--warn);
+}
+
+.net {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-sm);
+  line-height: 1.25;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 92px;
+}
+
+.gauge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gaugeLabel {
+  width: 26px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.gauge[data-high] .gaugeLabel {
+  color: var(--warn);
+}
+
+.meter {
+  flex: 1;
+  height: 5px;
+}
+
+.gauge[data-high] .meter > * {
+  background: var(--warn);
+}

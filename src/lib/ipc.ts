@@ -40,6 +40,7 @@ export type Config = {
     calendar: { icsUrls: string[] };
     clock: { showSeconds: boolean };
     system: { buttons: SystemButton[] };
+    sysmon: { view: SysmonView };
   } & Record<string, unknown>;
 };
 
@@ -52,6 +53,19 @@ export type PreviewOpen = { appId: string; seq: number };
 export type SourceSize = { hwnd: number; width: number; height: number };
 export type ThumbRect = { hwnd: number; x: number; y: number; width: number; height: number };
 export type Rect = { x: number; y: number; width: number; height: number };
+
+/** Sistem izleyici (8.4). Baytlar; `disks`/`processes` yalnızca panel açıkken dolu. */
+export type SysmonView = "compact" | "bars" | "net";
+export type SysState = {
+  cpu: number;
+  ramUsed: number;
+  ramTotal: number;
+  netDown: number;
+  netUp: number;
+  history: number[];
+  disks: { root: string; used: number; total: number }[];
+  processes: { name: string; cpu: number; memory: number }[];
+} | null;
 
 export type AppItem = {
   id: string; // gruplama anahtarı
@@ -143,6 +157,7 @@ export const events = {
   popupClosed: "popup://closed",
   /** Rust kapanma istiyor (odak kaybı, ikinci tıklama): animasyonla kapat. */
   popupClose: "popup://close",
+  sysmon: "sysmon://changed",
   /** Yalnızca önizleme penceresine: hangi uygulamanın pencereleri (PreviewOpen). */
   previewOpen: "preview://open",
   previewClosed: "preview://closed",
@@ -207,6 +222,10 @@ export const commands = {
   setAppIconRects: (rects: { id: string; x: number; y: number; size: number }[]) =>
     invoke<void>("set_app_icon_rects", { rects }),
   openStart: () => invoke<void>("open_start"),
+  getSysmon: () => invoke<SysState>("get_sysmon"),
+  /** Panel açık: her saniye, diskler ve süreçlerle. */
+  sysmonDetail: (on: boolean) => invoke<void>("sysmon_detail", { on }),
+  openTaskManager: () => invoke<void>("open_task_manager"),
 
   /** İmleç açık penceresi olan bir ikona girdi; `anchor`: ikonun dock'taki yeri (CSS px). */
   previewEnter: (appId: string, anchor: { x: number; width: number }) =>

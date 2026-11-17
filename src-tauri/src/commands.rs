@@ -11,6 +11,7 @@ use crate::services::media::{MediaCmd, MediaService, MediaState};
 use crate::services::power::{PowerService, PowerState};
 use crate::services::radios::{RadiosService, RadiosState, SetRadio};
 use crate::services::spotify::{Queue, Spotify, SpotifyStatus};
+use crate::services::sysmon::SysState;
 use crate::services::updater::{self, UpdateInfo, Updater};
 use crate::services::{ics, launcher};
 use crate::win::{placement, popup, preview};
@@ -332,6 +333,24 @@ pub fn show_app_menu(window: WebviewWindow, apps: State<AppsService>, id: String
 #[tauri::command]
 pub fn open_start() -> CmdResult {
     launcher::open_start().map_err(Into::into)
+}
+
+// --- sistem izleyici (8.4) ---------------------------------------------------
+
+#[tauri::command]
+pub fn get_sysmon(sysmon: State<crate::services::sysmon::SysmonService>) -> Option<SysState> {
+    sysmon.get()
+}
+
+/// Panel açıldı / kapandı: açıkken her saniye, diskler ve süreçlerle.
+#[tauri::command]
+pub fn sysmon_detail(sysmon: State<crate::services::sysmon::SysmonService>, on: bool) {
+    sysmon.send(crate::services::sysmon::Detail(on));
+}
+
+#[tauri::command]
+pub fn open_task_manager() -> CmdResult {
+    launcher::shell_open("taskmgr.exe", "", "").map_err(Into::into)
 }
 
 /// Sistem düğmeleri (8.2). Değiştirici tuş bekleyebileceği için ana iş

@@ -94,6 +94,9 @@ pub fn run() {
             commands::unpin_app,
             commands::show_app_menu,
             commands::open_start,
+            commands::get_sysmon,
+            commands::sysmon_detail,
+            commands::open_task_manager,
             commands::system_shortcut,
             commands::get_media,
             commands::media_toggle,
@@ -151,6 +154,7 @@ pub fn run() {
             services::audio::spawn(app.handle());
             services::power::spawn(app.handle());
             services::radios::spawn(app.handle());
+            services::sysmon::spawn(app.handle());
             services::backdrop::spawn(app.handle());
             services::accent::spawn(app.handle());
             // Servisler kapalı başlar; yerleşimdeki widget'larınki açılır (8.1).

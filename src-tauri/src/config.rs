@@ -141,6 +141,22 @@ pub struct Widgets {
     pub calendar: CalendarConfig,
     pub clock: ClockConfig,
     pub system: SystemConfig,
+    pub sysmon: SysmonConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SysmonConfig {
+    /// Çubuktaki görünüm: "compact", "bars" ya da "net" (8.4).
+    pub view: String,
+}
+
+impl Default for SysmonConfig {
+    fn default() -> Self {
+        Self {
+            view: "compact".into(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

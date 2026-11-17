@@ -5,6 +5,7 @@ import { clockWidget } from "./clock";
 import { mediaWidget } from "./media";
 import { radiosWidget } from "./radios";
 import { startWidget } from "./start";
+import { sysmonWidget } from "./sysmon";
 import { systemWidget } from "./system";
 import { volumeWidget } from "./volume";
 import { weatherWidget } from "./weather";
@@ -21,4 +22,5 @@ export const registry: Record<string, WidgetDefinition<any>> = {
   [volumeWidget.id]: volumeWidget,
   [batteryWidget.id]: batteryWidget,
   [systemWidget.id]: systemWidget,
+  [sysmonWidget.id]: sysmonWidget,
 };

@@ -12,6 +12,7 @@ pub mod power;
 pub mod radios;
 pub mod runner;
 pub mod spotify;
+pub mod sysmon;
 pub mod updater;
 pub mod windows_list;
 
@@ -35,6 +36,9 @@ pub fn sync_active(app: &AppHandle, config: &Config) {
     }
     if let Some(s) = app.try_state::<radios::RadiosService>() {
         s.set_active(on("radios"));
+    }
+    if let Some(s) = app.try_state::<sysmon::SysmonService>() {
+        s.set_active(on("sysmon"));
     }
     // Düz zeminde duvar kâğıdı şeridi kullanılmaz.
     if let Some(s) = app.try_state::<backdrop::BackdropService>() {
