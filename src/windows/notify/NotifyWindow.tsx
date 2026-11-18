@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { commands, events, report, type Notice } from "../../lib/ipc";
+import { commands, events, report, type Notice, type NotifyBackdrop } from "../../lib/ipc";
+import { useReducedMotion } from "../../lib/motion";
 import { startConfigSync, useConfig } from "../../lib/store";
-import { applyTheme, uiScale } from "../../lib/theme";
+import { applyTheme, glassAlpha, uiScale } from "../../lib/theme";
 import { useService } from "../../lib/useService";
 import { BellIcon, CloseIcon } from "../../widgets/icons";
 import styles from "./NotifyWindow.module.css";
@@ -15,22 +16,28 @@ const WIDTH = 360;
 const MAX_CARDS = 3;
 /** Kart bu kadar sonra kendiliğinden kapanır (üstündeyken durur). */
 const LIFETIME_MS = 6000;
-/** Kapanış animasyonu (CSS → exit ile aynı). */
-const EXIT_MS = 160;
+/** Kapanış animasyonu (CSS `exit` ile aynı). */
+const EXIT_MS = 220;
+/** Kart kalkınca alttakilerin yukarı kayması. */
+const SHIFT_MS = 260;
 
 type Card = Notice & { leaving: boolean; left: number };
 
 /**
- * Bildirim kartları (sağ üst). Rust yeni bildirimi `notify://show` ile gönderir;
- * yığın boyu değişince `notify_layout` ile pencere boyutlanır / gizlenir.
+ * Bildirim kartları (sağ üst), macOS bildirimleri ve dock'un camıyla aynı dil.
+ * Rust yeni bildirimi `notify://show` ile gönderir (pencere gizliyse önce
+ * arkadaki ekranın bulanık görüntüsünü, `notify://backdrop`); yığın boyu
+ * değişince `notify_layout` ile pencere boyutlanır / gizlenir.
  */
 export function NotifyWindow() {
   const config = useConfig();
   const systemAccent = useService(commands.getSystemAccent, events.accent);
   const [cards, setCards] = useState<Card[]>([]);
   const [hover, setHover] = useState(false);
+  const [backdrop, setBackdrop] = useState<NotifyBackdrop | null>(null);
   const stack = useRef<HTMLDivElement>(null);
   const zoom = config ? uiScale(config.theme) : 1;
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     if (config) applyTheme(config.theme, { systemAccent });
@@ -43,6 +50,7 @@ export function NotifyWindow() {
 
   useEffect(() => {
     const unlisten = [
+      listen<NotifyBackdrop>(events.notifyBackdrop, (e) => setBackdrop(e.payload)),
       listen<Notice>(events.notifyShow, (e) => {
         setCards((cs) => {
           const next = [
@@ -91,9 +99,49 @@ export function NotifyWindow() {
     return () => ro.disconnect();
   }, [cards.length, zoom]);
 
+  // Kart eklenip kalkınca diğerleri yeni yerine kayar (FLIP); her kartın camı
+  // da yığındaki yerine göre kaydırılır (görüntü yığının köşesine yaslı).
+  const tops = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const el = stack.current;
+    if (!el) return;
+    const next = new Map<string, number>();
+    for (const child of Array.from(el.children) as HTMLElement[]) {
+      const id = child.dataset.id!;
+      const top = child.offsetTop;
+      next.set(id, top);
+      child.style.setProperty("--glass-y", `${-top}px`);
+      const before = tops.current.get(id);
+      if (before !== undefined && before !== top && !reduced) {
+        child.animate([{ translate: `0 ${before - top}px` }, { translate: "0 0" }], {
+          duration: SHIFT_MS,
+          easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        });
+      }
+    }
+    tops.current = next;
+  }, [cards, reduced]);
+
+  // Yığın kapanınca eski cam atılır (sonraki bildirimde Rust yenisini gönderir).
+  const empty = cards.length === 0;
+  useEffect(() => {
+    if (empty) setBackdrop(null); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [empty]);
+
+  const glass =
+    backdrop && config && config.theme.glass !== "flat"
+      ? ({
+          "--notify-image": `url("${backdrop.image}")`,
+          "--glass-w": `${backdrop.width}px`,
+          "--glass-h": `${backdrop.height}px`,
+          "--glass-x": `${WIDTH - backdrop.width}px`,
+          "--panel-alpha": glassAlpha(config.theme, backdrop.luma).toFixed(3),
+        } as CSSProperties)
+      : undefined;
+
   return (
     <div className={styles.root}>
-      <div style={{ zoom } as CSSProperties}>
+      <div style={{ zoom, ...glass } as CSSProperties}>
         <div
           ref={stack}
           className={styles.stack}
@@ -101,28 +149,24 @@ export function NotifyWindow() {
           onPointerEnter={() => setHover(true)}
           onPointerLeave={() => setHover(false)}
         >
-          {cards.map((c) => (
-            <article
-              key={c.id}
-              className={styles.card}
-              data-leaving={c.leaving || undefined}
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                commands.notifyActivate(c.id).catch(report("notify_activate"));
-                dismiss(c.id);
-              }}
-            >
-              <header className={styles.head}>
-                {c.icon ? (
-                  <img className={styles.icon} src={c.icon} alt="" draggable={false} />
-                ) : (
-                  <span className={styles.icon}>
-                    <BellIcon size={14} />
-                  </span>
-                )}
-                <span className={styles.app}>{c.app || "Bildirim"}</span>
-                <span className={styles.time}>şimdi</span>
+          {cards.map((c) => {
+            const title = c.title || c.app || "Bildirim";
+            const body = c.title ? c.body : c.body || "";
+            return (
+              <article
+                key={c.id}
+                data-id={c.id}
+                className={styles.card}
+                data-leaving={c.leaving || undefined}
+                data-glass={glass ? "" : undefined}
+                role="button"
+                tabIndex={0}
+                aria-label={`${c.app}: ${title}${body ? `. ${body}` : ""}`}
+                onClick={() => {
+                  commands.notifyActivate(c.id).catch(report("notify_activate"));
+                  dismiss(c.id);
+                }}
+              >
                 <button
                   type="button"
                   className={styles.close}
@@ -132,13 +176,26 @@ export function NotifyWindow() {
                     dismiss(c.id);
                   }}
                 >
-                  <CloseIcon size={12} />
+                  <CloseIcon size={10} />
                 </button>
-              </header>
-              {c.title && <div className={styles.title}>{c.title}</div>}
-              {c.body && <div className={styles.body}>{c.body}</div>}
-            </article>
-          ))}
+                {c.icon ? (
+                  <img className={styles.icon} src={c.icon} alt="" draggable={false} />
+                ) : (
+                  <span className={styles.icon} data-fallback>
+                    <BellIcon size={18} />
+                  </span>
+                )}
+                <div className={styles.content}>
+                  <div className={styles.row}>
+                    <span className={styles.title}>{title}</span>
+                    <span className={styles.time}>şimdi</span>
+                  </div>
+                  {c.title && c.app && c.app !== title && <div className={styles.app}>{c.app}</div>}
+                  {body && <div className={styles.body}>{body}</div>}
+                </div>
+              </article>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -675,6 +675,22 @@ pub async fn set_power_timeout(kind: String, seconds: u32) -> CmdResult {
     blocking_str(move || battery_settings::set_timeout(&kind, seconds)).await
 }
 
+/// Ayarlar → "Dene": örnek bildirim kartı (seçili sesle; `silent` ise sessiz).
+#[tauri::command]
+pub fn notify_test(app: AppHandle, silent: bool) {
+    use crate::services::notifications;
+    let (name, title, body) = (
+        "Akıllı Dock",
+        "Bildirimler böyle görünür",
+        "Uygulamaların bildirimleri sağ üstte bu kartlarla gelir. Tıklayınca uygulama açılır.",
+    );
+    if silent {
+        notifications::show_card(&app, name, title, body);
+    } else {
+        notifications::show_local(&app, name, title, body);
+    }
+}
+
 /// Bildirim kartları penceresi: yığının boyu değişti (0 → gizle).
 #[tauri::command]
 pub fn notify_layout(app: AppHandle, width: f64, height: f64) -> CmdResult {

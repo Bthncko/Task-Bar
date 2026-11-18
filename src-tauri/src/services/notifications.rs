@@ -489,6 +489,7 @@ fn run(app: AppHandle) {
                 && !seen.contains(&id)
                 && let Some(notice) = notice(n, id)
             {
+                crate::win::notify::before_show(&app);
                 let _ = app.emit(NOTIFY_SHOW, notice);
                 if let Some(aumid) = with(|s| s.senders.get(&id).cloned()).flatten() {
                     play_sound(&aumid);
@@ -621,7 +622,20 @@ fn notice(n: &UserNotification, id: u32) -> Option<Notice> {
 /// Dock'un kendi bildirimi (ör. zamanlayıcı bitti): kart + Windows'un
 /// bildirim sesi (kullanıcının seçtiği ses).
 pub fn show_local(app: &AppHandle, app_name: &str, title: &str, body: &str) {
+    show_card(app, app_name, title, body);
+    unsafe {
+        let _ = PlaySoundW(
+            windows::core::w!("Notification.Default"),
+            None,
+            SND_ALIAS | SND_ASYNC | SND_NODEFAULT,
+        );
+    }
+}
+
+/// Yalnızca kart (ses yok): ayarlardaki "Dene"nin sessiz hâli.
+pub fn show_card(app: &AppHandle, app_name: &str, title: &str, body: &str) {
     let id = LOCAL_ID.fetch_add(1, Ordering::Relaxed);
+    crate::win::notify::before_show(app);
     let _ = app.emit(
         NOTIFY_SHOW,
         Notice {
@@ -632,13 +646,6 @@ pub fn show_local(app: &AppHandle, app_name: &str, title: &str, body: &str) {
             body: body.to_string(),
         },
     );
-    unsafe {
-        let _ = PlaySoundW(
-            windows::core::w!("Notification.Default"),
-            None,
-            SND_ALIAS | SND_ASYNC | SND_NODEFAULT,
-        );
-    }
 }
 
 /// Karta tıklandı: gönderen uygulamanın AUMID'si; bildirim merkezden de kalkar

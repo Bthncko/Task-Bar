@@ -50,11 +50,21 @@ export function General({ config }: { config: Config }) {
           label="Bildirimler dock tarzında"
           hint="Uygulama bildirimleri sağ üstte sade kartlarla çıkar; Windows'un kutucukları kapanır, bildirimler bildirim merkezinde kalır. Kapatınca (ya da dock kapanınca) Windows'unkiler geri gelir."
         >
-          <Toggle
-            label="Bildirimler dock tarzında"
-            checked={config.ownNotifications}
-            onChange={(on) => updateConfig((c) => ({ ...c, ownNotifications: on }))}
-          />
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.button}
+              title="Örnek bir bildirim kartı gösterir (seçili sesle)"
+              onClick={() => commands.notifyTest().catch(report("notify_test"))}
+            >
+              Dene
+            </button>
+            <Toggle
+              label="Bildirimler dock tarzında"
+              checked={config.ownNotifications}
+              onChange={(on) => updateConfig((c) => ({ ...c, ownNotifications: on }))}
+            />
+          </div>
         </Row>
         <Row
           label="Açılışta başlat"

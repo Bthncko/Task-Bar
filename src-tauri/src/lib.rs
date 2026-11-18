@@ -154,6 +154,7 @@ pub fn run() {
             commands::preview_notification_sound,
             commands::get_brightness,
             commands::notify_layout,
+            commands::notify_test,
             commands::notify_activate,
             commands::wifi_scan,
             commands::wifi_connect,

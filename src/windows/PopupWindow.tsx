@@ -9,7 +9,7 @@ import {
 import { listen } from "@tauri-apps/api/event";
 import { commands, events, report, type PopupOpen } from "../lib/ipc";
 import { startConfigSync, useConfig } from "../lib/store";
-import { applyTheme, uiScale } from "../lib/theme";
+import { applyTheme, glassAlpha, uiScale } from "../lib/theme";
 import { useService } from "../lib/useService";
 import { registry } from "../widgets/registry";
 import { PopupCloseProvider } from "../widgets/ui/popupClose";
@@ -23,14 +23,6 @@ const CLOSE_MS = 120;
  * Rust `popup_ready`'de arkadaki ekranı (buzlu cam) okur, eskisi görünmesin.
  */
 const SWITCH_SETTLE_MS = 50;
-
-/** Buzlu camın örtüsü: arkası açıksa koyulaşır (yazı okunsun), düzde opak. */
-function glassAlpha(theme: { opacity: number; glass: string }, luma: number) {
-  if (theme.glass === "flat") return 1;
-  const base = 0.42 + 0.4 * Math.min(Math.max(luma, 0), 1);
-  // Saydamlık ayarı yükseldikçe opaklığa yaklaşır.
-  return Math.min(1, base + Math.max(0, theme.opacity - 0.6));
-}
 
 type Backdrop = { image: string; alpha: number };
 

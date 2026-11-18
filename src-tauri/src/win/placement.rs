@@ -43,7 +43,7 @@ pub fn set_ui_scale(scale: f64) {
     UI_SCALE.store(scale.to_bits(), Ordering::SeqCst);
 }
 
-fn ui_scale() -> f64 {
+pub fn ui_scale() -> f64 {
     f64::from_bits(UI_SCALE.load(Ordering::SeqCst))
 }
 

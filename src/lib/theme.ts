@@ -15,6 +15,17 @@ export function uiScale(theme: Config["theme"]) {
   return Number.isFinite(theme.scale) ? Math.min(Math.max(theme.scale, 0.85), 1.25) : 1;
 }
 
+/**
+ * Buzlu camın (paneller, bildirim kartları; Rust `win/glass.rs`) örtüsü: arkası
+ * açıksa koyulaşır (yazı okunsun), düz zeminde opak.
+ */
+export function glassAlpha(theme: { opacity: number; glass: string }, luma: number) {
+  if (theme.glass === "flat") return 1;
+  const base = 0.42 + 0.4 * Math.min(Math.max(luma, 0), 1);
+  // Saydamlık ayarı yükseldikçe opaklığa yaklaşır.
+  return Math.min(1, base + Math.max(0, theme.opacity - 0.6));
+}
+
 type Options = {
   /** Duvar kâğıdı şeridinin parlaklığı (0–1); yoksa (düz cam) örtü tam. */
   luma?: number;

@@ -242,6 +242,8 @@ export const events = {
   /** Yalnızca bildirim penceresine: yeni kart (Notice) / kaldırılan bildirim (id). */
   notifyShow: "notify://show",
   notifyGone: "notify://gone",
+  /** Bildirim kartlarının buzlu camı (NotifyBackdrop), kart olayından hemen önce. */
+  notifyBackdrop: "notify://backdrop",
   /** Kendi tepsimizdeki simgeler (TrayState). */
   tray: "tray://changed",
   /** Yalnızca önizleme penceresine: hangi uygulamanın pencereleri (PreviewOpen). */
@@ -271,6 +273,8 @@ export type BatterySettings = {
 };
 /** Uygulama bildirimi (kendi kartımız). */
 export type Notice = { id: number; app: string; icon: string | null; title: string; body: string };
+/** Kartların arkasındaki ekranın bulanık görüntüsü; alan CSS pikseli, sağ üst köşesi yığınınki. */
+export type NotifyBackdrop = { image: string; luma: number; width: number; height: number };
 export type TrayIcon = { id: string; tip: string; icon: string | null };
 /** `active: false`: simgeler Windows'ta (kendi tepsimiz açılamadı). */
 /** AI kullanımı (8.9): Claude hesabındaki limitler (`/usage` ile aynı). */
@@ -498,6 +502,8 @@ export const commands = {
   getBrightness: () => invoke<number | null>("get_brightness"),
   notifyLayout: (width: number, height: number) => invoke<void>("notify_layout", { width, height }),
   notifyActivate: (id: number) => invoke<void>("notify_activate", { id }),
+  /** Ayarlar → "Dene": örnek kart; `silent` ise ses çalmaz. */
+  notifyTest: (silent = false) => invoke<void>("notify_test", { silent }),
   trayClick: (id: string, button: "left" | "double" | "right") =>
     invoke<void>("tray_click", { id, button }),
   /** Tarama birkaç saniye sürer. */
