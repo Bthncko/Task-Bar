@@ -91,9 +91,11 @@ export function useFileDrop(
         case "drop": {
           const { x, y } = client(payload.position);
           const id = appAt(x, y);
+          // Kendi bırakma hedefi olan widget (ör. çöp kutusu) dosyayı kendisi işler.
+          const claimed = document.elementFromPoint(x, y)?.closest("[data-file-drop]");
           if (id) {
             commands.openFilesWithApp(id, payload.paths).catch(report("open_files_with_app"));
-          } else {
+          } else if (!claimed) {
             for (const path of payload.paths.filter(isApp)) {
               commands.pinPath(path).catch(report("pin_path"));
             }

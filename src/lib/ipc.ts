@@ -489,6 +489,8 @@ export const commands = {
   getRecycle: () => invoke<RecycleState | null>("get_recycle"),
   openRecycleBin: () => invoke<void>("open_recycle_bin"),
   emptyRecycleBin: () => invoke<void>("empty_recycle_bin"),
+  /** Dosyaları geri dönüşüm kutusuna gönder; döner: sıraya giren öğe sayısı. */
+  recycleFiles: (paths: string[]) => invoke<number>("recycle_files", { paths }),
   getKeyboard: () => invoke<KeyboardState | null>("get_keyboard"),
   getAiUsage: () => invoke<AiUsage>("get_ai_usage"),
   /** Beklemeden yeniden oku; sonuç `events.aiUsage` ile gelir. */

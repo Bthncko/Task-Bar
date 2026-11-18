@@ -145,6 +145,7 @@ pub fn run() {
             commands::get_recycle,
             commands::open_recycle_bin,
             commands::empty_recycle_bin,
+            commands::recycle_files,
             commands::get_keyboard,
             commands::get_ai_usage,
             commands::ai_usage_refresh,

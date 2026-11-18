@@ -736,6 +736,19 @@ pub async fn empty_recycle_bin(app: AppHandle) -> CmdResult {
     Ok(())
 }
 
+/// Dock'taki çöp kutusuna bırakılan dosyalar (kutuya gidince sayaç yenilenir).
+#[tauri::command]
+pub async fn recycle_files(app: AppHandle, paths: Vec<String>) -> CmdResult<usize> {
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        crate::services::recycle::recycle(paths).map_err(String::from)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    app.state::<crate::services::recycle::RecycleService>()
+        .wake();
+    result
+}
+
 #[tauri::command]
 pub fn get_keyboard(
     keyboard: State<crate::services::keyboard::KeyboardService>,

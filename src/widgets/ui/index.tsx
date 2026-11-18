@@ -4,6 +4,7 @@ import {
   type CSSProperties,
   type HTMLAttributes,
   type ReactNode,
+  type Ref,
 } from "react";
 import styles from "./ui.module.css";
 
@@ -21,6 +22,8 @@ type TileProps = (HTMLAttributes<HTMLElement> & ButtonHTMLAttributes<HTMLButtonE
   interactive?: boolean;
   /** `tinted` için degrade rengi (`--tile-color`). */
   color?: string;
+  /** React 19: ref sıradan bir prop, kök öğeye gider. */
+  ref?: Ref<HTMLElement>;
 };
 
 /**

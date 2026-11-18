@@ -2,9 +2,71 @@
   gap: 6px;
   font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
+  transition:
+    box-shadow var(--t-med) var(--ease-out),
+    background-color var(--t-med) var(--ease-out);
 }
 
 .count {
   color: var(--text-2);
   font-weight: 600;
 }
+
+/* Dosya üstündeyken: vurgu halkası (uygulama ikonlarının bırakma vurgusuyla aynı). */
+.tile[data-over] {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* --- kutu ikonu ----------------------------------------------------------- */
+
+.bin {
+  overflow: visible;
+  transform-origin: 50% 90%;
+}
+
+.lid,
+.body {
+  transform-box: view-box;
+}
+
+/* Kapak sağ ucundaki menteşeden kalkar; kapanırken hafif sekerek oturur. */
+.lid {
+  transform-origin: 19.5px 6.5px;
+  transition: transform var(--t-med) var(--ease-spring);
+}
+
+.bin[data-open] .lid {
+  transform: translateY(-1.5px) rotate(30deg);
+  transition-duration: 260ms;
+}
+
+/* Açık kapakla kutu biraz öne eğilir: "buraya bırak". */
+.body {
+  transform-origin: 12px 21px;
+  transition: transform var(--t-med) var(--ease-out);
+}
+
+.bin[data-open] .body {
+  transform: scale(1.06);
+}
+
+/* Bırakınca: kapak kapanırken kutu yutar gibi esner. */
+.bin[data-swallow] {
+  animation: gulp 420ms var(--ease-out);
+}
+
+@keyframes gulp {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.14, 0.86);
+  }
+  60% {
+    transform: scale(0.95, 1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+/* Hareket azaltma global.css'te (süreler sıfır: kapak anında açılır). */
