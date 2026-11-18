@@ -107,9 +107,18 @@ pub fn reset() {
 fn schedule(end: u64) {
     let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_millis(end.saturating_sub(now_ms())));
-        if GENERATION.load(Ordering::SeqCst) != generation {
-            return;
+        // Parçalı bekle, saate bak: bilgisayar uykudayken geçen süre tek uzun
+        // `sleep` içinde sayılmayabilir (uyanınca bitiş gecikirdi); iptal de
+        // en geç bir parça sonra fark edilir.
+        loop {
+            if GENERATION.load(Ordering::SeqCst) != generation {
+                return;
+            }
+            let left = end.saturating_sub(now_ms());
+            if left == 0 {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(left.min(2000)));
         }
         let state = update(|s| {
             s.ends_at = None;

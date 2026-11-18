@@ -58,12 +58,15 @@
   pointer-events: none;
 }
 
+/* Başlık kartın genişliğini belirlemesin (kart = küçük resim genişliği): uzun
+   başlık eskiden kartı genişletip panel kenarında üç noktasız kesiliyordu. */
 .head {
   display: flex;
   align-items: center;
   gap: 6px;
   height: 28px;
   min-width: 0;
+  contain: inline-size;
 }
 
 .icon {

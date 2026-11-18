@@ -15,8 +15,12 @@
   height: var(--bar-visual);
   padding: var(--bar-pad) 10px;
   display: grid;
-  /* Yan bölümler içeriğe göre büyümez: sığmayan uygulama ikonları küçülür (7.8). */
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  /* Sol bölüm içeriğe göre büyümez: sığmayan uygulama ikonları küçülür (7.8).
+     Sağ bölüm küçülemez (widget'lar sabit genişlik): sığmazsa ortayı sola iter,
+     üstüne binmez. Sığdığında üç sütun simetrik, orta tam ortada. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
+  /* Bölümler sıkıştığında bile birbirine yapışmasın (widget aralığıyla aynı). */
+  column-gap: 12px;
   align-items: start;
   border-radius: var(--r-bar);
   box-shadow: var(--shadow-bar);

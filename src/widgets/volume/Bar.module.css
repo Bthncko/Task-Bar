@@ -90,3 +90,13 @@
 .track:active .meter {
   height: 10px;
 }
+
+/* Sıkışık mod (DockWindow → useCompact): aygıt adı gizli; düğme alanı
+   yerinde kalır (tıklayınca yine çıkış / mikrofon paneli). */
+:global(html[data-compact]) .tile {
+  width: 112px;
+}
+
+:global(html[data-compact]) .device {
+  font-size: 0;
+}

@@ -7,6 +7,7 @@ import {
   ago,
   current,
   days,
+  NBSP,
   remaining,
   resetTime,
   share,
@@ -105,9 +106,15 @@ export function AiUsagePopup() {
                 ))}
               </ul>
               <p className={styles.tokens}>
-                {tokens(activity.tokens.output)} çıktı · {tokens(activity.tokens.input)} girdi ·{" "}
-                {tokens(activity.tokens.cacheRead)} önbellekten ·{" "}
-                {tokens(activity.tokens.cacheWrite)} önbelleğe
+                {/* Her ölçü ("3,4 M çıktı") kendi içinde bölünmez; satır yalnızca " · " yerinde kırılır. */}
+                {[
+                  `${tokens(activity.tokens.output)} çıktı`,
+                  `${tokens(activity.tokens.input)} girdi`,
+                  `${tokens(activity.tokens.cacheRead)} önbellekten`,
+                  `${tokens(activity.tokens.cacheWrite)} önbelleğe`,
+                ]
+                  .map((s) => s.split(" ").join(NBSP))
+                  .join(`${NBSP}· `)}
               </p>
             </section>
           )}

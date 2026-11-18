@@ -85,11 +85,15 @@ export function days(activity: Activity, now = Date.now()) {
   return out;
 }
 
+/** Sayı ile birim arasında bölünmez boşluk: satır sonunda "11,1" / "M" diye ayrılmasın. */
+export const NBSP = String.fromCharCode(0xa0);
+
 /** 1234567 → "1,2 M". */
 export function tokens(n: number) {
-  if (n >= 1e9) return `${(n / 1e9).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} Mr`;
-  if (n >= 1e6) return `${(n / 1e6).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} M`;
-  if (n >= 1e3) return `${Math.round(n / 1e3)} B`;
+  if (n >= 1e9)
+    return `${(n / 1e9).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}${NBSP}Mr`;
+  if (n >= 1e6) return `${(n / 1e6).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}${NBSP}M`;
+  if (n >= 1e3) return `${Math.round(n / 1e3)}${NBSP}B`;
   return String(n);
 }
 

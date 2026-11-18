@@ -48,3 +48,9 @@
 .row[data-high] .meter > * {
   background: var(--warn);
 }
+
+/* Sıkışık mod (DockWindow → useCompact): "Oturum / Hafta" yazıları gizli
+   (üstteki oturum, alttaki hafta; ayrıntı balonda ve panelde). */
+:global(html[data-compact]) .label {
+  display: none;
+}

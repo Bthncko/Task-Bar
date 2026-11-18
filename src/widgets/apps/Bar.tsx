@@ -226,7 +226,9 @@ export function AppsBar({ config }: { config: AppsConfig }) {
               "--icon-size": `${icon}px`,
               // Kayarken üst pay (3 px, Bar.module.css) da telafi edilir.
               marginTop: (ICON - icon) / 2 - (scrolling ? 3 : 0),
-              maxWidth: scrolling ? room : undefined,
+              // Yer hiç kalmasa da en az bir ikon görünür (eksi değer geçersiz sayılıp
+              // grup komşu widget'ların altına taşıyordu).
+              maxWidth: scrolling ? Math.max(room, icon) : undefined,
             } as CSSProperties)
       }
       data-scrolling={scrolling || undefined}

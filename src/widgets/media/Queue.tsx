@@ -157,7 +157,14 @@ export function Queue({ trackKey, version }: { trackKey: string; version: number
           <LinkButton onClick={() => setAttempt((n) => n + 1)}>Yeniden dene</LinkButton>
         </div>
       )}
-      {queue && items.length === 0 && <p className={styles.note}>Sırada şarkı yok.</p>}
+      {queue && items.length === 0 && (
+        <p className={styles.note}>
+          {queue.current
+            ? "Sırada şarkı yok."
+            : // Uzun duraklamada Spotify etkin cihazı bırakır, sıra boş döner.
+              "Spotify şu an etkin değil; çalmaya başlayınca sıra burada görünür."}
+        </p>
+      )}
       {items.length > 0 && (
         <ol
           ref={list}

@@ -25,7 +25,7 @@ Kolay ve değeri yüksek olanlar önce, büyük yeniden yapılandırmalar sonda.
 | 8.8 | Küçük widget'lar | Kolay–Orta | Düşük |
 | 8.9 | AI kullanımı | Orta | Orta (belgelenmemiş dosya biçimi) |
 | 8.10 | Otomatik gizlenme | Orta | Orta |
-| 8.11 | Çoklu monitör | Zor | Orta (büyük yeniden yapılandırma) |
+| 8.11 | Çoklu monitör — **iptal** (2026-11-18: tek ekran, kullanılmayacak) | Zor | Orta (büyük yeniden yapılandırma) |
 
 Her paket sonunda: çalıştır, göster, onay, commit. Boşta CPU (~%2) her paketten
 sonra yeniden ölçülür; yükseldiyse paket bitmemiştir.
@@ -337,6 +337,9 @@ kaplıyor; imleç alta inince dock geliyor, 20 denemede takılma yok.
 ---
 
 ## 8.11 Çoklu monitör
+
+> **İptal edildi (2026-11-18).** Kullanıcı tek ekran kullanıyor; "zaten
+> kullanılmayacak". Aşağıdaki plan ileride gerekirse diye duruyor.
 
 Config: `monitors: "primary" | "all"`, `secondaryContent: "same" | "appsOnly"`,
 `appsPerMonitor: false` (açıksa her dock yalnızca kendi ekranındaki pencereleri gösterir).

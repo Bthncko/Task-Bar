@@ -8,7 +8,7 @@
 
 .option {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   min-width: 0;
   padding: 10px 12px;
@@ -34,6 +34,7 @@
   flex: none;
   display: grid;
   place-items: center;
+  margin-top: 2px;
   width: 26px;
   height: 26px;
   border-radius: 50%;
@@ -58,12 +59,15 @@
   font-weight: 600;
 }
 
+/* Açıklama iki satıra kadar (tek satırda "Yükselen iki yumu…" diye kesiliyordu). */
 .hint {
   overflow: hidden;
   font-size: 12px;
+  line-height: 1.3;
   color: var(--text-3);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .note {

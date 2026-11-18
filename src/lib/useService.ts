@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { withRetry } from "./retry";
 
 /**
  * Servis deseni (bölüm 2): açılışta `get` ile ilk durumu al, sonra olayla güncelle.
@@ -15,11 +16,12 @@ export function useService<T>(get: () => Promise<T>, event: string): T | undefin
       gotEvent = true;
       if (alive) setValue(e.payload);
     });
-    get()
+    // Açılışta Rust durumu henüz kaydetmemiş olabilir (lib/retry.ts).
+    withRetry(get, () => alive && !gotEvent)
       .then((v) => {
         if (alive && !gotEvent) setValue(v);
       })
-      .catch((e) => console.error(event, e));
+      .catch((e) => alive && !gotEvent && console.error(event, e));
     return () => {
       alive = false;
       unlisten.then((off) => off());

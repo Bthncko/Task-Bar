@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { listen } from "@tauri-apps/api/event";
 import { commands, events, report, type Config } from "./ipc";
+import { withRetry } from "./retry";
 
 // Uygulama durumu (bölüm 10). Config tek kaynaktan: Rust. Burada yalnızca son
 // gelen kopya tutulur; değişiklikler `set_config` ile Rust'a gider ve
@@ -27,8 +28,8 @@ export function startConfigSync() {
     if (writeTimer !== undefined || writesInFlight > 0) return;
     useConfigStore.setState({ config: e.payload });
   });
-  commands
-    .getConfig()
+  // Açılışta Rust durumu henüz kaydetmemiş olabilir (lib/retry.ts).
+  withRetry(commands.getConfig)
     .then((config) => {
       if (!gotEvent) useConfigStore.setState({ config });
     })

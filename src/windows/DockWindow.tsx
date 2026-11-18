@@ -60,11 +60,65 @@ function useExpandOnHover() {
   }, []);
 }
 
+/** Uygulama ikonlarına en az bırakılacak yer (dört küçük ikon, CSS piksel). */
+const APPS_MIN = 120;
+
+/**
+ * Sıkışık mod: widget'lar çubuğa sığmıyorsa (çok widget ya da büyük boyut
+ * ayarı) `html[data-compact]`; geniş karolar ikincil yazılarını gizler (ses
+ * aygıtı adı, hava durumu açıklaması, AI etiketleri, dar müzik başlığı).
+ *
+ * Karar her zaman sıkışık OLMAYAN hâlin ölçüsüyle verilir (öznitelik ölçüm
+ * için anlık kaldırılıp geri konur; aynı karede, titreme yok): böylece mod
+ * kendi etkisiyle gidip gelmez. Uygulamalar küçülüp kaydığı için onların
+ * yerine `APPS_MIN` sayılır.
+ */
+function useCompact(bar: React.RefObject<HTMLDivElement | null>, layoutKey: string) {
+  useLayoutEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    const html = document.documentElement;
+    const measure = () => {
+      html.removeAttribute("data-compact");
+      const sections = [...el.querySelectorAll<HTMLElement>("[data-section]")];
+      const need = sections.reduce((sum, section) => {
+        const gap = parseFloat(getComputedStyle(section).columnGap) || 0;
+        const widths = [...section.children]
+          .map((c) =>
+            (c as HTMLElement).dataset.widget === "apps"
+              ? APPS_MIN
+              : (c as HTMLElement).offsetWidth,
+          )
+          .filter((w) => w > 0);
+        return sum + widths.reduce((s, w) => s + w, 0) + gap * Math.max(widths.length - 1, 0);
+      }, 0);
+      const cs = getComputedStyle(el);
+      const room =
+        el.clientWidth -
+        parseFloat(cs.paddingLeft) -
+        parseFloat(cs.paddingRight) -
+        (parseFloat(cs.columnGap) || 0) * (sections.length - 1);
+      if (need > room) html.setAttribute("data-compact", "");
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const s of el.querySelectorAll("[data-section]")) ro.observe(s);
+    return () => ro.disconnect();
+  }, [bar, layoutKey]);
+}
+
 startConfigSync();
 
 export function DockWindow() {
   useExpandOnHover();
   const config = useConfig();
+  const barRef = useRef<HTMLDivElement>(null);
+  const layoutKey = config
+    ? SECTIONS.map((s) => config.layout[s].map((r) => r.id).join(",")).join("|") +
+      `@${config.theme.scale}`
+    : "";
+  useCompact(barRef, layoutKey);
   const service = useService(commands.getBackdrop, events.backdrop) ?? null;
   // Düz zemin (7.9): duvar kâğıdı şeridi kullanılmaz; çubuk mat ve opak (DockWindow.module.css).
   const flat = config?.theme.glass === "flat";
@@ -94,6 +148,7 @@ export function DockWindow() {
       data-fullscreen={fullscreen || undefined}
     >
       <div
+        ref={barRef}
         className={styles.bar}
         data-hit
         // Widget'ların kendi sağ tık menüleri varsa onlar önce davranır.
@@ -129,7 +184,7 @@ function Section({
 }) {
   const [items, drop] = usePresence(ids);
   return (
-    <div className={`${styles.section} ${styles[section]}`}>
+    <div className={`${styles.section} ${styles[section]}`} data-section={section}>
       {items.map(({ id, entering, leaving }) => {
         const widget = registry[id];
         const { Bar } = widget;
@@ -137,7 +192,13 @@ function Section({
         const widgetConfig = widgets[id] ?? widget.defaultConfig;
         return (
           // Anahtar aynı kalır: çıkan widget yeniden takılmaz, son hâli kaybolur.
-          <WidgetSlot key={id} entering={entering} leaving={leaving} onGone={() => drop(id)}>
+          <WidgetSlot
+            key={id}
+            id={id}
+            entering={entering}
+            leaving={leaving}
+            onGone={() => drop(id)}
+          >
             <Bar config={widgetConfig} />
           </WidgetSlot>
         );
@@ -150,11 +211,13 @@ function Section({
 const SLOT_MS = 250;
 
 function WidgetSlot({
+  id,
   entering,
   leaving,
   onGone,
   children,
 }: {
+  id: string;
   entering: boolean;
   leaving: boolean;
   onGone: () => void;
@@ -200,7 +263,7 @@ function WidgetSlot({
   }, [entering, leaving, reduced]);
 
   return (
-    <div ref={ref} className={styles.widget} data-leaving={leaving || undefined}>
+    <div ref={ref} className={styles.widget} data-widget={id} data-leaving={leaving || undefined}>
       {children}
     </div>
   );

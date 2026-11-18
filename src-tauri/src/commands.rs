@@ -154,9 +154,13 @@ pub async fn fetch_ics(url: String) -> CmdResult<String> {
 
 // --- Spotify (müzik paneli) -------------------------------------------------------
 
+/// Arka planda: anahtar yenilenirken (ağ isteği) durum kilidi tutulur; ana
+/// iş parçacığı beklerse dock donardı.
 #[tauri::command]
-pub fn spotify_status(spotify: State<Spotify>) -> SpotifyStatus {
-    spotify.status()
+pub async fn spotify_status(app: AppHandle) -> CmdResult<SpotifyStatus> {
+    tauri::async_runtime::spawn_blocking(move || app.state::<Spotify>().status())
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Tarayıcıda onay ister; kullanıcı onaylayana kadar (en çok 3 dk) bekler.

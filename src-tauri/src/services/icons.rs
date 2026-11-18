@@ -46,11 +46,36 @@ pub fn shell_info(aumid: Option<&str>, exe: Option<&str>) -> ShellInfo {
             aumid_resolves,
         };
     };
+    let mut icon = icon_image(&item);
+    // Başlat kutucuğu logosu: bazı uygulamalar (Firefox) AUMID'lerine renkli
+    // zemine konacak beyaz bir silüet tanımlar (VisualElementsManifest); kabuk
+    // onu verir ve dock'ta renksiz görünür. Exe'nin kendi ikonu renkliyse o.
+    if !is_exe
+        && icon.as_ref().is_some_and(is_white_glyph)
+        && let Some(own) = exe.and_then(parse).as_ref().and_then(icon_image)
+        && !is_white_glyph(&own)
+    {
+        icon = Some(own);
+    }
     ShellInfo {
         name: display_name(&item, is_exe),
-        icon: icon_data_url(&item),
+        icon: icon.as_ref().and_then(png_data_url),
         aumid_resolves,
     }
+}
+
+/// Opak piksellerinin neredeyse hepsi beyaz / açık gri (renksiz silüet).
+fn is_white_glyph(image: &image::RgbaImage) -> bool {
+    let (mut opaque, mut light) = (0u32, 0u32);
+    for p in image.pixels() {
+        if p[3] > 128 {
+            opaque += 1;
+            if p[0].min(p[1]).min(p[2]) > 200 {
+                light += 1;
+            }
+        }
+    }
+    opaque > 0 && light * 100 >= opaque * 95
 }
 
 fn parse(path: &str) -> Option<IShellItem> {
@@ -81,7 +106,7 @@ fn display_name(item: &IShellItem, is_exe: bool) -> Option<String> {
     }
 }
 
-fn icon_data_url(item: &IShellItem) -> Option<String> {
+fn icon_image(item: &IShellItem) -> Option<image::RgbaImage> {
     unsafe {
         let factory = item.cast::<IShellItemImageFactory>().ok()?;
         let bitmap = factory
@@ -107,7 +132,7 @@ fn icon_data_url(item: &IShellItem) -> Option<String> {
                 image::imageops::FilterType::CatmullRom,
             );
         }
-        png_data_url(&image)
+        Some(image)
     }
 }
 
@@ -228,5 +253,33 @@ fn fix_alpha_and_swizzle(buf: &mut [u8]) {
                 *c = ((*c as u32 * 255 + a / 2) / a).min(255) as u8;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_white_glyph;
+    use image::{Rgba, RgbaImage};
+
+    #[test]
+    fn detects_white_tile_logos() {
+        // Saydam zemin üstünde beyaz silüet (Firefox'un kutucuk logosu gibi).
+        let mut glyph = RgbaImage::new(8, 8);
+        for x in 2..6 {
+            glyph.put_pixel(x, 4, Rgba([250, 250, 250, 255]));
+        }
+        assert!(is_white_glyph(&glyph));
+        // Siyah daire içinde beyaz X (X'in logosu): renksiz ama silüet değil.
+        let mut x_logo = RgbaImage::from_pixel(8, 8, Rgba([0, 0, 0, 255]));
+        x_logo.put_pixel(3, 3, Rgba([255, 255, 255, 255]));
+        assert!(!is_white_glyph(&x_logo));
+        // Renkli ikon.
+        assert!(!is_white_glyph(&RgbaImage::from_pixel(
+            8,
+            8,
+            Rgba([255, 120, 0, 255])
+        )));
+        // Tamamen saydam.
+        assert!(!is_white_glyph(&RgbaImage::new(8, 8)));
     }
 }
