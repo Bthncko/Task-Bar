@@ -314,6 +314,7 @@ pub fn set_config(app: AppHandle, config: State<ConfigStore>, value: Config) -> 
     let hide_after = value.hide_windows_taskbar;
     let fx_after = value.minimize_to_dock;
     let notify_after = value.own_notifications;
+    let auto_hide_after = value.auto_hide.clone();
     let scale_after = value.theme.ui_scale();
     config.update(|c| *c = value).map_err(String::from)?;
     if before.theme.ui_scale() != scale_after {
@@ -333,7 +334,22 @@ pub fn set_config(app: AppHandle, config: State<ConfigStore>, value: Config) -> 
     if before.own_notifications != notify_after {
         crate::services::notifications::set_enabled(notify_after);
     }
+    if before.auto_hide != auto_hide_after {
+        crate::win::autohide::set_mode(crate::win::autohide::Mode::parse(&auto_hide_after));
+        // Şerit ayırma değişti: yerleşimi yenile (pencereler alanı alır / bırakır).
+        if let Some(dock) = app.get_webview_window("dock")
+            && let Ok(hwnd) = dock.hwnd()
+        {
+            crate::win::appbar::post_reposition(hwnd);
+        }
+    }
     Ok(())
+}
+
+/// Otomatik gizlenme (8.10): imleç dock penceresine girdi / çıktı.
+#[tauri::command]
+pub fn dock_pointer(inside: bool) {
+    crate::win::autohide::pointer(inside);
 }
 
 /// Uygulama ikonlarının dinlenme konumları (dock CSS pikseli); küçültme animasyonu hedefi.

@@ -38,8 +38,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     SetWindowPos, ShowWindow,
 };
 
-use super::placement::{self, EDGE, Edge};
 use super::id_to_hwnd;
+use super::placement::{self, EDGE, Edge};
 use crate::config::ConfigStore;
 use crate::error::{AppError, AppResult};
 
@@ -342,6 +342,11 @@ pub fn layout(
     Ok(())
 }
 
+/// Önizleme ekranda (otomatik gizlenme beklesin).
+pub fn is_visible() -> bool {
+    with(|s| s.visible)
+}
+
 /// Önizlemeyi kapatır ve tüm küçük resimleri bırakır. Açık değilse yalnızca
 /// bekleyen açılışı iptal eder.
 pub fn hide(app: &AppHandle) {
@@ -355,6 +360,7 @@ pub fn hide(app: &AppHandle) {
         }
         std::mem::replace(&mut s.visible, false)
     });
+    super::autohide::poke();
     if was_visible {
         if let Ok(w) = window(app)
             && let Ok(hwnd) = w.hwnd()

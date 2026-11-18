@@ -4,12 +4,13 @@ import {
   events,
   report,
   type AutostartState,
+  type AutoHide,
   type Config,
   type UpdateStatus,
 } from "../../lib/ipc";
 import { updateConfig } from "../../lib/store";
 import { useService } from "../../lib/useService";
-import { Card, Row, Section, Toggle } from "./controls";
+import { Card, Row, Section, Segmented, Toggle } from "./controls";
 import { NotificationSound } from "./NotificationSound";
 import styles from "./Settings.module.css";
 
@@ -34,6 +35,21 @@ export function General({ config }: { config: Config }) {
             label="Windows görev çubuğunu gizle"
             checked={config.hideWindowsTaskbar}
             onChange={(hide) => updateConfig((c) => ({ ...c, hideWindowsTaskbar: hide }))}
+          />
+        </Row>
+        <Row
+          label="Otomatik gizle"
+          hint="Gizliyken pencereler tüm ekranı kullanır; imleci ekranın alt kenarına götürünce dock kayarak gelir. Akıllı: yalnızca bir pencere dock'un alanına girince gizlenir."
+        >
+          <Segmented<AutoHide>
+            label="Otomatik gizle"
+            value={config.autoHide}
+            options={[
+              { value: "never", label: "Kapalı" },
+              { value: "smart", label: "Akıllı" },
+              { value: "always", label: "Her zaman" },
+            ]}
+            onChange={(autoHide) => updateConfig((c) => ({ ...c, autoHide }))}
           />
         </Row>
         <Row

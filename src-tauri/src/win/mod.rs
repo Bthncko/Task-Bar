@@ -1,4 +1,5 @@
 pub mod appbar;
+pub mod autohide;
 pub mod focus;
 pub mod glass;
 pub mod notify;

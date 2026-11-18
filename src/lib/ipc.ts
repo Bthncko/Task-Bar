@@ -14,6 +14,9 @@ export type AutostartState = { enabled: boolean; available: boolean };
 /** Bulanık duvar kâğıdı şeridi (7.2). Yoksa düz cam. */
 export type Backdrop = { image: string; luma: number } | null;
 
+/** "smart": yalnızca bir pencere dock'un alanına girince gizlenir. */
+export type AutoHide = "never" | "always" | "smart";
+
 export type Config = {
   version: number;
   position: "top" | "bottom";
@@ -24,6 +27,8 @@ export type Config = {
   autoUpdate: boolean;
   /** Bildirimler sağ üstte dock tarzı kartlarla (Windows'un kutucukları kapanır). */
   ownNotifications: boolean;
+  /** Otomatik gizlenme (8.10). */
+  autoHide: AutoHide;
   theme: {
     /** "#rrggbb" ya da "auto" (Windows vurgu rengi). */
     accent: string;
@@ -229,6 +234,8 @@ export const events = {
   accent: "accent://changed",
   /** Tam ekran uygulama açıldı (true) / kapandı (false). */
   fullscreen: "fullscreen://changed",
+  /** Otomatik gizlenme: `true` = çubuk kenara kaysın (8.10). */
+  autohide: "autohide://changed",
   /** Yalnızca popup penceresine: hangi panel çizilecek. */
   popupOpen: "popup://open",
   popupClosed: "popup://closed",
@@ -336,6 +343,8 @@ export type PopupPlaced = {
 export const commands = {
   /** Büyütme sırasında görünür bölgeyi açar / bara daraltır (3.2). */
   setDockExpanded: (expanded: boolean) => invoke<void>("set_dock_expanded", { expanded }),
+  /** Otomatik gizlenme (8.10): imleç dock penceresine girdi / çıktı. */
+  dockPointer: (inside: boolean) => invoke<void>("dock_pointer", { inside }),
   openSystemSettings: (
     page:
       | "wifi"

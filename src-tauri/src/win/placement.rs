@@ -34,6 +34,8 @@ use crate::error::AppResult;
 pub const BAR_HEIGHT: f64 = 64.0;
 /// Büyütülen ikonların taştığı ek pay (bölüm 3.2) → `--magnify-pad`.
 pub const MAGNIFY_PAD: f64 = 44.0;
+/// Otomatik gizlenmede kenardaki tetik şeridi (mantıksal piksel).
+const TRIGGER: f64 = 2.0;
 
 /// Kullanıcının boyut ayarı (7.9, `theme.scale`): sayfa CSS `zoom` ile aynı
 /// çarpanla büyür, ayrılan şerit ve pay da. f64 bitleri olarak saklanır.
@@ -59,6 +61,8 @@ pub const EDGE: Edge = Edge::Bottom;
 
 struct Geometry {
     expanded: bool,
+    /// Otomatik gizlenme (8.10): bölge kenardaki tetik şeridi.
+    hidden: bool,
     /// AppBar'ın ayırdığı şerit (fiziksel piksel, ekran koordinatı).
     reserved: Option<RECT>,
     /// Büyütme payı (fiziksel piksel).
@@ -67,6 +71,7 @@ struct Geometry {
 
 static GEOMETRY: Mutex<Geometry> = Mutex::new(Geometry {
     expanded: false,
+    hidden: false,
     reserved: None,
     pad: 0,
 });
@@ -117,16 +122,40 @@ pub fn reposition(hwnd: HWND) -> AppResult<()> {
 pub fn set_expanded(hwnd: HWND, expanded: bool) {
     GEOMETRY.lock().unwrap().expanded = expanded;
     apply_region(hwnd);
+    if !expanded {
+        appbar::poke_autohide();
+    }
+}
+
+/// Büyütme / sürükleme sürüyor (otomatik gizlenme beklesin).
+pub fn is_expanded() -> bool {
+    GEOMETRY.lock().unwrap().expanded
+}
+
+/// Otomatik gizlenme (8.10): bölgeyi kenardaki tetik şeridine indir / geri aç.
+pub fn set_hidden(hwnd: HWND, hidden: bool) {
+    GEOMETRY.lock().unwrap().hidden = hidden;
+    apply_region(hwnd);
 }
 
 fn apply_region(hwnd: HWND) {
-    let (expanded, reserved, pad) = {
+    let (expanded, hidden, reserved, pad) = {
         let g = GEOMETRY.lock().unwrap();
-        (g.expanded, g.reserved, g.pad)
+        (g.expanded, g.hidden, g.reserved, g.pad)
     };
     let Some(reserved) = reserved else { return };
     unsafe {
-        if expanded {
+        if hidden {
+            // Ekran kenarında ince tetik şeridi: imleç değince sayfa haber verir.
+            let width = reserved.right - reserved.left;
+            let height = reserved.bottom - reserved.top;
+            let trigger = (TRIGGER * scale(hwnd)).round().max(2.0) as i32;
+            let region = match EDGE {
+                Edge::Bottom => CreateRectRgn(0, pad + height - trigger, width, pad + height),
+                Edge::Top => CreateRectRgn(0, 0, width, trigger),
+            };
+            SetWindowRgn(hwnd, Some(region), true);
+        } else if expanded {
             // Bölge yok = tüm pencere.
             SetWindowRgn(hwnd, None, true);
             // WebView2 bölge dışındaki alanı çizmeyi atlıyor; bölge açılınca

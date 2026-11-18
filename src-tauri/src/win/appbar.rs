@@ -8,8 +8,8 @@
 //! Tam ekran uygulama açılınca (`ABN_FULLSCREENAPP`) dock gizlenir, kapanınca
 //! (ya da Alt+Tab ile çıkılınca) geri gelir; bkz. `set_fullscreen_z`.
 
-use std::sync::OnceLock;
-use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU64, Ordering};
+use std::sync::{Mutex, OnceLock};
 
 use tauri::{AppHandle, Emitter};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
@@ -24,9 +24,11 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     GWL_EXSTYLE, GetClassNameW, GetForegroundWindow, GetWindowLongW, GetWindowRect,
-    GetWindowThreadProcessId, HWND_TOPMOST, PostMessageW, RegisterWindowMessageW, SW_HIDE,
-    SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetWindowPos, ShowWindow,
-    WM_ACTIVATE, WM_APP, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_WINDOWPOSCHANGED, WS_EX_TOPMOST,
+    GetWindowThreadProcessId, HWND_TOPMOST, PostMessageW, RegisterWindowMessageW, SPI_GETWORKAREA,
+    SPI_SETWORKAREA, SPIF_SENDCHANGE, SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE,
+    SWP_NOSIZE, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SetWindowPos, ShowWindow,
+    SystemParametersInfoW, WM_ACTIVATE, WM_APP, WM_DISPLAYCHANGE, WM_DPICHANGED,
+    WM_WINDOWPOSCHANGED, WS_EX_TOPMOST,
 };
 use windows::core::w;
 
@@ -105,7 +107,64 @@ fn new_appbar(hwnd: HWND) -> AppResult<()> {
     Ok(())
 }
 
+/// Kabuk `ABM_SETPOS` sonrası çalışma alanını her zaman yeniden hesaplamıyor
+/// (bu makinede: ayrılan şerit küçülünce de büyüyünce de eski alan kaldı;
+/// yalnızca Windows çubuğunun durumu değişince güncelleniyordu). Ana ekranın
+/// çalışma alanının dock kenarı ayrılan şeride eşitlenir; farklıysa yazılır.
+///
+/// Yazmak tüm pencerelere WM_SETTINGCHANGE yayar ve onları bekler (büyütülmüş
+/// pencereler yeniden boyutlanır): dock'un iş parçacığı takılmasın diye ayrı iş
+/// parçacığında. Art arda iki istek ters sırayla bitmesin: yazımlar sırayla,
+/// her biri o anki alanı okuyup karşılaştırır, yenisi geldiyse eskisi atlanır.
+fn sync_work_area(reserved: RECT) {
+    static WRITE: Mutex<()> = Mutex::new(());
+    static LATEST: AtomicU64 = AtomicU64::new(0);
+    let want = match EDGE {
+        Edge::Bottom => reserved.top,
+        Edge::Top => reserved.bottom,
+    };
+    let generation = LATEST.fetch_add(1, Ordering::SeqCst) + 1;
+    std::thread::spawn(move || {
+        let _turn = WRITE.lock().unwrap_or_else(|e| e.into_inner());
+        if LATEST.load(Ordering::SeqCst) != generation {
+            return;
+        }
+        let mut area = RECT::default();
+        let read = unsafe {
+            SystemParametersInfoW(
+                SPI_GETWORKAREA,
+                0,
+                Some(&mut area as *mut RECT as *mut _),
+                SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
+            )
+        };
+        let edge = match EDGE {
+            Edge::Bottom => &mut area.bottom,
+            Edge::Top => &mut area.top,
+        };
+        if read.is_err() || *edge == want {
+            return;
+        }
+        *edge = want;
+        if let Err(e) = unsafe {
+            SystemParametersInfoW(
+                SPI_SETWORKAREA,
+                0,
+                Some(&mut area as *mut RECT as *mut _),
+                SPIF_SENDCHANGE,
+            )
+        } {
+            eprintln!("çalışma alanı ayarlanamadı: {}", e.message());
+        }
+    });
+}
+
 /// Kenarda `thickness` kalınlığında şerit ister; sistemin onayladığı dikdörtgeni döner.
+///
+/// Otomatik gizlenme açıkken (8.10) çubuğun yeri yine sistemin önerdiği yerdir
+/// ama yalnızca 1 px ayrılır (pencereler neredeyse tüm ekranı kullanır). Bu
+/// makinede denendi: sıfır yükseklikli `ABM_SETPOS`'u kabuk yok sayıyor; kaydı
+/// silip yeniden açınca da sonraki `ABM_SETPOS` çalışma alanını güncellemiyor.
 pub fn set_pos(hwnd: HWND, monitor: RECT, thickness: i32) -> Option<RECT> {
     if !REGISTERED.load(Ordering::SeqCst) {
         return None;
@@ -124,12 +183,24 @@ pub fn set_pos(hwnd: HWND, monitor: RECT, thickness: i32) -> Option<RECT> {
     }
     unsafe { SHAppBarMessage(ABM_QUERYPOS, &mut abd) };
     // Sistem yalnızca çıkarma yapar, boyutu korumaz: kalınlığı yeniden ayarla.
+    let reserve = if super::autohide::active() {
+        1
+    } else {
+        thickness
+    };
     match EDGE {
-        Edge::Bottom => abd.rc.top = abd.rc.bottom - thickness,
-        Edge::Top => abd.rc.bottom = abd.rc.top + thickness,
+        Edge::Bottom => abd.rc.top = abd.rc.bottom - reserve,
+        Edge::Top => abd.rc.bottom = abd.rc.top + reserve,
     }
     unsafe { SHAppBarMessage(ABM_SETPOS, &mut abd) };
-    Some(abd.rc)
+    sync_work_area(abd.rc);
+    // Çubuğun yeri: onaylanan kenardan tam kalınlık.
+    let mut bar = abd.rc;
+    match EDGE {
+        Edge::Bottom => bar.top = bar.bottom - thickness,
+        Edge::Top => bar.bottom = bar.top + thickness,
+    }
+    Some(bar)
 }
 
 /// Ayrılan yeri geri verir. Çıkışta ve panik kancasında çağrılır; iki kez çağrılması zararsız.
@@ -198,6 +269,16 @@ const FULLSCREEN_RECHECK_MS: [u64; 4] = [100, 150, 250, 500];
 static SHELL_FULLSCREEN: AtomicBool = AtomicBool::new(false);
 /// Dock şu an tam ekran yüzünden arkada / gizli.
 static HIDDEN: AtomicBool = AtomicBool::new(false);
+
+/// Otomatik gizlenmeyi dürt (placement'tan; modül bağımlılığı tek yönlü kalsın).
+pub fn poke_autohide() {
+    super::autohide::poke();
+}
+
+/// Dock tam ekran yüzünden gizli (otomatik gizlenme bu sırada beklemede).
+pub fn fullscreen_hidden() -> bool {
+    HIDDEN.load(Ordering::SeqCst)
+}
 
 fn on_fullscreen(hwnd: HWND, opening: bool) {
     SHELL_FULLSCREEN.store(opening, Ordering::SeqCst);
@@ -269,6 +350,7 @@ fn exit_fullscreen(hwnd: HWND) {
         let _ = app.emit(FULLSCREEN_CHANGED, false);
     }
     set_fullscreen_z(hwnd, false);
+    super::autohide::poke();
 }
 
 /// Günlük için: ön plandaki pencerenin sınıfı, dikdörtgeni ve monitörü.

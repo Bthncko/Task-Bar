@@ -35,7 +35,11 @@ struct TrayMenu {
 pub(crate) fn show_dock_menu(window: &tauri::WebviewWindow) -> tauri::Result<()> {
     let app = window.app_handle();
     if let Some(tray) = app.try_state::<TrayMenu>() {
-        window.popup_menu(&tray.menu)?;
+        // Menü kapanana dek döner (TrackPopupMenu); bu sırada dock gizlenmesin.
+        win::autohide::set_menu_open(true);
+        let shown = window.popup_menu(&tray.menu);
+        win::autohide::set_menu_open(false);
+        shown?;
     }
     Ok(())
 }
@@ -56,6 +60,7 @@ pub fn run() {
         }))
         .invoke_handler(tauri::generate_handler![
             commands::set_dock_expanded,
+            commands::dock_pointer,
             commands::open_system_settings,
             commands::open_quick_settings,
             commands::show_popup,
@@ -190,6 +195,7 @@ pub fn run() {
             let hide_taskbar = config.get().hide_windows_taskbar;
             let minimize_to_dock = config.get().minimize_to_dock;
             let own_notifications = config.get().own_notifications;
+            let auto_hide = win::autohide::Mode::parse(&config.get().auto_hide);
             let first_run = config.is_first_run();
             win::placement::set_ui_scale(config.get().theme.ui_scale());
             app.manage(config);
@@ -222,6 +228,8 @@ pub fn run() {
                 .ok_or(AppError::NoDockWindow)?;
             let hwnd = dock.hwnd()?;
             win::window_style::apply_dock_style(&dock)?;
+            // Yerleşimden önce: mod açıksa AppBar şerit ayırmaz (8.10).
+            win::autohide::spawn(app.handle(), hwnd, auto_hide);
             win::appbar::register(app.handle(), hwnd)?;
             win::placement::reposition(hwnd)?;
             dock.show()?;

@@ -216,6 +216,7 @@ pub fn hide(app: &AppHandle, seq: Option<u64>) -> AppResult<()> {
     }
     window(app)?.hide()?;
     app.emit_to(LABEL, CLOSED_EVENT, ())?;
+    super::autohide::poke();
     Ok(())
 }
 

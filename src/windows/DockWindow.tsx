@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { commands, events, type Config } from "../lib/ipc";
 import { useReducedMotion } from "../lib/motion";
 import { usePresence } from "../lib/presence";
@@ -60,6 +61,41 @@ function useExpandOnHover() {
   }, []);
 }
 
+/**
+ * 8.10: imleç dock penceresine (görünür bölgesine) girdi / çıktı → Rust
+ * otomatik gizlenmeyi yönetir. Gizliyken bölge kenardaki ince şerittir;
+ * imleç ona değince buradan haber gider.
+ */
+function useReportPointer() {
+  useEffect(() => {
+    let inside: boolean | null = null;
+    const report = (value: boolean) => {
+      if (inside === value) return;
+      inside = value;
+      commands.dockPointer(value).catch((e) => console.error("dock_pointer", e));
+    };
+    const enter = () => report(true);
+    const leave = () => report(false);
+    const root = document.documentElement;
+    root.addEventListener("mouseenter", enter);
+    root.addEventListener("mouseleave", leave);
+    // Giriş olayı kaçarsa (bölge imlecin altında değişti) ilk hareket yakalar.
+    window.addEventListener("pointermove", enter);
+    // Gezgin'den dosya sürüklenirken fare olayı gelmez: gizli dock, dosya kenara
+    // gelince de açılsın (uygulamaya / çöp kutusuna bırakılabilsin).
+    const unlistenDrag = getCurrentWebview().onDragDropEvent(({ payload }) => {
+      if (payload.type === "enter" || payload.type === "over") report(true);
+      else report(false);
+    });
+    return () => {
+      root.removeEventListener("mouseenter", enter);
+      root.removeEventListener("mouseleave", leave);
+      window.removeEventListener("pointermove", enter);
+      unlistenDrag.then((off) => off());
+    };
+  }, []);
+}
+
 /** Uygulama ikonlarına en az bırakılacak yer (dört küçük ikon, CSS piksel). */
 const APPS_MIN = 120;
 
@@ -112,6 +148,7 @@ startConfigSync();
 
 export function DockWindow() {
   useExpandOnHover();
+  useReportPointer();
   const config = useConfig();
   const barRef = useRef<HTMLDivElement>(null);
   const layoutKey = config
@@ -127,6 +164,7 @@ export function DockWindow() {
   const systemAccent = useService(commands.getSystemAccent, events.accent);
 
   const [fullscreen, setFullscreen] = useState(false);
+  const [autoHidden, setAutoHidden] = useState(false);
 
   useEffect(() => {
     if (config) applyTheme(config.theme, { luma, systemAccent, zoomDocument: true });
@@ -135,8 +173,11 @@ export function DockWindow() {
   // Tam ekrana girerken çubuk aşağı kayar; Rust dock'u ancak sonra arkaya alır.
   useEffect(() => {
     const unlisten = listen<boolean>(events.fullscreen, (e) => setFullscreen(e.payload));
+    // Otomatik gizlenme (8.10): aynı kayma; Rust bölgeyi ancak sonra daraltır.
+    const unlistenHide = listen<boolean>(events.autohide, (e) => setAutoHidden(e.payload));
     return () => {
       unlisten.then((off) => off());
+      unlistenHide.then((off) => off());
     };
   }, []);
 
@@ -146,6 +187,7 @@ export function DockWindow() {
       data-edge={DOCK_EDGE}
       data-glass={flat ? "flat" : undefined}
       data-fullscreen={fullscreen || undefined}
+      data-autohidden={autoHidden || undefined}
     >
       <div
         ref={barRef}

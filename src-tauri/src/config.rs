@@ -30,6 +30,8 @@ pub struct Config {
     /// Uygulama bildirimleri sağ üstte dock tarzı kartlarla; Windows'un
     /// kutucukları kapanır (services/notifications.rs).
     pub own_notifications: bool,
+    /// Otomatik gizlenme (8.10): "never" | "always" | "smart" (win/autohide.rs).
+    pub auto_hide: String,
     pub theme: Theme,
     pub layout: Layout,
     pub widgets: Widgets,
@@ -44,6 +46,7 @@ impl Default for Config {
             minimize_to_dock: true,
             auto_update: true,
             own_notifications: true,
+            auto_hide: "never".into(),
             theme: Theme::default(),
             layout: Layout::default(),
             widgets: Widgets::default(),
