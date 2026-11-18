@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDockVisible } from "../../lib/dockVisible";
 import { commands, report } from "../../lib/ipc";
 import { togglePopup } from "../../lib/popup";
 import { Tile } from "../ui";
@@ -29,11 +30,16 @@ function msToNext(now: Date, seconds: boolean) {
 export function ClockBar({ config }: { config: ClockConfig }) {
   const seconds = config.showSeconds;
   const [now, setNow] = useState(() => new Date());
+  // Dock görünmezken (tam ekran) saat durur; görününce hemen güncellenir.
+  const visible = useDockVisible();
 
   useEffect(() => {
-    const id = window.setTimeout(() => setNow(new Date()), msToNext(now, seconds));
+    if (!visible) return;
+    // Görünmezken geçen süre: beklemeden şimdiki saate atla.
+    const late = Date.now() - now.getTime() > (seconds ? 1000 : 60_000);
+    const id = window.setTimeout(() => setNow(new Date()), late ? 0 : msToNext(now, seconds));
     return () => window.clearTimeout(id);
-  }, [now, seconds]);
+  }, [now, seconds, visible]);
 
   const full = fullFmt.format(now);
 

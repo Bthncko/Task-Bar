@@ -85,10 +85,16 @@ pub fn spawn(app: &AppHandle) {
     runner::spawn(app, "backdrop", BACKDROP_CHANGED, POLL, None, |_| {
         let mut last: Option<Source> = None;
         let mut cached: Option<Backdrop> = None;
+        // Her bakışta yeniden oluşturmak (süreçler arası COM) bakışın en pahalı
+        // kısmıydı: nesne saklanır, bozulursa (Explorer yeniden başladı) yenilenir.
+        let mut dw: Option<IDesktopWallpaper> = None;
         move |_: Option<()>| {
             // Dock henüz yerleşmediyse bekle.
             let strip = placement::reserved_rect()?;
-            let source = match read_source(strip) {
+            let source = match read_source(&mut dw, strip).or_else(|_| {
+                dw = None;
+                read_source(&mut dw, strip)
+            }) {
                 Ok(s) => s,
                 Err(e) => {
                     log(&format!("duvar kâğıdı okunamadı: {e}"));
@@ -130,12 +136,15 @@ fn log(msg: &str) {
     }
 }
 
-fn read_source(strip: RECT) -> AppResult<Source> {
+fn read_source(dw: &mut Option<IDesktopWallpaper>, strip: RECT) -> AppResult<Source> {
     let monitor = placement::primary_monitor_rect();
     // SAFETY: COM bu iş parçacığında runner tarafından başlatıldı.
     let (path, position, color) = unsafe {
-        let dw: IDesktopWallpaper = CoCreateInstance(&DesktopWallpaper, None, CLSCTX_ALL)?;
-        let id = primary_monitor_id(&dw);
+        let dw = match dw {
+            Some(dw) => dw,
+            None => dw.insert(CoCreateInstance(&DesktopWallpaper, None, CLSCTX_ALL)?),
+        };
+        let id = primary_monitor_id(dw);
         let id_w = id.as_deref().map(wide);
         let id_ptr = id_w.as_ref().map_or(PCWSTR::null(), |w| PCWSTR(w.as_ptr()));
         let path = take_pwstr(dw.GetWallpaper(id_ptr)?);

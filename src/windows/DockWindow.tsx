@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { setDockVisible } from "../lib/dockVisible";
 import { commands, events, type Config } from "../lib/ipc";
 import { useReducedMotion } from "../lib/motion";
 import { usePresence } from "../lib/presence";
@@ -180,6 +181,9 @@ export function DockWindow() {
       unlistenHide.then((off) => off());
     };
   }, []);
+
+  // Çubuk ekranda değilken sürekli güncellenen widget'lar durur (lib/dockVisible).
+  useEffect(() => setDockVisible(!fullscreen && !autoHidden), [fullscreen, autoHidden]);
 
   return (
     <div

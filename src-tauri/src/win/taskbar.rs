@@ -14,25 +14,34 @@
 use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use windows::Win32::Foundation::{HWND, LPARAM, RECT};
+use windows::Win32::Foundation::{HWND, LPARAM, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{CreateRectRgn, GetWindowRgnBox, NULLREGION, SetWindowRgn};
+use windows::Win32::System::Threading::GetCurrentThreadId;
+use windows::Win32::UI::Accessibility::{HWINEVENTHOOK, SetWinEventHook, UnhookWinEvent};
 use windows::Win32::UI::Shell::{
     ABM_GETSTATE, ABM_SETSTATE, ABS_ALWAYSONTOP, ABS_AUTOHIDE, APPBARDATA, SHAppBarMessage,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, FindWindowExW, GetClassNameW, IsWindowVisible, SW_HIDE, SW_SHOW, ShowWindow,
-    ShowWindowAsync,
+    DispatchMessageW, EVENT_OBJECT_SHOW, EnumWindows, FindWindowExW, GetClassNameW, GetMessageW,
+    GetWindowThreadProcessId, IsWindowVisible, MSG, OBJID_WINDOW, PM_NOREMOVE, PeekMessageW,
+    PostThreadMessageW, SW_HIDE, SW_SHOW, SetTimer, ShowWindow, ShowWindowAsync, TranslateMessage,
+    WINEVENT_OUTOFCONTEXT, WM_APP, WM_TIMER,
 };
 use windows::core::{BOOL, w};
 
 use crate::error::AppResult;
 
 const STATE_FILE: &str = "taskbar-state.json";
-const WATCH_INTERVAL: Duration = Duration::from_millis(300);
+/// Yedek bakış (asıl tepki `EVENT_OBJECT_SHOW` ile anında, `watch`).
+const WATCH_INTERVAL: Duration = Duration::from_secs(2);
+/// Bekçi iş parçacığına: Explorer yeniden başladı, kancayı yeni sürece kur.
+const REHOOK: u32 = WM_APP + 1;
+/// Bekçi iş parçacığının kimliği (0: henüz yok).
+static WATCH_THREAD: AtomicU32 = AtomicU32::new(0);
 
 #[derive(Serialize, Deserialize)]
 struct SavedState {
@@ -96,6 +105,13 @@ pub fn on_explorer_restart() {
     {
         set_autohide(true);
     }
+    // Olay kancası eski Explorer sürecine bağlıydı.
+    let thread = WATCH_THREAD.load(Ordering::SeqCst);
+    if thread != 0 {
+        unsafe {
+            let _ = PostThreadMessageW(thread, REHOOK, WPARAM(0), LPARAM(0));
+        }
+    }
 }
 
 fn hide(control: &Control) {
@@ -140,16 +156,97 @@ fn save_state(control: &Control) -> AppResult<()> {
     Ok(())
 }
 
+/// Explorer çubuğu gösterince (Win tuşu, fare alt kenarda, otomatik gizleme
+/// geçişi) `EVENT_OBJECT_SHOW` gelir → hemen yeniden gizlenir. Kanca yalnızca
+/// Explorer sürecinin olaylarını alır: boştayken iş parçacığı hiç uyanmaz.
+/// Eskiden 300 ms'de bir tüm pencereler taranıyordu (dock'un Rust tarafındaki
+/// boşta işlemcinin çoğu). Olay kaçarsa diye seyrek yedek bakış (`WATCH_INTERVAL`);
+/// Explorer yeniden başlayınca kanca yeni sürece taşınır (`on_explorer_restart`).
 fn watch() {
-    loop {
-        std::thread::sleep(WATCH_INTERVAL);
-        let Some(control) = CONTROL.get() else {
-            continue;
-        };
-        if control.want_hidden.load(Ordering::SeqCst) {
-            hide_bars();
+    unsafe {
+        // Önce mesaj kuyruğu: kimlik yayımlanır yayımlanmaz gelen ileti kaybolmasın.
+        let mut msg = MSG::default();
+        let _ = PeekMessageW(&mut msg, None, 0, 0, PM_NOREMOVE);
+        WATCH_THREAD.store(GetCurrentThreadId(), Ordering::SeqCst);
+        let mut hook = hook_explorer();
+        let _ = SetTimer(None, 0, WATCH_INTERVAL.as_millis() as u32, None);
+        while GetMessageW(&mut msg, None, 0, 0).as_bool() {
+            match msg.message {
+                WM_TIMER => {
+                    if CONTROL
+                        .get()
+                        .is_some_and(|c| c.want_hidden.load(Ordering::SeqCst))
+                    {
+                        hide_bars();
+                    }
+                }
+                REHOOK => {
+                    if let Some(h) = hook.take() {
+                        let _ = UnhookWinEvent(h);
+                    }
+                    hook = hook_explorer();
+                }
+                _ => {
+                    let _ = TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
+                }
+            }
         }
     }
+}
+
+/// Explorer'ın (çubuğun sahibi) gösterme olaylarına kanca. Explorer yoksa `None`
+/// (yedek bakış yine çalışır).
+fn hook_explorer() -> Option<HWINEVENTHOOK> {
+    let tray = tray_window()?;
+    let mut pid = 0u32;
+    unsafe { GetWindowThreadProcessId(tray, Some(&mut pid)) };
+    if pid == 0 {
+        return None;
+    }
+    let hook = unsafe {
+        SetWinEventHook(
+            EVENT_OBJECT_SHOW,
+            EVENT_OBJECT_SHOW,
+            None,
+            Some(on_show),
+            pid,
+            0,
+            WINEVENT_OUTOFCONTEXT,
+        )
+    };
+    (!hook.is_invalid()).then_some(hook)
+}
+
+unsafe extern "system" fn on_show(
+    _hook: HWINEVENTHOOK,
+    _event: u32,
+    hwnd: HWND,
+    id_object: i32,
+    _id_child: i32,
+    _thread: u32,
+    _time: u32,
+) {
+    if id_object != OBJID_WINDOW.0
+        || !CONTROL
+            .get()
+            .is_some_and(|c| c.want_hidden.load(Ordering::SeqCst))
+        || !is_taskbar(hwnd)
+    {
+        return;
+    }
+    hide_bar(hwnd);
+}
+
+/// Explorer'ın çubuk penceresi mi (sınıf adı; olay başına bellek ayırmadan).
+fn is_taskbar(hwnd: HWND) -> bool {
+    let mut buf = [0u16; 32];
+    let n = unsafe { GetClassNameW(hwnd, &mut buf) }.max(0) as usize;
+    let class = &buf[..n];
+    let (primary, secondary) = (w!("Shell_TrayWnd"), w!("Shell_SecondaryTrayWnd"));
+    // SAFETY: w! sabit, sonu sıfırlı dizeler; dilimler bu işlev boyunca geçerli.
+    let matches = unsafe { class == primary.as_wide() || class == secondary.as_wide() };
+    matches && !super::is_own_window(hwnd)
 }
 
 /// Çubuğu gizler ve boş pencere bölgesi verir. Otomatik gizlemedeki çubuk, fare
@@ -158,14 +255,18 @@ fn watch() {
 /// Eşzamansız: Explorer meşgulse dock beklemesin.
 fn hide_bars() {
     for bar in taskbar_windows() {
-        unsafe {
-            let mut box_ = RECT::default();
-            if GetWindowRgnBox(bar, &mut box_) != NULLREGION {
-                SetWindowRgn(bar, Some(CreateRectRgn(0, 0, 0, 0)), true);
-            }
-            if IsWindowVisible(bar).as_bool() {
-                let _ = ShowWindowAsync(bar, SW_HIDE);
-            }
+        hide_bar(bar);
+    }
+}
+
+fn hide_bar(bar: HWND) {
+    unsafe {
+        let mut box_ = RECT::default();
+        if GetWindowRgnBox(bar, &mut box_) != NULLREGION {
+            SetWindowRgn(bar, Some(CreateRectRgn(0, 0, 0, 0)), true);
+        }
+        if IsWindowVisible(bar).as_bool() {
+            let _ = ShowWindowAsync(bar, SW_HIDE);
         }
     }
 }

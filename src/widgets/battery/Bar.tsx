@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { commands, events, report, type PowerState } from "../../lib/ipc";
+import { useDockVisible } from "../../lib/dockVisible";
 import { useReducedMotion } from "../../lib/motion";
 import { togglePopup } from "../../lib/popup";
 import { useService } from "../../lib/useService";
@@ -30,6 +31,9 @@ function usePlugPulse(plugged: boolean | undefined) {
 function useWave(power: PowerState | undefined) {
   const ref = useRef<SVGSVGElement>(null);
   const reduced = useReducedMotion();
+  // Dock görünmezken (tam ekran) dalga durur; dönünce kaldığı yerden sürer.
+  const visible = useDockVisible();
+  const step = useRef(0);
   // [tur süresi ms, adım sayısı]: saniyede 15, 8, 8 adım.
   const [period, steps] = power?.charging ? [1600, 24] : power?.plugged ? [3000, 24] : [5000, 40];
 
@@ -40,14 +44,16 @@ function useWave(power: PowerState | undefined) {
       el.style.transform = "";
       return;
     }
-    let i = 0;
+    if (!visible) return;
+    let i = step.current % steps;
     const id = window.setInterval(() => {
       i = (i + 1) % steps;
+      step.current = i;
       // İki kat genişlikteki dalga yarısı kadar kayınca başa döner.
       el.style.transform = `translateX(${(-50 * i) / steps}%)`;
     }, period / steps);
     return () => window.clearInterval(id);
-  }, [reduced, period, steps, !power]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [reduced, visible, period, steps, !power]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return ref;
 }

@@ -55,7 +55,9 @@
   z-index: -1;
 }
 
-/* İki kat genişlikte; prizdeyken sola kayar. */
+/* İki kat genişlikte; prizdeyken sola kayar. Kendi GPU katmanında: her adımda
+   yalnızca kaydırılır. Katmansızken her adım (saniyede 8) tüm çubuğu yeniden
+   boyatıp GPU'ya yüklüyordu: boşta işlemcinin (sayfa + GPU) ~2/3'ü buydu. */
 .wave {
   position: absolute;
   left: 0;
@@ -63,6 +65,7 @@
   width: 200%;
   height: 4px;
   fill: var(--fill-color);
+  will-change: transform;
 }
 
 /* Dalganın hareketi Bar.tsx → useWave (zamanlayıcı; CSS animasyonu boşta pahalıydı). */
