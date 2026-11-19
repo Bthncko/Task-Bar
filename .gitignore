@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Gizli dosyalar asla depoya girmesin (güncelleme imza anahtarı vb.)
+*.key
+*.key.password
+*.pem
+*.pfx
+.env
+.env.*
+config.json.bak

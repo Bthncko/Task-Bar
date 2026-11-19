@@ -50,12 +50,45 @@ Ayarlar → Müzik sayfasında. İki yol var:
 - **Kaldırmak:** Windows Ayarlar → Uygulamalar → Yüklü uygulamalar → Akilli Dock →
   Kaldır.
 
+## Gizlilik
+
+Dock hiçbir kullanım verisi ya da istatistik toplamaz, kendi sunucusu yoktur.
+Ayarlar ve girişler yalnızca bu bilgisayarda, `%APPDATA%\com.proxd.akillidock`
+klasöründe durur. Dışarıya yalnızca şu bağlantılar yapılır:
+
+| Ne için                     | Nereye                                    | Ne gider                                     |
+| --------------------------- | ----------------------------------------- | -------------------------------------------- |
+| Hava durumu                 | `api.open-meteo.com`                      | Seçilen şehrin koordinatları                 |
+| Şehir arama                 | `geocoding-api.open-meteo.com`            | Yazılan şehir adı                            |
+| Takvim                      | Yapıştırdığın iCal adresleri              | Yalnızca adresin kendisi (indirme)           |
+| Spotify (isteğe bağlı)      | `accounts.spotify.com`, `api.spotify.com` | Kendi Client ID'n ve Spotify girişin         |
+| AI kullanımı (isteğe bağlı) | `api.anthropic.com`                       | Claude Code'un oturum token'ı                |
+| Güncellemeler               | `github.com` (bu depo)                    | Hiçbir şey; yalnızca sürüm dosyası indirilir |
+
+- **AI kullanımı widget'ı:** Claude Code kuruluysa `~/.claude/.credentials.json`
+  dosyasındaki oturum token'ını **yalnızca okur** ve sadece Anthropic'e, limitlerini
+  sormak için gönderir; token kaydedilmez, değiştirilmez, yenilenmez. Bilgisayardaki
+  Claude Code kayıtlarından yalnızca sayılar (istek ve token adedi, model) çıkarılır;
+  mesaj metinleri saklanmaz ve hiçbir yere gönderilmez. Widget'ı kaldırınca hiçbiri
+  yapılmaz.
+- **Bildirimler:** "Bildirimler dock tarzında" açıkken Windows bildirimleri dock'un
+  kendi kartlarında gösterilir; içerikleri bilgisayardan çıkmaz.
+- **Güncellemeler imzalıdır:** dock yalnızca bu deponun imza anahtarıyla imzalanmış
+  sürümleri kurar.
+
+Bir güvenlik açığı bulursan lütfen herkese açık bir issue yerine GitHub'daki
+**Security → Report a vulnerability** ile özel olarak bildir.
+
+## Lisans
+
+[MIT](LICENSE)
+
 ---
 
 ## Geliştirme
 
 Tauri 2 (Rust) + React + TypeScript + Vite. Plan: [PLAN.md](PLAN.md),
-[PLAN-ASAMA-7.md](PLAN-ASAMA-7.md).
+[PLAN-ASAMA-7.md](PLAN-ASAMA-7.md), [PLAN-ASAMA-8.md](PLAN-ASAMA-8.md).
 
 ```sh
 npm install
