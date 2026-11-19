@@ -12,6 +12,7 @@ import { updateConfig } from "../../lib/store";
 import { useService } from "../../lib/useService";
 import { Card, Row, Section, Segmented, Toggle } from "./controls";
 import { NotificationSound } from "./NotificationSound";
+import { NotifyPlacement } from "./NotifyPlacement";
 import styles from "./Settings.module.css";
 
 export function General({ config }: { config: Config }) {
@@ -64,7 +65,7 @@ export function General({ config }: { config: Config }) {
         </Row>
         <Row
           label="Bildirimler dock tarzında"
-          hint="Uygulama bildirimleri sağ üstte sade kartlarla çıkar; Windows'un kutucukları kapanır, bildirimler bildirim merkezinde kalır. Kapatınca (ya da dock kapanınca) Windows'unkiler geri gelir."
+          hint="Uygulama bildirimleri sade kartlarla çıkar (yeri aşağıdan seçilir); Windows'un kutucukları kapanır, bildirimler bildirim merkezinde kalır. Kapatınca (ya da dock kapanınca) Windows'unkiler geri gelir."
         >
           <div className={styles.actions}>
             <button
@@ -100,6 +101,8 @@ export function General({ config }: { config: Config }) {
           />
         </Row>
       </Card>
+
+      <NotifyPlacement config={config} />
 
       <NotificationSound />
 

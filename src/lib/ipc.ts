@@ -14,6 +14,13 @@ export type AutostartState = { enabled: boolean; available: boolean };
 /** Bulanık duvar kâğıdı şeridi (7.2). Yoksa düz cam. */
 export type Backdrop = { image: string; luma: number } | null;
 
+/** Bildirim kartlarının köşesi / kenarı. */
+export type NotifyAnchor =
+  "topLeft" | "topCenter" | "topRight" | "bottomLeft" | "bottomCenter" | "bottomRight";
+
+/** `x`/`y`: köşenin kenarlarından uzaklık (mantıksal piksel); ortada `x` yok sayılır. */
+export type NotifyPosition = { anchor: NotifyAnchor; x: number; y: number };
+
 /** "smart": yalnızca bir pencere dock'un alanına girince gizlenir. */
 export type AutoHide = "never" | "always" | "smart";
 
@@ -25,8 +32,10 @@ export type Config = {
   minimizeToDock: boolean;
   /** Yeni sürüm çıkınca kendiliğinden indirip kur. */
   autoUpdate: boolean;
-  /** Bildirimler sağ üstte dock tarzı kartlarla (Windows'un kutucukları kapanır). */
+  /** Bildirimler dock tarzı kartlarla (Windows'un kutucukları kapanır). */
   ownNotifications: boolean;
+  /** Bildirim kartlarının yeri; alt kenarda uzaklık dock'un üstünden ölçülür. */
+  notifyPosition: NotifyPosition;
   /** Otomatik gizlenme (8.10). */
   autoHide: AutoHide;
   theme: {
@@ -280,7 +289,7 @@ export type BatterySettings = {
 };
 /** Uygulama bildirimi (kendi kartımız). */
 export type Notice = { id: number; app: string; icon: string | null; title: string; body: string };
-/** Kartların arkasındaki ekranın bulanık görüntüsü; alan CSS pikseli, sağ üst köşesi yığınınki. */
+/** Kartların arkasındaki ekranın bulanık görüntüsü; alan CSS pikseli, yığınla aynı köşeye yaslı. */
 export type NotifyBackdrop = { image: string; luma: number; width: number; height: number };
 export type TrayIcon = { id: string; tip: string; icon: string | null };
 /** `active: false`: simgeler Windows'ta (kendi tepsimiz açılamadı). */

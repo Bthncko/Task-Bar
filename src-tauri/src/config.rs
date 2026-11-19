@@ -27,9 +27,11 @@ pub struct Config {
     pub minimize_to_dock: bool,
     /// Yeni sürüm çıkınca kendiliğinden indirip kur (services/updater.rs).
     pub auto_update: bool,
-    /// Uygulama bildirimleri sağ üstte dock tarzı kartlarla; Windows'un
-    /// kutucukları kapanır (services/notifications.rs).
+    /// Uygulama bildirimleri dock tarzı kartlarla; Windows'un kutucukları
+    /// kapanır (services/notifications.rs).
     pub own_notifications: bool,
+    /// Bildirim kartlarının ekrandaki yeri (win/notify.rs).
+    pub notify_position: NotifyPosition,
     /// Otomatik gizlenme (8.10): "never" | "always" | "smart" (win/autohide.rs).
     pub auto_hide: String,
     pub theme: Theme,
@@ -46,10 +48,32 @@ impl Default for Config {
             minimize_to_dock: true,
             auto_update: true,
             own_notifications: true,
+            notify_position: NotifyPosition::default(),
             auto_hide: "never".into(),
             theme: Theme::default(),
             layout: Layout::default(),
             widgets: Widgets::default(),
+        }
+    }
+}
+
+/// Bildirim kartlarının yeri: köşe/kenar + o kenarlardan uzaklık (mantıksal piksel).
+/// Alt kenarda uzaklık dock'un üstünden ölçülür; ortada yatay uzaklık yok sayılır.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct NotifyPosition {
+    /// "topLeft" | "topCenter" | "topRight" | "bottomLeft" | "bottomCenter" | "bottomRight".
+    pub anchor: String,
+    pub x: f64,
+    pub y: f64,
+}
+
+impl Default for NotifyPosition {
+    fn default() -> Self {
+        Self {
+            anchor: "topRight".into(),
+            x: 12.0,
+            y: 12.0,
         }
     }
 }

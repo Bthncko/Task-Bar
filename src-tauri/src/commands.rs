@@ -702,7 +702,7 @@ pub fn notify_test(app: AppHandle, silent: bool) {
     let (name, title, body) = (
         "Akıllı Dock",
         "Bildirimler böyle görünür",
-        "Uygulamaların bildirimleri sağ üstte bu kartlarla gelir. Tıklayınca uygulama açılır.",
+        "Uygulamaların bildirimleri bu kartlarla gelir. Tıklayınca uygulama açılır.",
     );
     if silent {
         notifications::show_card(&app, name, title, body);

@@ -1,0 +1,125 @@
+/* Bildirim konumu (Ayarlar → Genel): ekranın küçük kopyası. */
+.stage {
+  padding: 4px 16px 16px;
+}
+
+.stage[data-disabled] {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.screen {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+  /* Duvar kâğıdı yerine: vurgu renginden yumuşak bir degrade. */
+  background:
+    radial-gradient(
+      120% 90% at 20% 10%,
+      color-mix(in srgb, var(--accent) 38%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      90% 80% at 90% 100%,
+      color-mix(in srgb, var(--accent) 22%, #6b4cff 20%),
+      transparent 70%
+    ),
+    #101420;
+  box-shadow:
+    inset 0 0 0 1px var(--hairline),
+    0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+/* Dock: ekranın altında yüzen cam çubuk. */
+.dock {
+  position: absolute;
+  left: 1.2%;
+  right: 1.2%;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+/* Bildirim kartı: tutup sürüklenir; bırakınca yerine kayar. */
+.card {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6%;
+  padding: 0 4%;
+  border-radius: 5px;
+  background: rgba(40, 44, 58, 0.88);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 3px 10px rgba(0, 0, 0, 0.4);
+  cursor: grab;
+  transition:
+    left 260ms cubic-bezier(0.2, 0.9, 0.25, 1.08),
+    top 260ms cubic-bezier(0.2, 0.9, 0.25, 1.08),
+    scale 160ms ease;
+}
+
+.card:hover {
+  scale: 1.04;
+}
+
+.card[data-dragging] {
+  cursor: grabbing;
+  transition: scale 160ms ease;
+  scale: 1.06;
+  z-index: 1;
+}
+
+.cardIcon {
+  flex: none;
+  height: 52%;
+  aspect-ratio: 1;
+  border-radius: 22%;
+  background: var(--accent);
+}
+
+.cardLines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18%;
+  height: 40%;
+  justify-content: center;
+}
+
+.cardLines span {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.cardLines span + span {
+  width: 70%;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Sürüklerken: bırakınca oturacağı yer. */
+.ghost {
+  position: absolute;
+  border-radius: 5px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+  transition:
+    left 160ms ease,
+    top 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .ghost {
+    transition: none;
+  }
+}

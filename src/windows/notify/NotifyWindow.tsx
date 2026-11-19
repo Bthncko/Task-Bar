@@ -1,6 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { commands, events, report, type Notice, type NotifyBackdrop } from "../../lib/ipc";
+import {
+  commands,
+  events,
+  report,
+  type Notice,
+  type NotifyAnchor,
+  type NotifyBackdrop,
+} from "../../lib/ipc";
 import { useReducedMotion } from "../../lib/motion";
 import { startConfigSync, useConfig } from "../../lib/store";
 import { applyTheme, glassAlpha, uiScale } from "../../lib/theme";
@@ -23,8 +30,16 @@ const SHIFT_MS = 260;
 
 type Card = Notice & { leaving: boolean; left: number };
 
+/** "bottomRight" → yatay "right", alt: true. */
+function parseAnchor(anchor: NotifyAnchor | undefined) {
+  const a = anchor ?? "topRight";
+  const h = a.endsWith("Left") ? "left" : a.endsWith("Center") ? "center" : "right";
+  return { h, bottom: a.startsWith("bottom") } as const;
+}
+
 /**
- * Bildirim kartları (sağ üst), macOS bildirimleri ve dock'un camıyla aynı dil.
+ * Bildirim kartları, macOS bildirimleri ve dock'un camıyla aynı dil. Yeri
+ * ayarlardan (`notifyPosition`): altta en yeni kart en altta, yığın yukarı büyür.
  * Rust yeni bildirimi `notify://show` ile gönderir (pencere gizliyse önce
  * arkadaki ekranın bulanık görüntüsünü, `notify://backdrop`); yığın boyu
  * değişince `notify_layout` ile pencere boyutlanır / gizlenir.
@@ -38,6 +53,9 @@ export function NotifyWindow() {
   const stack = useRef<HTMLDivElement>(null);
   const zoom = config ? uiScale(config.theme) : 1;
   const reduced = useReducedMotion();
+  const pos = config?.notifyPosition;
+  const { h, bottom } = parseAnchor(pos?.anchor);
+  const posKey = pos ? `${pos.anchor}:${pos.x}:${pos.y}` : "";
 
   useEffect(() => {
     if (config) applyTheme(config.theme, { systemAccent });
@@ -97,20 +115,32 @@ export function NotifyWindow() {
     const ro = new ResizeObserver(send);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [cards.length, zoom]);
+    // posKey: yer ayarı değişince görünen kartlar yeni yere geçsin.
+  }, [cards.length, zoom, posKey]);
+
+  // Yer değişince eski cam başka bir yerin görüntüsü: at (sonraki yığında yenisi gelir).
+  const shownKey = useRef(posKey);
+  useEffect(() => {
+    if (shownKey.current === posKey) return;
+    shownKey.current = posKey;
+    setBackdrop(null);
+  }, [posKey]);
 
   // Kart eklenip kalkınca diğerleri yeni yerine kayar (FLIP); her kartın camı
-  // da yığındaki yerine göre kaydırılır (görüntü yığının köşesine yaslı).
+  // da yığındaki yerine göre kaydırılır (görüntü yığının köşesine yaslı: altta
+  // alt kenarına).
   const tops = useRef(new Map<string, number>());
+  const glassH = backdrop?.height ?? 0;
   useLayoutEffect(() => {
     const el = stack.current;
     if (!el) return;
+    const imageTop = bottom ? el.offsetHeight - glassH : 0;
     const next = new Map<string, number>();
     for (const child of Array.from(el.children) as HTMLElement[]) {
       const id = child.dataset.id!;
       const top = child.offsetTop;
       next.set(id, top);
-      child.style.setProperty("--glass-y", `${-top}px`);
+      child.style.setProperty("--glass-y", `${imageTop - top}px`);
       const before = tops.current.get(id);
       if (before !== undefined && before !== top && !reduced) {
         child.animate([{ translate: `0 ${before - top}px` }, { translate: "0 0" }], {
@@ -120,7 +150,7 @@ export function NotifyWindow() {
       }
     }
     tops.current = next;
-  }, [cards, reduced]);
+  }, [cards, reduced, bottom, glassH]);
 
   // Yığın kapanınca eski cam atılır (sonraki bildirimde Rust yenisini gönderir).
   const empty = cards.length === 0;
@@ -134,13 +164,13 @@ export function NotifyWindow() {
           "--notify-image": `url("${backdrop.image}")`,
           "--glass-w": `${backdrop.width}px`,
           "--glass-h": `${backdrop.height}px`,
-          "--glass-x": `${WIDTH - backdrop.width}px`,
+          "--glass-x": `${{ left: 0, center: (WIDTH - backdrop.width) / 2, right: WIDTH - backdrop.width }[h]}px`,
           "--panel-alpha": glassAlpha(config.theme, backdrop.luma).toFixed(3),
         } as CSSProperties)
       : undefined;
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-h={h} data-bottom={bottom || undefined}>
       <div style={{ zoom, ...glass } as CSSProperties}>
         <div
           ref={stack}

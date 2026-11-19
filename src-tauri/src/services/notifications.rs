@@ -1,4 +1,4 @@
-//! Kendi bildirimlerimiz: uygulama bildirimleri sağ üstte dock tarzı kartlarla.
+//! Kendi bildirimlerimiz: uygulama bildirimleri dock tarzı kartlarla.
 //!
 //! - Okuma: `UserNotificationListener` (resmi API). Belgeye göre paketli
 //!   uygulama + `userNotificationListener` yeteneği ister; bu makinede paketsiz
