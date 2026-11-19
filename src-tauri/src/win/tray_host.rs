@@ -26,13 +26,13 @@ use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
     AllowSetForegroundWindow, CS_DBLCLKS, CreateWindowExW, DefWindowProcW, DestroyWindow,
     DispatchMessageW, FindWindowExW, FindWindowW, GetCursorPos, GetMessageW,
-    GetWindowThreadProcessId, HICON, HWND_BROADCAST, HWND_TOPMOST, IsWindow, KillTimer, MSG,
-    PostMessageW, PostQuitMessage, RegisterClassW, RegisterWindowMessageW, SMTO_ABORTIFHUNG,
-    SMTO_NORMAL, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SendMessageTimeoutW,
-    SendNotifyMessageW, SetTimer, SetWindowPos, TranslateMessage, WINDOW_EX_STYLE, WM_ACTIVATEAPP,
-    WM_CLOSE, WM_COMMAND, WM_CONTEXTMENU, WM_COPYDATA, WM_DESTROY, WM_LBUTTONDBLCLK,
-    WM_LBUTTONDOWN, WM_LBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_TIMER, WM_USER, WNDCLASSW,
-    WS_CHILD, WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+    GetWindowThreadProcessId, HICON, HWND_TOPMOST, IsWindow, KillTimer, MSG, PostMessageW,
+    PostQuitMessage, RegisterClassW, RegisterWindowMessageW, SMTO_ABORTIFHUNG, SMTO_NORMAL,
+    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SendMessageTimeoutW, SendNotifyMessageW,
+    SetTimer, SetWindowPos, TranslateMessage, WINDOW_EX_STYLE, WM_ACTIVATEAPP, WM_CLOSE,
+    WM_COMMAND, WM_CONTEXTMENU, WM_COPYDATA, WM_DESTROY, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
+    WM_LBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_TIMER, WM_USER, WNDCLASSW, WS_CHILD,
+    WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
 };
 use windows::core::{GUID, w};
 
@@ -334,9 +334,8 @@ fn broadcast() {
         return;
     };
     with(|h| h.broadcast_at = Some(Instant::now()));
-    unsafe {
-        let _ = SendNotifyMessageW(HWND_BROADCAST, msg, WPARAM(0), LPARAM(0));
-    }
+    // Sistem geneli yayın değil: hareketli duvar kâğıdı sıfırlanıyordu (broadcast.rs).
+    super::broadcast::send(msg, WPARAM(0), LPARAM(0), super::broadcast::Skip::Wallpaper);
 }
 
 unsafe extern "system" fn wndproc(h: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {

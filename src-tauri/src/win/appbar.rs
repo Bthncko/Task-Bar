@@ -25,10 +25,10 @@ use windows::Win32::UI::Shell::{
 use windows::Win32::UI::WindowsAndMessaging::{
     GWL_EXSTYLE, GetClassNameW, GetForegroundWindow, GetWindowLongW, GetWindowRect,
     GetWindowThreadProcessId, HWND_TOPMOST, PostMessageW, RegisterWindowMessageW, SPI_GETWORKAREA,
-    SPI_SETWORKAREA, SPIF_SENDCHANGE, SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE,
-    SWP_NOSIZE, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SetWindowPos, ShowWindow,
-    SystemParametersInfoW, WM_ACTIVATE, WM_APP, WM_DISPLAYCHANGE, WM_DPICHANGED,
-    WM_WINDOWPOSCHANGED, WS_EX_TOPMOST,
+    SPI_SETWORKAREA, SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+    SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SetWindowPos, ShowWindow, SystemParametersInfoW,
+    WM_ACTIVATE, WM_APP, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_SETTINGCHANGE, WM_WINDOWPOSCHANGED,
+    WS_EX_TOPMOST,
 };
 use windows::core::w;
 
@@ -112,9 +112,9 @@ fn new_appbar(hwnd: HWND) -> AppResult<()> {
 /// yalnızca Windows çubuğunun durumu değişince güncelleniyordu). Ana ekranın
 /// çalışma alanının dock kenarı ayrılan şeride eşitlenir; farklıysa yazılır.
 ///
-/// Yazmak tüm pencerelere WM_SETTINGCHANGE yayar ve onları bekler (büyütülmüş
-/// pencereler yeniden boyutlanır): dock'un iş parçacığı takılmasın diye ayrı iş
-/// parçacığında. Art arda iki istek ters sırayla bitmesin: yazımlar sırayla,
+/// Yazıp pencerelere WM_SETTINGCHANGE gönderir (büyütülmüş pencereler yeniden
+/// boyutlanır; masaüstüne gönderilmez, bkz. broadcast.rs): dock'un iş parçacığı
+/// takılmasın diye ayrı iş parçacığında. Art arda iki istek ters sırayla bitmesin: yazımlar sırayla,
 /// her biri o anki alanı okuyup karşılaştırır, yenisi geldiyse eskisi atlanır.
 fn sync_work_area(reserved: RECT) {
     static WRITE: Mutex<()> = Mutex::new(());
@@ -146,15 +146,23 @@ fn sync_work_area(reserved: RECT) {
             return;
         }
         *edge = want;
-        if let Err(e) = unsafe {
+        // SPIF_SENDCHANGE yerine kendimiz bildiriyoruz: masaüstüne giderse
+        // hareketli duvar kâğıdı (Wallpaper Engine) sıfırlanıyordu (broadcast.rs).
+        match unsafe {
             SystemParametersInfoW(
                 SPI_SETWORKAREA,
                 0,
                 Some(&mut area as *mut RECT as *mut _),
-                SPIF_SENDCHANGE,
+                SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
             )
         } {
-            eprintln!("çalışma alanı ayarlanamadı: {}", e.message());
+            Ok(()) => super::broadcast::send(
+                WM_SETTINGCHANGE,
+                WPARAM(SPI_SETWORKAREA.0 as usize),
+                LPARAM(0),
+                super::broadcast::Skip::WallpaperAndDesktop,
+            ),
+            Err(e) => eprintln!("çalışma alanı ayarlanamadı: {}", e.message()),
         }
     });
 }
