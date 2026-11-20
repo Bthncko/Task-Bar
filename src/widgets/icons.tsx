@@ -391,6 +391,14 @@ export function WifiIcon({ bars, off, ...p }: IconProps & { bars: number; off: b
   );
 }
 
+/** Kablolu bağlantı: ağ prizi (RJ45). */
+export const EthernetIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6 4h12a1.5 1.5 0 0 1 1.5 1.5V15H16v2.5h-2V20h-4v-2.5H8V15H4.5V5.5A1.5 1.5 0 0 1 6 4z" />
+    <path d="M9 8v2.5M11 8v2.5M13 8v2.5M15 8v2.5" />
+  </Svg>
+);
+
 export function BluetoothIcon({ off, ...p }: IconProps & { off: boolean }) {
   return (
     <Svg {...p}>

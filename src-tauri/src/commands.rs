@@ -35,6 +35,7 @@ pub fn set_dock_expanded(window: WebviewWindow, expanded: bool) -> CmdResult {
 pub fn open_system_settings(page: String) -> CmdResult {
     let uri = match page.as_str() {
         "wifi" => "ms-settings:network-wifi",
+        "ethernet" => "ms-settings:network-ethernet",
         "bluetooth" => "ms-settings:bluetooth",
         "sound" => "ms-settings:sound",
         "sound-mixer" => "ms-settings:apps-volume",

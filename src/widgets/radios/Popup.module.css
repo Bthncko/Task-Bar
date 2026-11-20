@@ -13,6 +13,45 @@
   color: var(--text-2);
 }
 
+/* Kablo takılıyken Wi-Fi panelinin başında. */
+.wired {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--r-tile);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--text);
+  text-align: left;
+  transition: background-color var(--t-fast) ease;
+}
+
+.wired:hover {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.wired > svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.wired > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wiredTitle {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.wiredHint {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
 .error {
   display: flex;
   flex-direction: column;

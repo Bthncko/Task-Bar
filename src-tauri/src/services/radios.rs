@@ -5,6 +5,9 @@
 //! paketsiz uygulamada buna rağmen çalıştı. Değiştirme reddedilirse frontend
 //! `ms-settings:` sayfasını açar.
 //!
+//! Kablolu bağlantı: internet profilinin bağdaştırıcısı Ethernet (IANA 6) ise
+//! `ethernet` (Wi-Fi karosu kablo simgesini gösterir).
+//!
 //! Ağ adı: Microsoft'un konum izni gerektirmeyen yol olarak önerdiği
 //! `WlanConnectionProfileDetails.GetConnectedSsid` (WlanQueryInterface değil).
 //!
@@ -20,7 +23,9 @@ use serde::Serialize;
 use tauri::AppHandle;
 use windows::Devices::Radios::{Radio, RadioAccessStatus, RadioKind, RadioState};
 use windows::Foundation::TypedEventHandler;
-use windows::Networking::Connectivity::{NetworkInformation, NetworkStatusChangedEventHandler};
+use windows::Networking::Connectivity::{
+    ConnectionProfile, NetworkInformation, NetworkStatusChangedEventHandler,
+};
 use windows::core::IInspectable;
 
 use super::runner::{self, Waker};
@@ -46,6 +51,8 @@ pub struct RadiosState {
     pub ssid: Option<String>,
     /// 0–5 sinyal çubuğu.
     pub signal: Option<u8>,
+    /// İnternet kablodan (Ethernet) geliyor.
+    pub ethernet: bool,
 }
 
 pub struct SetRadio {
@@ -157,19 +164,30 @@ fn info(radios: &[Radio], kind: RadioKind) -> Option<RadioInfo> {
 }
 
 fn read_state(radios: &[Radio]) -> RadiosState {
-    let (ssid, signal) = wifi_connection();
+    let profile = NetworkInformation::GetInternetConnectionProfile().ok();
+    let (ssid, signal) = profile.as_ref().map_or((None, None), wifi_connection);
     RadiosState {
         wifi: info(radios, RadioKind::WiFi),
         bluetooth: info(radios, RadioKind::Bluetooth),
         ssid,
         signal,
+        ethernet: profile.as_ref().is_some_and(is_ethernet),
     }
 }
 
-fn wifi_connection() -> (Option<String>, Option<u8>) {
-    let Ok(profile) = NetworkInformation::GetInternetConnectionProfile() else {
-        return (None, None);
-    };
+/// IANA arayüz türü 6: Ethernet (ifType, RFC 1213).
+const IANA_ETHERNET: u32 = 6;
+
+fn is_ethernet(profile: &ConnectionProfile) -> bool {
+    !profile.IsWlanConnectionProfile().unwrap_or(false)
+        && !profile.IsWwanConnectionProfile().unwrap_or(false)
+        && profile
+            .NetworkAdapter()
+            .and_then(|a| a.IanaInterfaceType())
+            .is_ok_and(|t| t == IANA_ETHERNET)
+}
+
+fn wifi_connection(profile: &ConnectionProfile) -> (Option<String>, Option<u8>) {
     if !profile.IsWlanConnectionProfile().unwrap_or(false) {
         return (None, None);
     }

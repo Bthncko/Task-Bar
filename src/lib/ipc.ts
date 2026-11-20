@@ -159,6 +159,8 @@ export type RadiosState = {
   bluetooth: RadioInfo | null;
   ssid: string | null;
   signal: number | null;
+  /** İnternet kablodan (Ethernet) geliyor. */
+  ethernet: boolean;
 };
 
 export type SpotifyStatus = {
@@ -357,6 +359,7 @@ export const commands = {
   openSystemSettings: (
     page:
       | "wifi"
+      | "ethernet"
       | "bluetooth"
       | "sound"
       | "sound-mixer"

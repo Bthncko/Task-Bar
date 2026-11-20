@@ -4,6 +4,7 @@ import { useService } from "../../lib/useService";
 import { Toggle } from "../../windows/settings/controls";
 import {
   BluetoothIcon,
+  EthernetIcon,
   HeadphonesIcon,
   KeyboardIcon,
   LockIcon,
@@ -96,6 +97,22 @@ function WifiPanel() {
           </>
         }
       />
+      {radios?.ethernet && (
+        <button
+          type="button"
+          className={styles.wired}
+          title="Ethernet ayarları"
+          onClick={() =>
+            commands.openSystemSettings("ethernet").catch(report("open_system_settings"))
+          }
+        >
+          <EthernetIcon size={16} />
+          <span>
+            <span className={styles.wiredTitle}>Kablolu bağlantı</span>
+            <span className={styles.wiredHint}>İnternet kablodan (Ethernet) geliyor</span>
+          </span>
+        </button>
+      )}
       {!wifi ? (
         <p className={styles.note}>Wi-Fi bağdaştırıcısı yok.</p>
       ) : !on ? (
