@@ -6,6 +6,18 @@
 geçen, cam görünümlü bir dock. Açık uygulamalar, saat ve takvim, müzik (Spotify
 sıradakiler dahil), hava durumu, ses, pil, Wi-Fi ve Bluetooth tek çubukta.
 
+![Dockora dock](docs/screenshots/dock.png)
+
+<p align="center">
+  <img src="docs/screenshots/weather.png" alt="Hava durumu" width="32%">
+  <img src="docs/screenshots/ai-usage.png" alt="Yapay zekâ kullanımı" width="32%">
+  <img src="docs/screenshots/battery.png" alt="Pil ve güç" width="32%">
+</p>
+<p align="center">
+  <img src="docs/screenshots/calendar.png" alt="Takvim" width="58%">
+  <img src="docs/screenshots/volume.png" alt="Ses" width="38%">
+</p>
+
 ## Kurulum
 
 1. [Releases](https://github.com/Bthncko/dockora/releases/latest) sayfasından

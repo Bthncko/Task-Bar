@@ -8,6 +8,18 @@ the Spotify queue), weather, volume, battery, Wi-Fi and Bluetooth — all in one
 
 Built with Tauri 2 (Rust) + React + TypeScript. Free and open source (MIT).
 
+![Dockora dock](docs/screenshots/dock.png)
+
+<p align="center">
+  <img src="docs/screenshots/weather.png" alt="Weather" width="32%">
+  <img src="docs/screenshots/ai-usage.png" alt="AI usage" width="32%">
+  <img src="docs/screenshots/battery.png" alt="Battery and power" width="32%">
+</p>
+<p align="center">
+  <img src="docs/screenshots/calendar.png" alt="Calendar" width="58%">
+  <img src="docs/screenshots/volume.png" alt="Volume" width="38%">
+</p>
+
 ## Features
 
 - **Open apps** – pinned and running apps in a floating glass dock
