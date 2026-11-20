@@ -1,5 +1,7 @@
 # Akıllı Dock
 
+🇹🇷 Türkçe · [🇬🇧 English](README.en.md)
+
 Windows 11 görev çubuğunun yerine geçen, cam görünümlü bir dock. Açık uygulamalar,
 saat ve takvim, müzik (Spotify sıradakiler dahil), hava durumu, ses, pil, Wi-Fi ve
 Bluetooth tek çubukta.
