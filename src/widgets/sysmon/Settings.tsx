@@ -1,6 +1,7 @@
 import type { SysmonView } from "../../lib/ipc";
 import { Card, Row, Segmented } from "../../windows/settings/controls";
 import type { SysmonConfig } from "./index";
+import { t } from "../../lib/i18n";
 
 /** Ayarlar → Widget'lar: çubukta ne görünsün. */
 export function SysmonSettings({
@@ -12,14 +13,14 @@ export function SysmonSettings({
 }) {
   return (
     <Card>
-      <Row label="Çubukta" hint="Tıklayınca ayrıntılı panel açılır.">
+      <Row label={t("Çubukta")} hint={t("Tıklayınca ayrıntılı panel açılır.")}>
         <Segmented<SysmonView>
-          label="Çubuk görünümü"
+          label={t("Çubuk görünümü")}
           value={config.view ?? "compact"}
           options={[
-            { value: "compact", label: "Yüzde" },
-            { value: "bars", label: "Çubuk" },
-            { value: "net", label: "Ağ" },
+            { value: "compact", label: t("Yüzde") },
+            { value: "bars", label: t("Çubuk") },
+            { value: "net", label: t("Ağ") },
           ]}
           onChange={(view) => onChange({ ...config, view })}
         />

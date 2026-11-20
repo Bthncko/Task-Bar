@@ -4,6 +4,7 @@ import { useService } from "../../lib/useService";
 import { PanelHeader } from "../ui/panel";
 import { format, idle, remainingMs, useNow } from "./clock";
 import styles from "./Popup.module.css";
+import { t } from "../../lib/i18n";
 
 /** Hazır süreler (dakika). */
 const PRESETS = [5, 15, 25, 50];
@@ -13,35 +14,37 @@ const control = (action: "start" | "pause" | "resume" | "reset", seconds?: numbe
 
 /** Zamanlayıcı paneli: hazır süreler / özel süre, başlat, duraklat, sıfırla. */
 export function TimerPopup() {
-  const t = useService(commands.timerGet, events.timer);
-  const running = t?.endsAt != null;
+  const timer = useService(commands.timerGet, events.timer);
+  const running = timer?.endsAt != null;
   const now = useNow(running);
   const [custom, setCustom] = useState("");
-  if (!t) return null;
+  if (!timer) return null;
 
-  const resting = idle(t);
-  const left = remainingMs(t, now);
+  const resting = idle(timer);
+  const left = remainingMs(timer, now);
   const minutes = Number(custom);
   const customValid = Number.isFinite(minutes) && minutes > 0 && minutes <= 24 * 60;
 
   return (
     <div className={styles.root}>
-      <PanelHeader title="Zamanlayıcı" />
+      <PanelHeader title={t("Zamanlayıcı")} />
 
       <div className={styles.display} data-paused={(!running && !resting) || undefined}>
-        {t.finished ? "Süre doldu" : format(resting ? t.total * 1000 || 25 * 60_000 : left)}
+        {timer.finished
+          ? t("Süre doldu")
+          : format(resting ? timer.total * 1000 || 25 * 60_000 : left)}
       </div>
 
-      <div className={styles.presets} role="group" aria-label="Hazır süreler">
+      <div className={styles.presets} role="group" aria-label={t("Hazır süreler")}>
         {PRESETS.map((m) => (
           <button
             key={m}
             type="button"
             className={styles.preset}
-            aria-pressed={t.total === m * 60 && !resting}
+            aria-pressed={timer.total === m * 60 && !resting}
             onClick={() => control("start", m * 60)}
           >
-            {m} dk
+            {m} {t("dk")}
           </button>
         ))}
       </div>
@@ -58,32 +61,32 @@ export function TimerPopup() {
           min={1}
           max={1440}
           inputMode="numeric"
-          placeholder="Özel süre (dk)"
-          aria-label="Özel süre, dakika"
+          placeholder={t("Özel süre (dk)")}
+          aria-label={t("Özel süre, dakika")}
           value={custom}
           onChange={(e) => setCustom(e.currentTarget.value)}
         />
         <button type="submit" className={styles.secondary} disabled={!customValid}>
-          Başlat
+          {t("Başlat")}
         </button>
       </form>
 
       <div className={styles.actions}>
         {running ? (
           <button type="button" className={styles.primary} onClick={() => control("pause")}>
-            Duraklat
+            {t("Duraklat")}
           </button>
-        ) : !resting && !t.finished ? (
+        ) : !resting && !timer.finished ? (
           <button type="button" className={styles.primary} onClick={() => control("resume")}>
-            Devam et
+            {t("Devam et")}
           </button>
         ) : (
           <button
             type="button"
             className={styles.primary}
-            onClick={() => control("start", t.total || 25 * 60)}
+            onClick={() => control("start", timer.total || 25 * 60)}
           >
-            {t.total ? "Yeniden başlat" : "25 dk başlat"}
+            {timer.total ? t("Yeniden başlat") : t("25 dk başlat")}
           </button>
         )}
         <button
@@ -92,7 +95,7 @@ export function TimerPopup() {
           disabled={resting}
           onClick={() => control("reset")}
         >
-          Sıfırla
+          {t("Sıfırla")}
         </button>
       </div>
     </div>

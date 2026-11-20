@@ -99,8 +99,8 @@ pub fn load(exe: Option<&str>, aumid: Option<&str>) -> Vec<Category> {
                 match section {
                     Section::Known(kind) => {
                         let (title, list) = match kind {
-                            1 => ("Sık kullanılanlar", ADLT_FREQUENT),
-                            _ => ("Son kullanılanlar", ADLT_RECENT),
+                            1 => (crate::i18n::t("Sık kullanılanlar"), ADLT_FREQUENT),
+                            _ => (crate::i18n::t("Son kullanılanlar"), ADLT_RECENT),
                         };
                         push(&mut out, title.into(), automatic(&app_id, list));
                     }
@@ -113,13 +113,13 @@ pub fn load(exe: Option<&str>, aumid: Option<&str>) -> Vec<Category> {
         None if has_automatic => {
             push(
                 &mut out,
-                "Son kullanılanlar".into(),
+                crate::i18n::t("Son kullanılanlar").into(),
                 automatic(&app_id, ADLT_RECENT),
             );
         }
         None => {}
     }
-    push(&mut out, "Görevler".into(), tasks);
+    push(&mut out, crate::i18n::t("Görevler").into(), tasks);
     out
 }
 

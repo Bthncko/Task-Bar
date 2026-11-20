@@ -1,12 +1,23 @@
 import type { FC } from "react";
+import { t } from "../lib/i18n";
 
 /** Katalogdaki gruplar (8.1); sıra = ayarlardaki sıra. */
 export const CATEGORIES = {
-  core: "Temel",
-  system: "Sistem",
-  media: "Müzik ve medya",
-  info: "Bilgi",
-  tools: "Araçlar",
+  get core() {
+    return t("Temel");
+  },
+  get system() {
+    return t("Sistem");
+  },
+  get media() {
+    return t("Müzik ve medya");
+  },
+  get info() {
+    return t("Bilgi");
+  },
+  get tools() {
+    return t("Araçlar");
+  },
 } as const;
 export type WidgetCategory = keyof typeof CATEGORIES;
 

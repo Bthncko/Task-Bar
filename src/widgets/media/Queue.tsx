@@ -6,6 +6,7 @@ import { ListSkeleton, RowAction, TrackRow } from "./rows";
 import { SETTLE_MS } from "./spotify";
 import { useQueueDrag } from "./useQueueDrag";
 import styles from "./Popup.module.css";
+import { errText, t } from "../../lib/i18n";
 
 /** Panel açıkken sıra bu aralıkla tazelenir (Spotify'da elle eklenenler için). */
 const REFRESH_MS = 15_000;
@@ -51,7 +52,7 @@ export function Queue({ trackKey, version }: { trackKey: string; version: number
             alive &&
             setState((s) => ({
               kind: "error",
-              message: String(e),
+              message: errText(e),
               queue: s.kind === "loading" ? null : s.queue,
             })),
         );
@@ -78,7 +79,7 @@ export function Queue({ trackKey, version }: { trackKey: string; version: number
   const fail = (e: unknown) =>
     setState((s) => ({
       kind: "error",
-      message: String(e),
+      message: errText(e),
       queue: s.kind === "loading" ? null : s.queue,
     }));
 
@@ -154,15 +155,15 @@ export function Queue({ trackKey, version }: { trackKey: string; version: number
       {state.kind === "error" && (
         <div className={styles.error} role="alert">
           <span>{state.message}</span>
-          <LinkButton onClick={() => setAttempt((n) => n + 1)}>Yeniden dene</LinkButton>
+          <LinkButton onClick={() => setAttempt((n) => n + 1)}>{t("Yeniden dene")}</LinkButton>
         </div>
       )}
       {queue && items.length === 0 && (
         <p className={styles.note}>
           {queue.current
-            ? "Sırada şarkı yok."
+            ? t("Sırada şarkı yok.")
             : // Uzun duraklamada Spotify etkin cihazı bırakır, sıra boş döner.
-              "Spotify şu an etkin değil; çalmaya başlayınca sıra burada görünür."}
+              t("Spotify şu an etkin değil; çalmaya başlayınca sıra burada görünür.")}
         </p>
       )}
       {items.length > 0 && (
@@ -203,11 +204,11 @@ export function Queue({ trackKey, version }: { trackKey: string; version: number
                     applying ? undefined : (
                       <>
                         {i > 0 && (
-                          <RowAction label="Sıradaki yap" onClick={() => move(i, 0)}>
+                          <RowAction label={t("Sıradaki yap")} onClick={() => move(i, 0)}>
                             <PlayNextIcon size={16} />
                           </RowAction>
                         )}
-                        <RowAction label="Sıradan kaldır" onClick={() => remove(item)}>
+                        <RowAction label={t("Sıradan kaldır")} onClick={() => remove(item)}>
                           <CloseIcon size={15} />
                         </RowAction>
                       </>
@@ -221,16 +222,20 @@ export function Queue({ trackKey, version }: { trackKey: string; version: number
       )}
       {applying ? (
         <div className={styles.footnote} role="status">
-          <span className={styles.applying}>Yeni sıra Spotify'a uygulanıyor…</span>
+          <span className={styles.applying}>{t("Yeni sıra Spotify'a uygulanıyor…")}</span>
         </div>
       ) : (
         queue &&
         queue.hidden > 0 && (
           <div className={styles.footnote}>
-            <span title="Spotify sıradan çıkarmaya izin vermiyor: kaldırılan şarkı çalmaya başlarsa hemen geçilir.">
-              {queue.hidden} şarkı sıradan kaldırıldı
+            <span
+              title={t(
+                "Spotify sıradan çıkarmaya izin vermiyor: kaldırılan şarkı çalmaya başlarsa hemen geçilir.",
+              )}
+            >
+              {t("{n} şarkı sıradan kaldırıldı", { n: queue.hidden })}
             </span>
-            <LinkButton onClick={restore}>Geri getir</LinkButton>
+            <LinkButton onClick={restore}>{t("Geri getir")}</LinkButton>
           </div>
         )
       )}

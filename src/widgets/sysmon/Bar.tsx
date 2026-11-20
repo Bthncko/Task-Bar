@@ -5,6 +5,7 @@ import { Meter, Tile } from "../ui";
 import { HIGH, percent, rate } from "./format";
 import type { SysmonConfig } from "./index";
 import styles from "./Bar.module.css";
+import { pct, t } from "../../lib/i18n";
 
 /** Çubuk karosu (8.4): üç görünümden biri; tıklayınca ayrıntılı panel. */
 export function SysmonBar({ config }: { config: SysmonConfig }) {
@@ -31,9 +32,9 @@ export function SysmonBar({ config }: { config: SysmonConfig }) {
   } else {
     body = (
       <span className={styles.compact}>
-        <span data-high={sys.cpu >= HIGH || undefined}>CPU %{sys.cpu}</span>
+        <span data-high={sys.cpu >= HIGH || undefined}>CPU {pct(sys.cpu)}</span>
         <span className={styles.dot}>·</span>
-        <span data-high={ram >= HIGH || undefined}>RAM %{ram}</span>
+        <span data-high={ram >= HIGH || undefined}>RAM {pct(ram)}</span>
       </span>
     );
   }
@@ -44,8 +45,13 @@ export function SysmonBar({ config }: { config: SysmonConfig }) {
       variant="soft"
       interactive
       className={styles.tile}
-      title={`İşlemci %${sys.cpu} · Bellek %${ram}\nİndirme ${rate(sys.netDown)} · Yükleme ${rate(sys.netUp)}`}
-      aria-label={`Sistem: işlemci yüzde ${sys.cpu}, bellek yüzde ${ram}`}
+      title={t("İşlemci %{cpu} · Bellek %{ram}\nİndirme {down} · Yükleme {up}", {
+        cpu: sys.cpu,
+        ram,
+        down: rate(sys.netDown),
+        up: rate(sys.netUp),
+      })}
+      aria-label={t("Sistem: işlemci yüzde {cpu}, bellek yüzde {ram}", { cpu: sys.cpu, ram })}
       onClick={(e) => togglePopup("sysmon", e.currentTarget)}
     >
       {body}

@@ -5,19 +5,23 @@ import { togglePopup } from "../../lib/popup";
 import { Tile } from "../ui";
 import type { ClockConfig } from "./index";
 import styles from "./Bar.module.css";
+import { dtf, t } from "../../lib/i18n";
 
-const timeFmt = new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" });
-const dateFmt = new Intl.DateTimeFormat("tr-TR", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-});
-const fullFmt = new Intl.DateTimeFormat("tr-TR", { dateStyle: "full", timeStyle: "short" });
+const timeFmt = () => dtf({ hour: "2-digit", minute: "2-digit" });
+const dateFmt = () =>
+  dtf({
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+const fullFmt = () => dtf({ dateStyle: "full", timeStyle: "short" });
 
 /** "Sal 20 Eki": Intl sırası yerele göre değişir, parçalardan kurulur. */
 function shortDate(d: Date) {
   const part = (type: Intl.DateTimeFormatPartTypes) =>
-    dateFmt.formatToParts(d).find((p) => p.type === type)?.value ?? "";
+    dateFmt()
+      .formatToParts(d)
+      .find((p) => p.type === type)?.value ?? "";
   return `${part("weekday")} ${part("day")} ${part("month")}`;
 }
 
@@ -41,7 +45,7 @@ export function ClockBar({ config }: { config: ClockConfig }) {
     return () => window.clearTimeout(id);
   }, [now, seconds, visible]);
 
-  const full = fullFmt.format(now);
+  const full = fullFmt().format(now);
 
   return (
     <Tile
@@ -49,8 +53,8 @@ export function ClockBar({ config }: { config: ClockConfig }) {
       variant="plain"
       interactive
       className={styles.clock}
-      title={`${full}\nSağ tık: bildirim merkezi`}
-      aria-label={`${full} — takvimi aç`}
+      title={t("{full}\nSağ tık: bildirim merkezi", { full })}
+      aria-label={t("{full} — takvimi aç", { full })}
       onClick={(e) => togglePopup("clock", e.currentTarget)}
       // Windows alışkanlığı (8.2): saate sağ tık bildirimleri açar.
       onContextMenu={(e) => {
@@ -59,7 +63,7 @@ export function ClockBar({ config }: { config: ClockConfig }) {
       }}
     >
       <span className={styles.top}>
-        <span className={styles.time}>{timeFmt.format(now)}</span>
+        <span className={styles.time}>{timeFmt().format(now)}</span>
         {seconds && (
           <span className={styles.seconds}>{String(now.getSeconds()).padStart(2, "0")}</span>
         )}

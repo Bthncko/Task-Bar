@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { commands, type SpotifyPlayer } from "../../lib/ipc";
+import { errText } from "../../lib/i18n";
 
 /** Panel açıkken çalma durumu bu aralıkla tazelenir. */
 const PLAYER_REFRESH_MS = 10_000;
@@ -26,7 +27,7 @@ export function useSpotifyPlayer(trackKey: string, playing: boolean) {
           setPlayer(p);
           setError(null);
         })
-        .catch((e) => alive && setError(String(e)));
+        .catch((e) => alive && setError(errText(e)));
     const first = window.setTimeout(load, delay.current);
     delay.current = SETTLE_MS;
     const timer = window.setInterval(load, PLAYER_REFRESH_MS);

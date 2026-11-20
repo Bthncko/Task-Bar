@@ -9,18 +9,18 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { tr } from "date-fns/locale";
 import { useConfig } from "../../lib/store";
 import { ChevronIcon, ChevronLeftIcon } from "../icons";
 import { IconButton } from "../ui";
 import { LinkButton, PanelHeader } from "../ui/panel";
 import { eventsBetween, useIcsSources, type CalEvent } from "./ics";
 import styles from "./Popup.module.css";
+import { dateFnsLocale, t } from "../../lib/i18n";
 
 // Takvim paneli (7.6): solda ay ızgarası, sağda seçilen günün etkinlikleri.
 // Hafta Pazartesi başlar. Saat widget'ına tıklayınca açılır. ICS salt okunur.
 
-const WEEK = { weekStartsOn: 1 as const, locale: tr };
+const week = () => ({ weekStartsOn: 1 as const, locale: dateFnsLocale() });
 const CELLS = 42; // her ay 6 satır: panel yüksekliği sabit kalsın
 const NO_URLS: string[] = [];
 const WHEEL_GAP_MS = 250;
@@ -49,11 +49,11 @@ function groupByDay(events: CalEvent[], from: Date, to: Date) {
 
 /** Saat sütunu: [başlangıç, bitiş] — gün dışına taşan uç ok ile. */
 function timeColumn(ev: CalEvent, day: Date): [string, string | null] {
-  if (ev.allDay) return ["Tüm gün", null];
+  if (ev.allDay) return [t("Tüm gün"), null];
   const nextDay = addDays(startOfDay(day), 1);
   const startsToday = isSameDay(ev.start, day);
   const endsToday = ev.end <= nextDay;
-  if (!startsToday && !endsToday) return ["Tüm gün", null];
+  if (!startsToday && !endsToday) return [t("Tüm gün"), null];
   const start = startsToday ? format(ev.start, "HH:mm") : "←";
   if (ev.end <= ev.start) return [start, null];
   const end = endsToday
@@ -76,7 +76,7 @@ export function CalendarPopup() {
   /** Son ay değişiminin yönü: ızgara o yönden kayarak gelir. */
   const [dir, setDir] = useState(0);
 
-  const gridStart = useMemo(() => startOfWeek(month, WEEK), [month]);
+  const gridStart = useMemo(() => startOfWeek(month, week()), [month]);
   const gridEnd = useMemo(() => addDays(gridStart, CELLS), [gridStart]);
   const days = useMemo(
     () => Array.from({ length: CELLS }, (_, i) => addDays(gridStart, i)),
@@ -115,21 +115,27 @@ export function CalendarPopup() {
   };
 
   const isToday = isSameDay(selected, today);
-  const selectedLabel = isToday ? "Bugün" : format(selected, "d MMMM EEEE", { locale: tr });
+  const selectedLabel = isToday
+    ? t("Bugün")
+    : format(selected, "d MMMM EEEE", { locale: dateFnsLocale() });
 
   return (
     <div className={styles.root}>
       <PanelHeader
-        title={<span className={styles.month}>{format(month, "LLLL yyyy", { locale: tr })}</span>}
+        title={
+          <span className={styles.month}>
+            {format(month, "LLLL yyyy", { locale: dateFnsLocale() })}
+          </span>
+        }
         actions={
           <>
             {(!isSameMonth(month, today) || !isToday) && (
-              <LinkButton onClick={goToday}>Bugün</LinkButton>
+              <LinkButton onClick={goToday}>{t("Bugün")}</LinkButton>
             )}
-            <IconButton aria-label="Önceki ay" onClick={() => goMonth(-1)}>
+            <IconButton aria-label={t("Önceki ay")} onClick={() => goMonth(-1)}>
               <ChevronLeftIcon size={16} />
             </IconButton>
-            <IconButton aria-label="Sonraki ay" onClick={() => goMonth(1)}>
+            <IconButton aria-label={t("Sonraki ay")} onClick={() => goMonth(1)}>
               <ChevronIcon size={16} />
             </IconButton>
           </>
@@ -141,7 +147,7 @@ export function CalendarPopup() {
           <div className={styles.weekHeads}>
             {days.slice(0, 7).map((d) => (
               <span key={`h${d.getDay()}`} className={styles.weekHead}>
-                {format(d, "EEEEEE", { locale: tr })}
+                {format(d, "EEEEEE", { locale: dateFnsLocale() })}
               </span>
             ))}
           </div>
@@ -158,7 +164,7 @@ export function CalendarPopup() {
                     data-outside={!isSameMonth(d, month) || undefined}
                     data-today={isSameDay(d, today) || undefined}
                     data-selected={isSameDay(d, selected) || undefined}
-                    aria-label={`${format(d, "d MMMM yyyy", { locale: tr })}${events.length ? `, ${events.length} etkinlik` : ""}`}
+                    aria-label={`${format(d, "d MMMM yyyy", { locale: dateFnsLocale() })}${events.length ? t(", {n} etkinlik", { n: events.length }) : ""}`}
                     onClick={() => pick(d)}
                   >
                     <span className={styles.num}>{format(d, "d")}</span>
@@ -181,13 +187,16 @@ export function CalendarPopup() {
           <h3 className={styles.agendaHead}>
             <span className={styles.agendaTitle}>{selectedLabel}</span>
             {dayEvents.length > 0 && (
-              <span className={styles.count}>{dayEvents.length} etkinlik</span>
+              <span className={styles.count}>
+                {dayEvents.length} {t("etkinlik")}
+              </span>
             )}
           </h3>
           {urls.length === 0 ? (
             <p className={styles.note}>
-              Takvim bağlı değil. Google Takvim'in “iCal biçiminde gizli adres”ini ayarlara
-              ekleyince etkinlikler burada görünür.
+              {t(
+                "Takvim bağlı değil. Google Takvim'in “iCal biçiminde gizli adres”ini ayarlara ekleyince etkinlikler burada görünür.",
+              )}
             </p>
           ) : dayEvents.length > 0 ? (
             <ul className={styles.list}>
@@ -215,12 +224,18 @@ export function CalendarPopup() {
             </ul>
           ) : (
             <p className={styles.note}>
-              {loading ? "Yükleniyor…" : isToday ? "Bugün etkinlik yok" : "Bu gün etkinlik yok"}
+              {loading
+                ? t("Yükleniyor…")
+                : isToday
+                  ? t("Bugün etkinlik yok")
+                  : t("Bu gün etkinlik yok")}
             </p>
           )}
           {failed > 0 && (
             <p className={styles.error}>
-              {failed === urls.length ? "Takvim yüklenemedi" : `${failed} takvim yüklenemedi`}
+              {failed === urls.length
+                ? t("Takvim yüklenemedi")
+                : t("{n} takvim yüklenemedi", { n: failed })}
             </p>
           )}
         </section>

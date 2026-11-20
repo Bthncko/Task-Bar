@@ -3,6 +3,8 @@ import { commands, type QueueItem } from "../../lib/ipc";
 import { CheckIcon, CloseIcon, PlusIcon, SearchIcon } from "../icons";
 import { ListSkeleton, RowAction, TrackRow } from "./rows";
 import styles from "./Popup.module.css";
+import { trans } from "../../lib/trans";
+import { errText, t } from "../../lib/i18n";
 
 /** Yazmayı bitirince ara. */
 const DEBOUNCE_MS = 350;
@@ -39,7 +41,7 @@ export function Search({ onQueued }: { onQueued: () => void }) {
       commands
         .spotifySearch(q)
         .then((items) => alive && setResult({ kind: "ready", items }))
-        .catch((e) => alive && setResult({ kind: "error", message: String(e) }));
+        .catch((e) => alive && setResult({ kind: "error", message: errText(e) }));
     }, DEBOUNCE_MS);
     return () => {
       alive = false;
@@ -64,12 +66,12 @@ export function Search({ onQueued }: { onQueued: () => void }) {
         );
         onQueued();
       })
-      .catch((e) => setMessage(String(e)));
+      .catch((e) => setMessage(errText(e)));
   };
 
   const play = (item: QueueItem) => {
     setMessage(null);
-    commands.spotifyPlayUri(item.uri).catch((e) => setMessage(String(e)));
+    commands.spotifyPlayUri(item.uri).catch((e) => setMessage(errText(e)));
   };
 
   return (
@@ -80,8 +82,8 @@ export function Search({ onQueued }: { onQueued: () => void }) {
           ref={input}
           type="search"
           value={query}
-          placeholder="Şarkı ya da sanatçı ara"
-          aria-label="Spotify'da ara"
+          placeholder={t("Şarkı ya da sanatçı ara")}
+          aria-label={t("Spotify'da ara")}
           spellCheck={false}
           onChange={(e) => setQuery(e.currentTarget.value)}
           onKeyDown={(e) => {
@@ -96,7 +98,7 @@ export function Search({ onQueued }: { onQueued: () => void }) {
           <button
             type="button"
             className={styles.searchClear}
-            aria-label="Temizle"
+            aria-label={t("Temizle")}
             onClick={() => {
               setQuery("");
               input.current?.focus();
@@ -113,7 +115,12 @@ export function Search({ onQueued }: { onQueued: () => void }) {
       )}
       {result.kind === "idle" && (
         <p className={styles.hint}>
-          Sonuca tıklayınca hemen çalar; <b>+</b> ile çalan listeyi bozmadan sıraya eklenir.
+          {trans(
+            t("Sonuca tıklayınca hemen çalar; {plus} ile çalan listeyi bozmadan sıraya eklenir."),
+            {
+              plus: <b>+</b>,
+            },
+          )}
         </p>
       )}
       {result.kind === "loading" && <ListSkeleton rows={4} />}
@@ -123,7 +130,7 @@ export function Search({ onQueued }: { onQueued: () => void }) {
         </div>
       )}
       {result.kind === "ready" && result.items.length === 0 && (
-        <p className={styles.note}>Sonuç yok.</p>
+        <p className={styles.note}>{t("Sonuç yok.")}</p>
       )}
       {result.kind === "ready" && result.items.length > 0 && (
         <ol className={styles.list}>
@@ -135,11 +142,11 @@ export function Search({ onQueued }: { onQueued: () => void }) {
                 subtitle={item.artist}
                 durationMs={item.durationMs}
                 state={added.has(item.uri) ? "done" : undefined}
-                playLabel="hemen çal"
+                playLabel={t("hemen çal")}
                 onPlay={() => play(item)}
                 actions={
                   <RowAction
-                    label={added.has(item.uri) ? "Sıraya eklendi" : "Sıraya ekle"}
+                    label={added.has(item.uri) ? t("Sıraya eklendi") : t("Sıraya ekle")}
                     disabled={added.has(item.uri)}
                     onClick={() => enqueue(item)}
                   >

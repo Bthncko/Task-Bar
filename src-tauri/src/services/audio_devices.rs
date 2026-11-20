@@ -94,7 +94,8 @@ pub fn list(enumerator: &IMMDeviceEnumerator, flow: EDataFlow) -> Vec<Device> {
                 let device = collection.Item(i).ok()?;
                 let id = device_id(&device)?;
                 Some(Device {
-                    name: friendly_name(&device).unwrap_or_else(|| "Ses aygıtı".into()),
+                    name: friendly_name(&device)
+                        .unwrap_or_else(|| crate::i18n::t("Ses aygıtı").into()),
                     default: default.as_deref() == Some(id.as_str()),
                     id,
                 })

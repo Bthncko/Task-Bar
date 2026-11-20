@@ -13,6 +13,7 @@ import { applyTheme, uiScale } from "../lib/theme";
 import { useService } from "../lib/useService";
 import { CloseIcon } from "../widgets/icons";
 import styles from "./PreviewWindow.module.css";
+import { t } from "../lib/i18n";
 
 startConfigSync();
 
@@ -242,8 +243,8 @@ export function PreviewWindow() {
                 <button
                   type="button"
                   className={styles.close}
-                  aria-label="Pencereyi kapat"
-                  title="Kapat"
+                  aria-label={t("Pencereyi kapat")}
+                  title={t("Kapat")}
                   onClick={(e) => {
                     e.stopPropagation();
                     closeWindow(card.hwnd);

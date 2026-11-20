@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { MusicIcon, PlayIcon } from "../icons";
 import { duration } from "./spotify";
 import styles from "./Popup.module.css";
+import { t } from "../../lib/i18n";
 
 export function Cover({
   src,
@@ -31,7 +32,7 @@ export function TrackRow({
   subtitle,
   durationMs,
   state,
-  playLabel = "çal",
+  playLabel = t("çal"),
   onPlay,
   actions,
 }: {

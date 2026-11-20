@@ -4,6 +4,7 @@ import { commands, events, report } from "../../lib/ipc";
 import { useService } from "../../lib/useService";
 import { Tile } from "../ui";
 import styles from "./Bar.module.css";
+import { t } from "../../lib/i18n";
 
 function size(bytes: number) {
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -74,7 +75,8 @@ function useRecycleDrop(tile: React.RefObject<HTMLElement | null>) {
 export function RecycleBar() {
   const bin = useService(commands.getRecycle, events.recycle);
   const items = bin?.items ?? 0;
-  const label = items === 0 ? "Boş" : `${items} öğe · ${size(bin?.bytes ?? 0)}`;
+  const label =
+    items === 0 ? t("Boş") : t("{items} öğe · {size}", { items, size: size(bin?.bytes ?? 0) });
   const tile = useRef<HTMLElement>(null);
   const { over, swallowing } = useRecycleDrop(tile);
 
@@ -87,8 +89,11 @@ export function RecycleBar() {
       data-file-drop="recycle"
       data-over={over || undefined}
       className={styles.tile}
-      aria-label={`Geri dönüşüm kutusu: ${label}`}
-      title={`Geri dönüşüm kutusu — ${label}\nDosya sürükle: çöpe at${items > 0 ? "\nSağ tık: boşalt" : ""}`}
+      aria-label={t("Geri dönüşüm kutusu: {label}", { label })}
+      title={t("Geri dönüşüm kutusu — {label}\nDosya sürükle: çöpe at{empty}", {
+        label,
+        empty: items > 0 ? t("\nSağ tık: boşalt") : "",
+      })}
       onClick={() => commands.openRecycleBin().catch(report("open_recycle_bin"))}
       onContextMenu={(e) => {
         e.preventDefault();

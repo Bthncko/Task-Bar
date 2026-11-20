@@ -4,30 +4,76 @@ import { Card, Row } from "../../windows/settings/controls";
 import settings from "../../windows/settings/Settings.module.css";
 import type { WorldClockConfig } from "./index";
 import styles from "./Settings.module.css";
+import { t } from "../../lib/i18n";
 
 /** Seçilebilir şehirler (IANA saat dilimleri). */
 const CITIES: WorldCity[] = [
-  { label: "İstanbul", tz: "Europe/Istanbul" },
-  { label: "Londra", tz: "Europe/London" },
+  {
+    get label() {
+      return t("İstanbul");
+    },
+    tz: "Europe/Istanbul",
+  },
+  {
+    get label() {
+      return t("Londra");
+    },
+    tz: "Europe/London",
+  },
   { label: "Paris", tz: "Europe/Paris" },
   { label: "Berlin", tz: "Europe/Berlin" },
   { label: "Amsterdam", tz: "Europe/Amsterdam" },
-  { label: "Moskova", tz: "Europe/Moscow" },
+  {
+    get label() {
+      return t("Moskova");
+    },
+    tz: "Europe/Moscow",
+  },
   { label: "Dubai", tz: "Asia/Dubai" },
-  { label: "Bakü", tz: "Asia/Baku" },
+  {
+    get label() {
+      return t("Bakü");
+    },
+    tz: "Asia/Baku",
+  },
   { label: "Delhi", tz: "Asia/Kolkata" },
-  { label: "Singapur", tz: "Asia/Singapore" },
-  { label: "Şangay", tz: "Asia/Shanghai" },
-  { label: "Seul", tz: "Asia/Seoul" },
+  {
+    get label() {
+      return t("Singapur");
+    },
+    tz: "Asia/Singapore",
+  },
+  {
+    get label() {
+      return t("Şangay");
+    },
+    tz: "Asia/Shanghai",
+  },
+  {
+    get label() {
+      return t("Seul");
+    },
+    tz: "Asia/Seoul",
+  },
   { label: "Tokyo", tz: "Asia/Tokyo" },
-  { label: "Sidney", tz: "Australia/Sydney" },
+  {
+    get label() {
+      return t("Sidney");
+    },
+    tz: "Australia/Sydney",
+  },
   { label: "Auckland", tz: "Pacific/Auckland" },
   { label: "New York", tz: "America/New_York" },
   { label: "Toronto", tz: "America/Toronto" },
   { label: "Chicago", tz: "America/Chicago" },
   { label: "Denver", tz: "America/Denver" },
   { label: "Los Angeles", tz: "America/Los_Angeles" },
-  { label: "Meksiko", tz: "America/Mexico_City" },
+  {
+    get label() {
+      return t("Meksiko");
+    },
+    tz: "America/Mexico_City",
+  },
   { label: "São Paulo", tz: "America/Sao_Paulo" },
   { label: "UTC", tz: "UTC" },
 ];
@@ -46,14 +92,14 @@ export function WorldClockSettings({
 
   return (
     <Card>
-      <Row label="Şehirler" hint="Çubukta soldan sağa bu sırayla görünür.">
+      <Row label={t("Şehirler")} hint={t("Çubukta soldan sağa bu sırayla görünür.")}>
         <div className={styles.list}>
           {cities.map((c) => (
             <span key={c.tz} className={styles.chip}>
               {c.label}
               <button
                 type="button"
-                aria-label={`${c.label} kaldır`}
+                aria-label={t("{label} kaldır", { label: c.label })}
                 onClick={() => onChange({ cities: cities.filter((x) => x.tz !== c.tz) })}
               >
                 ×
@@ -62,15 +108,15 @@ export function WorldClockSettings({
           ))}
         </div>
       </Row>
-      <Row label="Şehir ekle">
+      <Row label={t("Şehir ekle")}>
         <div className={styles.add}>
           <select
             className={settings.input}
             value={pick}
-            aria-label="Eklenecek şehir"
+            aria-label={t("Eklenecek şehir")}
             onChange={(e) => setPick(e.currentTarget.value)}
           >
-            <option value="">Seç…</option>
+            <option value="">{t("Seç…")}</option>
             {available.map((c) => (
               <option key={c.tz} value={c.tz}>
                 {c.label}
@@ -87,7 +133,7 @@ export function WorldClockSettings({
               setPick("");
             }}
           >
-            Ekle
+            {t("Ekle")}
           </button>
         </div>
       </Row>

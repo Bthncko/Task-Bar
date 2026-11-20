@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import ICAL from "ical.js";
 import { commands } from "../../lib/ipc";
+import { t } from "../../lib/i18n";
 
 // ICS aboneliği (bölüm 6.4). İndirme Rust'ta (Google'ın yanıtında CORS yok),
 // ayrıştırma burada `ical.js` ile.
@@ -87,7 +88,7 @@ function load(url: string): Promise<void> {
       cache.set(url, { at: Date.now(), source: parse(text), error: false });
     })
     .catch((e) => {
-      console.error("takvim yüklenemedi:", String(e));
+      console.error(t("takvim yüklenemedi:"), String(e));
       // Eski veriyi koru; kısa süre sonra yeniden dene.
       cache.set(url, {
         at: Date.now() - REFRESH_MS + RETRY_MS,
@@ -159,7 +160,7 @@ function expand(ev: IcalEvent, from: Date, to: Date, source: number, out: CalEve
     }
   } catch (e) {
     // Bozuk tek etkinlik tüm takvimi düşürmesin.
-    console.warn("etkinlik atlandı", e);
+    console.warn(t("etkinlik atlandı"), e);
   }
 }
 
@@ -178,7 +179,7 @@ function add(
   if (start >= to || (end <= from && start < from)) return;
   out.push({
     key: `${source}:${item.uid}:${start.getTime()}`,
-    title: item.summary || "(Başlıksız)",
+    title: item.summary || t("(Başlıksız)"),
     start,
     end,
     allDay: startTime.isDate,

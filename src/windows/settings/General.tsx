@@ -14,6 +14,7 @@ import { Card, Row, Section, Segmented, Toggle } from "./controls";
 import { NotificationSound } from "./NotificationSound";
 import { NotifyPlacement } from "./NotifyPlacement";
 import styles from "./Settings.module.css";
+import { t } from "../../lib/i18n";
 
 export function General({ config }: { config: Config }) {
   const [autostart, setAutostart] = useState<AutostartState | null>(null);
@@ -26,73 +27,94 @@ export function General({ config }: { config: Config }) {
   }, []);
 
   return (
-    <Section title="Genel">
+    <Section title={t("Genel")}>
       <Card>
         <Row
-          label="Windows görev çubuğunu gizle"
-          hint="Dock, Windows'un çubuğunun yerini alır. Çıkışta çubuk geri gelir."
+          label={t("Dil · Language")}
+          hint={t("Dock'un dili. Otomatik: Windows'un görüntüleme dilini kullanır.")}
+        >
+          <Segmented<Config["language"]>
+            label={t("Dil · Language")}
+            value={config.language}
+            options={[
+              { value: "auto", label: "Auto" },
+              { value: "tr", label: "Türkçe" },
+              { value: "en", label: "English" },
+            ]}
+            onChange={(language) => updateConfig((c) => ({ ...c, language }))}
+          />
+        </Row>
+        <Row
+          label={t("Windows görev çubuğunu gizle")}
+          hint={t("Dock, Windows'un çubuğunun yerini alır. Çıkışta çubuk geri gelir.")}
         >
           <Toggle
-            label="Windows görev çubuğunu gizle"
+            label={t("Windows görev çubuğunu gizle")}
             checked={config.hideWindowsTaskbar}
             onChange={(hide) => updateConfig((c) => ({ ...c, hideWindowsTaskbar: hide }))}
           />
         </Row>
         <Row
-          label="Otomatik gizle"
-          hint="Gizliyken pencereler tüm ekranı kullanır; imleci ekranın alt kenarına götürünce dock kayarak gelir. Akıllı: yalnızca bir pencere dock'un alanına girince gizlenir."
+          label={t("Otomatik gizle")}
+          hint={t(
+            "Gizliyken pencereler tüm ekranı kullanır; imleci ekranın alt kenarına götürünce dock kayarak gelir. Akıllı: yalnızca bir pencere dock'un alanına girince gizlenir.",
+          )}
         >
           <Segmented<AutoHide>
-            label="Otomatik gizle"
+            label={t("Otomatik gizle")}
             value={config.autoHide}
             options={[
-              { value: "never", label: "Kapalı" },
-              { value: "smart", label: "Akıllı" },
-              { value: "always", label: "Her zaman" },
+              { value: "never", label: t("Kapalı") },
+              { value: "smart", label: t("Akıllı") },
+              { value: "always", label: t("Her zaman") },
             ]}
             onChange={(autoHide) => updateConfig((c) => ({ ...c, autoHide }))}
           />
         </Row>
         <Row
-          label="Pencereler dock'a küçülsün"
-          hint="Küçültülen pencere dock'taki ikonuna girer, dock'tan açınca ikondan çıkar (macOS tarzı). Açıkken bu pencerelerde Windows'un kendi küçültme/büyütme animasyonları kapanır."
+          label={t("Pencereler dock'a küçülsün")}
+          hint={t(
+            "Küçültülen pencere dock'taki ikonuna girer, dock'tan açınca ikondan çıkar (macOS tarzı). Açıkken bu pencerelerde Windows'un kendi küçültme/büyütme animasyonları kapanır.",
+          )}
         >
           <Toggle
-            label="Pencereler dock'a küçülsün"
+            label={t("Pencereler dock'a küçülsün")}
             checked={config.minimizeToDock}
             onChange={(on) => updateConfig((c) => ({ ...c, minimizeToDock: on }))}
           />
         </Row>
         <Row
-          label="Bildirimler dock tarzında"
-          hint="Uygulama bildirimleri sade kartlarla çıkar (yeri aşağıdan seçilir); Windows'un kutucukları kapanır, bildirimler bildirim merkezinde kalır. Kapatınca (ya da dock kapanınca) Windows'unkiler geri gelir."
+          label={t("Bildirimler dock tarzında")}
+          hint={t(
+            "Uygulama bildirimleri sade kartlarla çıkar (yeri aşağıdan seçilir); Windows'un kutucukları kapanır, bildirimler bildirim merkezinde kalır. Kapatınca (ya da dock kapanınca) Windows'unkiler geri gelir.",
+          )}
         >
           <div className={styles.actions}>
             <button
               type="button"
               className={styles.button}
-              title="Örnek bir bildirim kartı gösterir (seçili sesle)"
+              title={t("Örnek bir bildirim kartı gösterir (seçili sesle)")}
               onClick={() => commands.notifyTest().catch(report("notify_test"))}
             >
-              Dene
+              {t("Dene")}
             </button>
             <Toggle
-              label="Bildirimler dock tarzında"
+              label={t("Bildirimler dock tarzında")}
               checked={config.ownNotifications}
               onChange={(on) => updateConfig((c) => ({ ...c, ownNotifications: on }))}
             />
           </div>
         </Row>
         <Row
-          label="Açılışta başlat"
+          label={t("Açılışta başlat")}
           hint={
             autostart && !autostart.available
-              ? "Yalnızca kurulu sürümde çalışır (geliştirme sürümü kapalı)."
-              : "Windows açılınca dock kendiliğinden başlar."
+              ? t("Yalnızca kurulu sürümde çalışır (geliştirme sürümü kapalı).")
+              : t("Windows açılınca dock kendiliğinden başlar.")
           }
         >
           <Toggle
-            label="Açılışta başlat"
+            label={t("Açılışta başlat")}
             checked={autostart?.enabled ?? false}
             disabled={!autostart?.available}
             onChange={(enabled) =>
@@ -106,20 +128,22 @@ export function General({ config }: { config: Config }) {
 
       <NotificationSound />
 
-      <h3 className={styles.subTitle}>Güncellemeler</h3>
+      <h3 className={styles.subTitle}>{t("Güncellemeler")}</h3>
       <Card>
         <Row
-          label="Otomatik güncelle"
-          hint="Yeni sürüm çıkınca arka planda indirilir ve kurulur; dock birkaç saniyeliğine kapanıp yeniden açılır."
+          label={t("Otomatik güncelle")}
+          hint={t(
+            "Yeni sürüm çıkınca arka planda indirilir ve kurulur; dock birkaç saniyeliğine kapanıp yeniden açılır.",
+          )}
         >
           <Toggle
-            label="Otomatik güncelle"
+            label={t("Otomatik güncelle")}
             checked={config.autoUpdate}
             onChange={(on) => updateConfig((c) => ({ ...c, autoUpdate: on }))}
           />
         </Row>
         <Row
-          label={update ? `Sürüm ${update.current}` : "Sürüm"}
+          label={update ? t("Sürüm {v}", { v: update.current }) : t("Sürüm")}
           hint={update ? describe(update.status) : undefined}
         >
           <button
@@ -128,13 +152,13 @@ export function General({ config }: { config: Config }) {
             disabled={busy}
             onClick={() => commands.checkUpdate().catch(report("check_update"))}
           >
-            Şimdi denetle
+            {t("Şimdi denetle")}
           </button>
         </Row>
       </Card>
 
       <p className={styles.footnote}>
-        Bu pencereye dock'un boş bir yerine sağ tıklayarak da ulaşabilirsin.
+        {t("Bu pencereye dock'un boş bir yerine sağ tıklayarak da ulaşabilirsin.")}
       </p>
     </Section>
   );
@@ -143,18 +167,18 @@ export function General({ config }: { config: Config }) {
 function describe(status: UpdateStatus) {
   switch (status.state) {
     case "idle":
-      return "Güncellemeler 6 saatte bir denetlenir.";
+      return t("Güncellemeler 6 saatte bir denetlenir.");
     case "checking":
-      return "Denetleniyor…";
+      return t("Denetleniyor…");
     case "upToDate":
-      return "En güncel sürümü kullanıyorsun.";
+      return t("En güncel sürümü kullanıyorsun.");
     case "available":
-      return `Yeni sürüm var: ${status.version} (geliştirme sürümünde kurulmaz).`;
+      return t("Yeni sürüm var: {v} (geliştirme sürümünde kurulmaz).", { v: status.version });
     case "downloading":
-      return `${status.version} indiriliyor… %${status.percent}`;
+      return t("{v} indiriliyor… %{p}", { v: status.version, p: status.percent });
     case "installing":
-      return `${status.version} kuruluyor; dock yeniden açılacak.`;
+      return t("{v} kuruluyor; dock yeniden açılacak.", { v: status.version });
     case "error":
-      return status.message;
+      return t(status.message);
   }
 }

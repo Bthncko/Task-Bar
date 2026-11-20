@@ -2,6 +2,7 @@ import type { WorldCity } from "../../lib/ipc";
 import type { WidgetDefinition } from "../types";
 import { WorldClockBar } from "./Bar";
 import { WorldClockSettings } from "./Settings";
+import { t } from "../../lib/i18n";
 
 export interface WorldClockConfig {
   cities: WorldCity[];
@@ -9,9 +10,13 @@ export interface WorldClockConfig {
 
 export const worldClockWidget: WidgetDefinition<WorldClockConfig> = {
   id: "worldClock",
-  name: "Dünya saati",
+  get name() {
+    return t("Dünya saati");
+  },
   category: "info",
-  description: "Seçtiğin şehirlerin saati.",
+  get description() {
+    return t("Seçtiğin şehirlerin saati.");
+  },
   defaultSection: "center",
   Bar: WorldClockBar,
   defaultConfig: {

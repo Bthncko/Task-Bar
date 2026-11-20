@@ -3,6 +3,7 @@ import { SunIcon } from "../icons";
 import { Tile } from "../ui";
 import { useBrightness, useBrightnessSender } from "./use";
 import styles from "./Bar.module.css";
+import { pct, t } from "../../lib/i18n";
 
 /** Klavye tuşlarıyla değişen parlaklık bu aralıkla yeniden okunur. */
 const POLL_MS = 5000;
@@ -20,8 +21,8 @@ export function BrightnessBar() {
       variant="soft"
       interactive
       className={styles.tile}
-      aria-label={`Parlaklık yüzde ${value}`}
-      title={`Parlaklık %${value}\nTekerlek: ayarla · Tıkla: kaydırıcı`}
+      aria-label={t("Parlaklık yüzde {v}", { v: value })}
+      title={t("Parlaklık %{v}\nTekerlek: ayarla · Tıkla: kaydırıcı", { v: value })}
       onClick={(e) => togglePopup("brightness", e.currentTarget)}
       onWheel={(e) => {
         const next = Math.min(100, Math.max(0, value + (e.deltaY < 0 ? STEP : -STEP)));
@@ -31,7 +32,7 @@ export function BrightnessBar() {
       }}
     >
       <SunIcon size={17} />
-      <span className={styles.value}>%{value}</span>
+      <span className={styles.value}>{pct(value)}</span>
     </Tile>
   );
 }

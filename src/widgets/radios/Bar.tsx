@@ -3,6 +3,7 @@ import { togglePopup } from "../../lib/popup";
 import { useService } from "../../lib/useService";
 import { BluetoothIcon, ChevronIcon, EthernetIcon, WifiIcon } from "../icons";
 import { SplitPill, Tile } from "../ui";
+import { t } from "../../lib/i18n";
 
 const EMPTY = { wifi: null, bluetooth: null, ssid: null, signal: null, ethernet: false };
 /** Wi-Fi bağdaştırıcısı olmayan bilgisayarda kablolu bağlantının karosu. */
@@ -18,20 +19,22 @@ export function RadiosBar() {
   const wifiState = !wifi
     ? ""
     : wifi.disabled
-      ? "Wi-Fi donanımdan kapalı"
+      ? t("Wi-Fi donanımdan kapalı")
       : !wifi.on
-        ? "Wi-Fi kapalı"
+        ? t("Wi-Fi kapalı")
         : radios.ssid
           ? `Wi-Fi: ${radios.ssid}`
-          : "Wi-Fi açık, bağlı değil";
+          : t("Wi-Fi açık, bağlı değil");
   // Kablo takılıyken (internet oradan geliyor) Wi-Fi karosu kablolu bağlantıyı
   // gösterir; sol yarı yine Wi-Fi'yi açıp kapatır, ok yine ağ panelini açar.
   const wiredState = !wifi
-    ? "Kablolu bağlantı (Ethernet)"
-    : `Kablolu bağlantı (Ethernet)\n${wifi.on ? "Wi-Fi açık · tıkla: kapat" : "Wi-Fi kapalı · tıkla: aç"}`;
+    ? t("Kablolu bağlantı (Ethernet)")
+    : `${t("Kablolu bağlantı (Ethernet)")}\n${wifi.on ? t("Wi-Fi açık · tıkla: kapat") : t("Wi-Fi kapalı · tıkla: aç")}`;
   const btState = !bluetooth
     ? ""
-    : `Bluetooth ${bluetooth.disabled ? "donanımdan kapalı" : bluetooth.on ? "açık" : "kapalı"}`;
+    : t("Bluetooth {state}", {
+        state: bluetooth.disabled ? t("donanımdan kapalı") : bluetooth.on ? t("açık") : t("kapalı"),
+      });
 
   return (
     <Tile variant="plain">
@@ -97,9 +100,13 @@ function Radio({
     <SplitPill
       active={info.on}
       disabled={info.disabled}
-      title={`${state}\nSağ tık: ${name} ayarları`}
-      label={toggle === null ? `${name} ayarları` : `${radioName} ${toggle ? "aç" : "kapat"}`}
-      arrowLabel={`${name} panelini aç`}
+      title={t("{state}\nSağ tık: {name} ayarları", { state, name })}
+      label={
+        toggle === null
+          ? t("{name} ayarları", { name })
+          : t(toggle ? t("{radio} aç") : t("{radio} kapat"), { radio: radioName })
+      }
+      arrowLabel={t("{name} panelini aç", { name })}
       icon={icon}
       arrow={<ChevronIcon size={13} />}
       onToggle={() =>

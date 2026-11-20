@@ -1,5 +1,6 @@
 import { useState, type DragEvent, type ReactNode } from "react";
 import styles from "./Settings.module.css";
+import { t } from "../../lib/i18n";
 
 // Bir ya da birkaç liste arasında sürükle-bırak (HTML5). Ayarlar penceresinde
 // WebView2'nin dosya bırakma işleyicisi kapalı (win/settings.rs), yoksa
@@ -106,7 +107,7 @@ export function SortableLists({
               ])}
               {indicatorAt === list.items.length && indicator}
               {list.items.length === 0 && indicatorAt < 0 && (
-                <li className={styles.listEmpty}>{list.empty ?? "Buraya sürükle"}</li>
+                <li className={styles.listEmpty}>{list.empty ?? t("Buraya sürükle")}</li>
               )}
             </ul>
           </div>

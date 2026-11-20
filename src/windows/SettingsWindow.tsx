@@ -12,17 +12,60 @@ import { Music } from "./settings/Music";
 import { Weather } from "./settings/Weather";
 import { Widgets } from "./settings/Widgets";
 import styles from "./settings/Settings.module.css";
+import { appName, t } from "../lib/i18n";
 
 startConfigSync();
 
 const PAGES: { id: string; label: string; Page: FC<{ config: Config }> }[] = [
-  { id: "appearance", label: "Görünüm", Page: Appearance },
-  { id: "widgets", label: "Widget'lar", Page: Widgets },
-  { id: "apps", label: "Uygulamalar", Page: Apps },
-  { id: "weather", label: "Hava durumu", Page: Weather },
-  { id: "calendar", label: "Saat ve takvim", Page: Calendar },
-  { id: "music", label: "Müzik", Page: Music },
-  { id: "general", label: "Genel", Page: General },
+  {
+    id: "appearance",
+    get label() {
+      return t("Görünüm");
+    },
+    Page: Appearance,
+  },
+  {
+    id: "widgets",
+    get label() {
+      return t("Widget'lar");
+    },
+    Page: Widgets,
+  },
+  {
+    id: "apps",
+    get label() {
+      return t("Uygulamalar");
+    },
+    Page: Apps,
+  },
+  {
+    id: "weather",
+    get label() {
+      return t("Hava durumu");
+    },
+    Page: Weather,
+  },
+  {
+    id: "calendar",
+    get label() {
+      return t("Saat ve takvim");
+    },
+    Page: Calendar,
+  },
+  {
+    id: "music",
+    get label() {
+      return t("Müzik");
+    },
+    Page: Music,
+  },
+  {
+    id: "general",
+    get label() {
+      return t("Genel");
+    },
+    Page: General,
+  },
 ];
 
 /** Ayarlar penceresi (Aşama 6). Her değişiklik `set_config` ile hemen kaydedilir. */
@@ -51,8 +94,8 @@ export function SettingsWindow() {
 
   return (
     <div className={styles.root}>
-      <nav className={styles.nav} aria-label="Ayar bölümleri">
-        <h1 className={styles.appTitle}>Akıllı Dock</h1>
+      <nav className={styles.nav} aria-label={t("Ayar bölümleri")}>
+        <h1 className={styles.appTitle}>{appName()}</h1>
         {PAGES.map((p) => (
           <button
             key={p.id}

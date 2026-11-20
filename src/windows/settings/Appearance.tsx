@@ -4,6 +4,7 @@ import { FALLBACK_ACCENT } from "../../lib/theme";
 import { useService } from "../../lib/useService";
 import { Card, Row, Section, Segmented, Slider } from "./controls";
 import styles from "./Settings.module.css";
+import { pct, t } from "../../lib/i18n";
 
 type Theme = Config["theme"];
 
@@ -45,19 +46,21 @@ export function Appearance({ config }: { config: Config }) {
   const systemAccent = useService(commands.getSystemAccent, events.accent) ?? null;
 
   return (
-    <Section title="Görünüm" intro="Değişiklikler dock'ta hemen görünür.">
+    <Section title={t("Görünüm")} intro={t("Değişiklikler dock'ta hemen görünür.")}>
       <Card>
         <Row
-          label="Vurgu rengi"
-          hint="İlk daire Windows'un vurgu rengi (Ayarlar → Kişiselleştirme → Renkler); orada değişince dock da değişir."
+          label={t("Vurgu rengi")}
+          hint={t(
+            "İlk daire Windows'un vurgu rengi (Ayarlar → Kişiselleştirme → Renkler); orada değişince dock da değişir.",
+          )}
         >
           <div className={styles.swatches}>
             <button
               type="button"
               className={`${styles.swatch} ${styles.swatchAuto}`}
               style={{ background: systemAccent ?? FALLBACK_ACCENT }}
-              aria-label="Windows vurgu rengi"
-              title="Windows vurgu rengi"
+              aria-label={t("Windows vurgu rengi")}
+              title={t("Windows vurgu rengi")}
               aria-pressed={accent === "auto"}
               onClick={() => setTheme({ accent: "auto" })}
             />
@@ -73,7 +76,7 @@ export function Appearance({ config }: { config: Config }) {
                 onClick={() => setTheme({ accent: color })}
               />
             ))}
-            <label className={styles.customColor} title="Başka bir renk">
+            <label className={styles.customColor} title={t("Başka bir renk")}>
               <input
                 type="color"
                 value={/^#[0-9a-f]{6}$/.test(accent) ? accent : "#6aa8ff"}
@@ -83,41 +86,45 @@ export function Appearance({ config }: { config: Config }) {
           </div>
         </Row>
         <Row
-          label="Zemin"
-          hint="Cam: arkadaki duvar kâğıdı bulanık görünür (hareketli duvar kâğıdında çubuk yarı saydam olur). Düz: mat, opak koyu zemin."
+          label={t("Zemin")}
+          hint={t(
+            "Cam: arkadaki duvar kâğıdı bulanık görünür (hareketli duvar kâğıdında çubuk yarı saydam olur). Düz: mat, opak koyu zemin.",
+          )}
         >
           <Segmented
-            label="Zemin"
+            label={t("Zemin")}
             value={theme.glass}
             options={[
-              { value: "wallpaper", label: "Cam" },
-              { value: "flat", label: "Düz" },
+              { value: "wallpaper", label: t("Cam") },
+              { value: "flat", label: t("Düz") },
             ]}
             onChange={(glass) => setTheme({ glass })}
           />
         </Row>
         <Row
-          label="Saydamlık"
+          label={t("Saydamlık")}
           hint={
             theme.glass === "flat"
-              ? "Düz zeminde kullanılmaz."
-              : "Arttıkça çubuğun arkası daha çok görünür. Açık renkli duvar kâğıdında yüksek değer yazıları zorlaştırabilir."
+              ? t("Düz zeminde kullanılmaz.")
+              : t(
+                  "Arttıkça çubuğun arkası daha çok görünür. Açık renkli duvar kâğıdında yüksek değer yazıları zorlaştırabilir.",
+                )
           }
         >
           {/* config'te opaklık saklanır (1 = tam cam); burada tersi gösterilir. */}
           <Slider
-            label="Saydamlık"
+            label={t("Saydamlık")}
             min={0}
             max={90}
             value={Math.round((1 - theme.opacity) * 100)}
-            format={(v) => `%${v}`}
+            format={(v) => pct(v)}
             disabled={theme.glass === "flat"}
             onChange={(v) => setTheme({ opacity: 1 - v / 100 }, DRAG_DELAY_MS)}
           />
         </Row>
-        <Row label="Köşe yuvarlaklığı">
+        <Row label={t("Köşe yuvarlaklığı")}>
           <Slider
-            label="Köşe yuvarlaklığı"
+            label={t("Köşe yuvarlaklığı")}
             min={0}
             max={24}
             value={theme.radius}
@@ -129,41 +136,43 @@ export function Appearance({ config }: { config: Config }) {
 
       <Card>
         <Row
-          label="Boyut"
-          hint="Dock ve panellerin tüm ölçüleri. Ekranda ayrılan yer de büyür ya da küçülür."
+          label={t("Boyut")}
+          hint={t("Dock ve panellerin tüm ölçüleri. Ekranda ayrılan yer de büyür ya da küçülür.")}
         >
           <Slider
-            label="Boyut"
+            label={t("Boyut")}
             min={85}
             max={125}
             step={5}
             value={Math.round(theme.scale * 100)}
-            format={(v) => `%${v}`}
+            format={(v) => pct(v)}
             onChange={(v) => setTheme({ scale: v / 100 }, SCALE_DELAY_MS)}
           />
         </Row>
-        <Row label="Yazı tipi">
+        <Row label={t("Yazı tipi")}>
           <Segmented
-            label="Yazı tipi"
+            label={t("Yazı tipi")}
             value={theme.font}
             options={[
               { value: "inter", label: "Inter" },
-              { value: "system", label: "Sistem (Segoe UI)" },
+              { value: "system", label: t("Sistem (Segoe UI)") },
             ]}
             onChange={(font) => setTheme({ font })}
           />
         </Row>
         <Row
-          label="Hareket"
-          hint="Sistem: Windows'taki “Animasyon efektleri” ayarına uyar. Azalt: animasyonlar ve ikon büyütme kapalı."
+          label={t("Hareket")}
+          hint={t(
+            "Sistem: Windows'taki “Animasyon efektleri” ayarına uyar. Azalt: animasyonlar ve ikon büyütme kapalı.",
+          )}
         >
           <Segmented
-            label="Hareket"
+            label={t("Hareket")}
             value={theme.reduceMotion}
             options={[
-              { value: "system", label: "Sistem" },
-              { value: "reduce", label: "Azalt" },
-              { value: "full", label: "Tam" },
+              { value: "system", label: t("Sistem") },
+              { value: "reduce", label: t("Azalt") },
+              { value: "full", label: t("Tam") },
             ]}
             onChange={(reduceMotion) => setTheme({ reduceMotion })}
           />
@@ -172,7 +181,7 @@ export function Appearance({ config }: { config: Config }) {
 
       <div className={styles.actions}>
         <button type="button" className={styles.button} onClick={() => setTheme(DEFAULT_THEME)}>
-          Varsayılana dön
+          {t("Varsayılana dön")}
         </button>
       </div>
     </Section>

@@ -21,9 +21,26 @@ sıradakiler dahil), hava durumu, ses, pil, Wi-Fi ve Bluetooth tek çubukta.
 - **Windows'un kendi çubuğunu gizlemek için:** dock'un boş bir yerine sağ tıkla →
   **Windows görev çubuğunu gizle**. Dock kapanınca Windows çubuğu geri gelir.
 - **Ayarlar:** aynı menüden **Ayarlar…**. Renk, cam, boyut, widget'ların yeri,
-  hava durumu şehri, takvim abonelikleri burada.
+  hava durumu şehri, takvim abonelikleri ve dil burada.
 - **Takvim:** Ayarlar → Saat ve takvim → Google Takvim'in "gizli iCal adresi"ni
   yapıştır. Adres gizlidir, kimseyle paylaşma.
+
+## Diller
+
+| Dil                 | Durum  |
+| ------------------- | ------ |
+| Türkçe              | ✅ Tam |
+| English (İngilizce) | ✅ Tam |
+
+Dil varsayılan olarak Windows'un görüntüleme dilini izler (Türkçe Windows'ta Türkçe,
+diğerlerinde İngilizce). **Ayarlar → Genel → Dil** bölümünden istediğin zaman
+değiştirebilirsin; dock, panelleri, tepsi menüsü ve bildirimler hemen yeni dile geçer.
+İngilizce arayüzde uygulamanın adı **Dockora**, Türkçede **Akıllı Dock** olarak görünür.
+
+Yeni bir dil eklemek istersen arayüz metinleri iki yerde: dock ve ayarlar için
+[`src/locales/en.ts`](src/locales/en.ts) (kaynak metin Türkçe, her satır bir çeviriye
+eşlenir), tepsi menüsü / sağ tık menüleri / bildirim kartları için
+[`src-tauri/src/i18n.rs`](src-tauri/src/i18n.rs). Katkılar açık.
 
 ## Güncellemeler
 

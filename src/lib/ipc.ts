@@ -36,6 +36,8 @@ export type Config = {
   ownNotifications: boolean;
   /** Bildirim kartlarının yeri; alt kenarda uzaklık dock'un üstünden ölçülür. */
   notifyPosition: NotifyPosition;
+  /** Arayüz dili: "auto" Windows'un diline uyar. */
+  language: "auto" | "tr" | "en";
   /** Otomatik gizlenme (8.10). */
   autoHide: AutoHide;
   theme: {

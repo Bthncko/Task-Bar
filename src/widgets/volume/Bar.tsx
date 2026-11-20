@@ -5,6 +5,7 @@ import { useService } from "../../lib/useService";
 import { SpeakerIcon } from "../icons";
 import { Dim, Meter, Tile } from "../ui";
 import styles from "./Bar.module.css";
+import { pct, t } from "../../lib/i18n";
 
 const WHEEL_STEP = 2;
 const KEY_STEP = 5;
@@ -50,13 +51,13 @@ export function VolumeBar() {
   if (audio === undefined) return null;
   if (audio === null) {
     return (
-      <Tile variant="soft" className={styles.tile} title="Ses aygıtı yok">
+      <Tile variant="soft" className={styles.tile} title={t("Ses aygıtı yok")}>
         <div className={styles.top}>
           <Dim>
             <SpeakerIcon level={0} muted size={16} />
           </Dim>
           <span className={styles.device}>
-            <Dim>Ses aygıtı yok</Dim>
+            <Dim>{t("Ses aygıtı yok")}</Dim>
           </span>
         </div>
         <Meter value={0} muted className={styles.meter} />
@@ -79,7 +80,14 @@ export function VolumeBar() {
       className={styles.tile}
       data-muted={audio.muted || undefined}
       data-volume-tile
-      title={`${audio.device} — %${audio.volume}${audio.muted ? " (sessiz)" : ""}\nAygıt adına tıkla: çıkış ve mikrofon · Sağ tık: ses ayarları`}
+      title={t(
+        "{device} — {vol}{muted}\nAygıt adına tıkla: çıkış ve mikrofon · Sağ tık: ses ayarları",
+        {
+          device: audio.device,
+          vol: pct(audio.volume),
+          muted: audio.muted ? t(" (sessiz)") : "",
+        },
+      )}
       onWheel={(e) => push(clamp(value + (e.deltaY < 0 ? WHEEL_STEP : -WHEEL_STEP)))}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -90,7 +98,7 @@ export function VolumeBar() {
         <button
           type="button"
           className={styles.mute}
-          aria-label={audio.muted ? "Sesi aç" : "Sesi kapat"}
+          aria-label={audio.muted ? t("Sesi aç") : t("Sesi kapat")}
           onClick={() => commands.setMute(!audio.muted).catch(report("set_mute"))}
         >
           <SpeakerIcon level={shown} muted={silent} size={16} />
@@ -99,7 +107,7 @@ export function VolumeBar() {
         <button
           type="button"
           className={styles.device}
-          title="Çıkış aygıtı ve mikrofon"
+          title={t("Çıkış aygıtı ve mikrofon")}
           onClick={(e) => togglePopup("volume", e.currentTarget.closest("[data-volume-tile]")!)}
         >
           {audio.device}
@@ -110,7 +118,7 @@ export function VolumeBar() {
         className={styles.track}
         role="slider"
         tabIndex={0}
-        aria-label="Ses düzeyi"
+        aria-label={t("Ses düzeyi")}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={shown}

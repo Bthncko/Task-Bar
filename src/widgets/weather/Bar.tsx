@@ -8,6 +8,7 @@ import { describeWeather } from "./wmo";
 import type { WeatherConfig } from "./index";
 import { Tile } from "../ui";
 import styles from "./Bar.module.css";
+import { dtf, t } from "../../lib/i18n";
 
 const REFRESH_MS = 20 * 60 * 1000;
 const RETRY_MS = 2 * 60 * 1000;
@@ -66,14 +67,11 @@ export function WeatherBar({ config }: { config: WeatherConfig }) {
 
   const { text, kind } = describeWeather(weather.code);
   const degrees = Math.round(weather.temperature);
-  const time = new Date(weather.fetchedAt).toLocaleTimeString("tr-TR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const time = dtf({ hour: "2-digit", minute: "2-digit" }).format(new Date(weather.fetchedAt));
   const title = [
     `${city}: ${text}, ${degrees}°${unit}`,
-    stale ? `Son güncelleme ${time} (çevrimdışı)` : `Güncellendi ${time}`,
-    "Veri: Open-Meteo.com (CC BY 4.0)",
+    stale ? t("Son güncelleme {time} (çevrimdışı)", { time }) : t("Güncellendi {time}", { time }),
+    t("Veri: Open-Meteo.com (CC BY 4.0)"),
   ].join("\n");
 
   return (
@@ -83,7 +81,7 @@ export function WeatherBar({ config }: { config: WeatherConfig }) {
       color={tileColor(kind, weather.isDay)}
       className={styles.tile}
       title={title}
-      aria-label={`Hava durumu: ${title}`}
+      aria-label={t("Hava durumu: {title}", { title })}
       data-stale={stale || undefined}
       onClick={(e) => togglePopup("weather", e.currentTarget)}
     >

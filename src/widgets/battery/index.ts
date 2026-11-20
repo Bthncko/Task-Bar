@@ -1,12 +1,17 @@
 import type { WidgetDefinition } from "../types";
 import { BatteryBar } from "./Bar";
 import { BatteryPopup } from "./Popup";
+import { t } from "../../lib/i18n";
 
 export const batteryWidget: WidgetDefinition<Record<string, never>> = {
   id: "battery",
-  name: "Pil",
+  get name() {
+    return t("Pil");
+  },
   category: "system",
-  description: "Pil yüzdesi; tıklayınca enerji tasarrufu, güç modu, parlaklık ve ekran ayarları.",
+  get description() {
+    return t("Pil yüzdesi; tıklayınca enerji tasarrufu, güç modu, parlaklık ve ekran ayarları.");
+  },
   defaultSection: "right",
   Bar: BatteryBar,
   Popup: BatteryPopup,

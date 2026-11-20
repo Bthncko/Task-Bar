@@ -1,6 +1,7 @@
 import { commands, report } from "../../lib/ipc";
 import { Tile } from "../ui";
 import styles from "./Bar.module.css";
+import { t } from "../../lib/i18n";
 
 /** Windows'un kendi Başlat menüsünü açar (Win tuşu simülasyonu, bölüm 5.5). */
 export function StartBar() {
@@ -9,8 +10,8 @@ export function StartBar() {
       as="button"
       variant="dark"
       className={styles.start}
-      title="Başlat"
-      aria-label="Başlat"
+      title={t("Başlat")}
+      aria-label={t("Başlat")}
       onClick={() => commands.openStart().catch(report("open_start"))}
     >
       <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">

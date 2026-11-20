@@ -4,6 +4,7 @@ import { useService } from "../../lib/useService";
 import { Card, Row, Section, Segmented, Slider, Toggle } from "./controls";
 import { SortableLists } from "./SortableLists";
 import styles from "./Settings.module.css";
+import { t } from "../../lib/i18n";
 
 const PINNED = "pinned";
 
@@ -34,11 +35,11 @@ export function Apps({ config }: { config: Config }) {
     });
 
   return (
-    <Section title="Uygulamalar">
+    <Section title={t("Uygulamalar")}>
       <Card>
-        <Row label="Büyütme" hint="İmleç üstüne gelince ikonların büyüme oranı.">
+        <Row label={t("Büyütme")} hint={t("İmleç üstüne gelince ikonların büyüme oranı.")}>
           <Slider
-            label="Büyütme"
+            label={t("Büyütme")}
             min={1}
             max={2.5}
             step={0.1}
@@ -56,24 +57,24 @@ export function Apps({ config }: { config: Config }) {
           />
         </Row>
         <Row
-          label="Pencere önizlemesi"
-          hint="Açık bir uygulamanın ikonunda bekleyince pencerelerinin küçük resimleri."
+          label={t("Pencere önizlemesi")}
+          hint={t("Açık bir uygulamanın ikonunda bekleyince pencerelerinin küçük resimleri.")}
         >
           <Toggle
-            label="Pencere önizlemesi"
+            label={t("Pencere önizlemesi")}
             checked={previews ?? true}
             onChange={(on) => setApps({ previews: on })}
           />
         </Row>
         {(previews ?? true) && (
-          <Row label="Önizleme gecikmesi" hint="İkonda ne kadar bekleyince açılsın.">
+          <Row label={t("Önizleme gecikmesi")} hint={t("İkonda ne kadar bekleyince açılsın.")}>
             <Segmented
-              label="Önizleme gecikmesi"
+              label={t("Önizleme gecikmesi")}
               value={String(previewDelayMs ?? 350)}
               options={[
-                { value: "200", label: "Kısa" },
-                { value: "350", label: "Normal" },
-                { value: "600", label: "Uzun" },
+                { value: "200", label: t("Kısa") },
+                { value: "350", label: t("Normal") },
+                { value: "600", label: t("Uzun") },
               ]}
               onChange={(v) => setApps({ previewDelayMs: Number(v) })}
             />
@@ -81,14 +82,14 @@ export function Apps({ config }: { config: Config }) {
         )}
       </Card>
 
-      <h3 className={styles.subTitle}>Sabitlenenler</h3>
+      <h3 className={styles.subTitle}>{t("Sabitlenenler")}</h3>
       {pinned.length === 0 ? (
         <p className={styles.intro}>
-          Henüz sabitlenen uygulama yok. Dock'ta bir uygulamaya sağ tıklayıp “Sabitle”yi seç.
+          {t("Henüz sabitlenen uygulama yok. Dock'ta bir uygulamaya sağ tıklayıp “Sabitle”yi seç.")}
         </p>
       ) : (
         <>
-          <p className={styles.intro}>Dock'taki sıra. Sürükleyerek değiştir.</p>
+          <p className={styles.intro}>{t("Dock'taki sıra. Sürükleyerek değiştir.")}</p>
           <SortableLists
             lists={[
               {
@@ -102,8 +103,8 @@ export function Apps({ config }: { config: Config }) {
               <button
                 type="button"
                 className={styles.itemAction}
-                aria-label={`${it.label} sabitlemesini kaldır`}
-                title="Sabitlemeyi kaldır"
+                aria-label={t("{label} sabitlemesini kaldır", { label: it.label })}
+                title={t("Sabitlemeyi kaldır")}
                 onClick={() => setPinned(pinned.map((p) => p.id).filter((id) => id !== it.id))}
               >
                 ×

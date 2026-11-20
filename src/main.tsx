@@ -10,6 +10,7 @@ import { NotifyWindow } from "./windows/notify/NotifyWindow";
 import { PopupWindow } from "./windows/PopupWindow";
 import { PreviewWindow } from "./windows/PreviewWindow";
 import { SettingsWindow } from "./windows/SettingsWindow";
+import { LangRoot } from "./lib/LangRoot";
 
 // Her Tauri penceresi aynı paketi yükler; hangisi olduğunu pencere etiketi söyler
 // (tauri.conf.json). Etiket adresten güvenilir: pencere adresine # eklemeye gerek yok.
@@ -32,5 +33,7 @@ function pickWindow() {
 window.addEventListener("contextmenu", (e) => e.preventDefault());
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>{pickWindow()}</React.StrictMode>,
+  <React.StrictMode>
+    <LangRoot render={pickWindow} />
+  </React.StrictMode>,
 );

@@ -3,6 +3,7 @@ import { CloseIcon } from "../icons";
 import { IconButton } from "./index";
 import { usePopupClose } from "./popupClose";
 import styles from "./panel.module.css";
+import { t } from "../../lib/i18n";
 
 // Panel ortak parçaları (7.6). Kapatma, popup kabuğunun animasyonlu kapanışıdır.
 
@@ -14,7 +15,12 @@ export function PanelHeader({ title, actions }: { title: ReactNode; actions?: Re
       <div className={styles.title}>{title}</div>
       <div className={styles.actions}>
         {actions}
-        <IconButton aria-label="Kapat" title="Kapat (Esc)" className={styles.close} onClick={close}>
+        <IconButton
+          aria-label={t("Kapat")}
+          title={t("Kapat (Esc)")}
+          className={styles.close}
+          onClick={close}
+        >
           <CloseIcon size={14} />
         </IconButton>
       </div>

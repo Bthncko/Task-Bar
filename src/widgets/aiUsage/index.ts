@@ -1,13 +1,19 @@
 import type { WidgetDefinition } from "../types";
 import { AiUsageBar } from "./Bar";
 import { AiUsagePopup } from "./Popup";
+import { t } from "../../lib/i18n";
 
 export const aiUsageWidget: WidgetDefinition<Record<string, never>> = {
   id: "aiUsage",
-  name: "AI kullanımı",
+  get name() {
+    return t("AI kullanımı");
+  },
   category: "info",
-  description:
-    "Claude limitlerin: oturum (5 saat) ve haftalık yüzde, ne zaman sıfırlanacağıyla (/usage ile aynı).",
+  get description() {
+    return t(
+      "Claude limitlerin: oturum (5 saat) ve haftalık yüzde, ne zaman sıfırlanacağıyla (/usage ile aynı).",
+    );
+  },
   defaultSection: "right",
   Bar: AiUsageBar,
   Popup: AiUsagePopup,

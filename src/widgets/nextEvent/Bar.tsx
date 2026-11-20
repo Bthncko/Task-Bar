@@ -5,6 +5,7 @@ import { eventsBetween, useIcsSources } from "../calendar/ics";
 import { CalendarIcon } from "../icons";
 import { Tile } from "../ui";
 import styles from "./Bar.module.css";
+import { dtf, fmtMinutes, t } from "../../lib/i18n";
 
 const NO_URLS: string[] = [];
 /** Bu kadar kala karo vurgu rengine döner. */
@@ -13,29 +14,26 @@ const SOON_MIN = 10;
 const TICK_MS = 30_000;
 const LOOKAHEAD_DAYS = 7;
 
-const timeFmt = new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" });
-const dayFmt = new Intl.DateTimeFormat("tr-TR", { weekday: "short" });
+const timeFmt = () => dtf({ hour: "2-digit", minute: "2-digit" });
+const dayFmt = () => dtf({ weekday: "short" });
 
 function sameDay(a: Date, b: Date) {
   return a.toDateString() === b.toDateString();
 }
 
 function inMinutes(min: number) {
-  if (min < 60) return `${Math.max(1, min)} dk`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m ? `${h} sa ${m} dk` : `${h} sa`;
+  return fmtMinutes(Math.max(1, min));
 }
 
 /** "12 dk sonra", "14:30", "yarın 09:00", "Cum 10:00". */
 function when(start: Date, now: Date) {
   const min = Math.round((start.getTime() - now.getTime()) / 60_000);
-  if (min < 60) return `${inMinutes(min)} sonra`;
-  if (sameDay(start, now)) return timeFmt.format(start);
+  if (min < 60) return t("{t} sonra", { t: inMinutes(min) });
+  if (sameDay(start, now)) return timeFmt().format(start);
   const tomorrow = new Date(now);
   tomorrow.setDate(now.getDate() + 1);
-  if (sameDay(start, tomorrow)) return `yarın ${timeFmt.format(start)}`;
-  return `${dayFmt.format(start)} ${timeFmt.format(start)}`;
+  if (sameDay(start, tomorrow)) return t("yarın {time}", { time: timeFmt().format(start) });
+  return `${dayFmt().format(start)} ${timeFmt().format(start)}`;
 }
 
 /** Sıradaki etkinlik (8.8): saat widget'ının takvim abonelikleri (ICS) okunur. */
@@ -64,7 +62,7 @@ export function NextEventBar() {
   const toStart = Math.round((next.start.getTime() - now.getTime()) / 60_000);
   const soon = !ongoing && toStart <= SOON_MIN;
   const status = ongoing
-    ? `${inMinutes(Math.round((next.end.getTime() - now.getTime()) / 60_000))} kaldı`
+    ? t("{t} kaldı", { t: inMinutes(Math.round((next.end.getTime() - now.getTime()) / 60_000)) })
     : when(next.start, now);
 
   return (
@@ -75,14 +73,14 @@ export function NextEventBar() {
       className={styles.tile}
       data-ongoing={ongoing || undefined}
       data-soon={soon || undefined}
-      title={`${next.title}\n${timeFmt.format(next.start)}–${timeFmt.format(next.end)}${
+      title={`${next.title}\n${timeFmt().format(next.start)}–${timeFmt().format(next.end)}${
         next.location ? ` · ${next.location}` : ""
       }`}
-      aria-label={`Sıradaki etkinlik: ${next.title}, ${status}`}
+      aria-label={t("Sıradaki etkinlik: {title}, {status}", { title: next.title, status })}
       onClick={(e) => togglePopup("clock", e.currentTarget)}
     >
       <CalendarIcon size={16} />
-      <span className={styles.title}>{next.title || "Etkinlik"}</span>
+      <span className={styles.title}>{next.title || t("Etkinlik")}</span>
       <span className={styles.status}>{status}</span>
     </Tile>
   );

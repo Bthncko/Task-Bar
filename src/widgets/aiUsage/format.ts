@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AiLimit, AiUsage } from "../../lib/ipc";
+import { currentLang, dtf, fmtMinutes, nf, pct, t } from "../../lib/i18n";
 
 export type Activity = NonNullable<NonNullable<AiUsage>["activity"]>;
 
@@ -30,7 +31,7 @@ export function current(limit: AiLimit | null | undefined, now: number) {
 /** Sıfırlanma: "22:30" (bugün), "yarın 02:10", "Cmt 05:00", "29 Kas 05:00". */
 export function resetTime(at: number, now = Date.now()) {
   const d = new Date(at);
-  const hm = d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  const hm = dtf({ hour: "2-digit", minute: "2-digit" }).format(d);
   const day = (t: number) => {
     const x = new Date(t);
     x.setHours(0, 0, 0, 0);
@@ -38,25 +39,25 @@ export function resetTime(at: number, now = Date.now()) {
   };
   const diff = Math.round((day(at) - day(now)) / 86_400_000);
   if (diff <= 0) return hm;
-  if (diff === 1) return `yarın ${hm}`;
-  if (diff < 7) return `${d.toLocaleDateString("tr-TR", { weekday: "short" })} ${hm}`;
-  return `${d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" })} ${hm}`;
+  if (diff === 1) return t("yarın {hm}", { hm });
+  if (diff < 7) return `${dtf({ weekday: "short" }).format(d)} ${hm}`;
+  return `${dtf({ day: "numeric", month: "short" }).format(d)} ${hm}`;
 }
 
 /** Kalan süre: "45 dk", "1 sa 56 dk", "4 gün 9 sa". */
 export function remaining(at: number, now = Date.now()) {
   const min = Math.max(0, Math.ceil((at - now) / 60_000));
   const h = Math.floor(min / 60);
-  if (h >= 24) return `${Math.floor(h / 24)} gün ${h % 24} sa`;
-  return h > 0 ? `${h} sa ${min % 60} dk` : `${min} dk`;
+  if (h >= 24) return t("{d} gün {h} sa", { d: Math.floor(h / 24), h: h % 24 });
+  return fmtMinutes(min);
 }
 
 /** "az önce", "3 dk önce", "2 sa önce". */
 export function ago(at: number, now = Date.now()) {
   const min = Math.floor((now - at) / 60_000);
-  if (min < 1) return "az önce";
-  if (min < 60) return `${min} dk önce`;
-  return `${Math.floor(min / 60)} sa önce`;
+  if (min < 1) return t("az önce");
+  if (min < 60) return t("{min} dk önce", { min });
+  return t("{h} sa önce", { h: Math.floor(min / 60) });
 }
 
 /** Son 7 günün (bugün dahil) yerel gün ağırlıkları, eskiden yeniye; `share` %. */
@@ -68,7 +69,7 @@ export function days(activity: Activity, now = Date.now()) {
     const date = new Date(today);
     date.setDate(today.getDate() - i);
     out.push({
-      label: i === 0 ? "Bugün" : date.toLocaleDateString("tr-TR", { weekday: "short" }),
+      label: i === 0 ? t("Bugün") : dtf({ weekday: "short" }).format(date),
       date,
       weight: 0,
       share: 0,
@@ -90,14 +91,15 @@ export const NBSP = String.fromCharCode(0xa0);
 
 /** 1234567 → "1,2 M". */
 export function tokens(n: number) {
-  if (n >= 1e9)
-    return `${(n / 1e9).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}${NBSP}Mr`;
-  if (n >= 1e6) return `${(n / 1e6).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}${NBSP}M`;
-  if (n >= 1e3) return `${Math.round(n / 1e3)}${NBSP}B`;
+  const en = currentLang() === "en";
+  const one = nf({ maximumFractionDigits: 1 });
+  if (n >= 1e9) return `${one.format(n / 1e9)}${NBSP}${en ? "B" : "Mr"}`;
+  if (n >= 1e6) return `${one.format(n / 1e6)}${NBSP}M`;
+  if (n >= 1e3) return `${Math.round(n / 1e3)}${NBSP}${en ? "K" : "B"}`;
   return String(n);
 }
 
 /** %62,5 → "%62,5"; tam sayıysa "%62". */
 export function share(v: number) {
-  return `%${v.toLocaleString("tr-TR", { maximumFractionDigits: v < 10 ? 1 : 0 })}`;
+  return pct(nf({ maximumFractionDigits: v < 10 ? 1 : 0 }).format(v));
 }

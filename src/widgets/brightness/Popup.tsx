@@ -2,6 +2,7 @@ import { commands, report } from "../../lib/ipc";
 import { Brightness } from "../battery/Popup";
 import { useBrightness } from "./use";
 import styles from "./Popup.module.css";
+import { t } from "../../lib/i18n";
 
 /** Parlaklık paneli: pil panelindeki kaydırıcının aynısı. */
 export function BrightnessPopup() {
@@ -11,7 +12,7 @@ export function BrightnessPopup() {
     <div className={styles.root}>
       {value == null ? (
         <p className={styles.note}>
-          {value === null ? "Bu ekranın parlaklığı ayarlanamıyor." : "Okunuyor…"}
+          {value === null ? t("Bu ekranın parlaklığı ayarlanamıyor.") : t("Okunuyor…")}
         </p>
       ) : (
         <Brightness

@@ -1,6 +1,7 @@
 import type { WidgetDefinition } from "../types";
 import { WeatherBar } from "./Bar";
 import { WeatherPopup } from "./Popup";
+import { t } from "../../lib/i18n";
 
 export interface WeatherConfig {
   lat: number;
@@ -11,9 +12,13 @@ export interface WeatherConfig {
 
 export const weatherWidget: WidgetDefinition<WeatherConfig> = {
   id: "weather",
-  name: "Hava durumu",
+  get name() {
+    return t("Hava durumu");
+  },
   category: "info",
-  description: "Anlık hava; tıklayınca saatlik ve 7 günlük tahmin.",
+  get description() {
+    return t("Anlık hava; tıklayınca saatlik ve 7 günlük tahmin.");
+  },
   defaultSection: "center",
   Bar: WeatherBar,
   Popup: WeatherPopup,

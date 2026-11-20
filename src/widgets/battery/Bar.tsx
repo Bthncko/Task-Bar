@@ -7,6 +7,7 @@ import { useService } from "../../lib/useService";
 import { BoltIcon, LeafIcon } from "../icons";
 import { Tile } from "../ui";
 import styles from "./Bar.module.css";
+import { t } from "../../lib/i18n";
 
 /** Sıvının üst kenarı: iki tam dalga; genişliğin yarısı kadar kayınca başa döner. */
 const WAVE = "M0 3 Q5 0 10 3 T20 3 T30 3 T40 3 V6 H0 Z";
@@ -78,13 +79,13 @@ export function BatteryBar() {
           : "ok";
   const state = [
     power.charging
-      ? "şarj oluyor"
+      ? t("şarj oluyor")
       : power.plugged
         ? pct >= 100
-          ? "prizde, dolu"
-          : "prizde"
-        : "pilde",
-    power.saver && "enerji tasarrufu açık",
+          ? t("prizde, dolu")
+          : t("prizde")
+        : t("pilde"),
+    power.saver && t("enerji tasarrufu açık"),
   ]
     .filter(Boolean)
     .join(", ");
@@ -97,8 +98,8 @@ export function BatteryBar() {
       data-level={level}
       data-charging={power.charging || undefined}
       style={{ "--level": `${pct}%` } as CSSProperties}
-      title={`Pil %${power.percent} — ${state}\nSağ tık: pil ayarları`}
-      aria-label={`Pil yüzde ${power.percent}, ${state}`}
+      title={t("Pil %{p} — {state}\nSağ tık: pil ayarları", { p: power.percent, state })}
+      aria-label={t("Pil yüzde {p}, {state}", { p: power.percent, state })}
       onClick={(e) => togglePopup("battery", e.currentTarget)}
       onContextMenu={(e) => {
         e.preventDefault();

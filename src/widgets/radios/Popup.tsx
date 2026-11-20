@@ -16,6 +16,7 @@ import { IconButton } from "../ui";
 import { LinkButton, PanelHeader } from "../ui/panel";
 import { usePopupClose } from "../ui/popupClose";
 import styles from "./Popup.module.css";
+import { errText, t } from "../../lib/i18n";
 
 /** Bluetooth aygıtlarının bağlantı durumu panel açıkken bu aralıkla tazelenir. */
 const BT_REFRESH_MS = 4000;
@@ -55,7 +56,7 @@ function WifiPanel() {
     commands
       .wifiScan()
       .then((list) => alive && setResult({ key, list, error: null }))
-      .catch((e) => alive && setResult((r) => ({ key, list: r.list, error: String(e) })));
+      .catch((e) => alive && setResult((r) => ({ key, list: r.list, error: errText(e) })));
     return () => {
       alive = false;
     };
@@ -77,8 +78,8 @@ function WifiPanel() {
           <>
             {on && (
               <IconButton
-                aria-label="Yeniden tara"
-                title="Yeniden tara"
+                aria-label={t("Yeniden tara")}
+                title={t("Yeniden tara")}
                 className={styles.refresh}
                 data-spin={scan.kind === "loading" || undefined}
                 onClick={() => setAttempt((n) => n + 1)}
@@ -101,33 +102,35 @@ function WifiPanel() {
         <button
           type="button"
           className={styles.wired}
-          title="Ethernet ayarları"
+          title={t("Ethernet ayarları")}
           onClick={() =>
             commands.openSystemSettings("ethernet").catch(report("open_system_settings"))
           }
         >
           <EthernetIcon size={16} />
           <span>
-            <span className={styles.wiredTitle}>Kablolu bağlantı</span>
-            <span className={styles.wiredHint}>İnternet kablodan (Ethernet) geliyor</span>
+            <span className={styles.wiredTitle}>{t("Kablolu bağlantı")}</span>
+            <span className={styles.wiredHint}>{t("İnternet kablodan (Ethernet) geliyor")}</span>
           </span>
         </button>
       )}
       {!wifi ? (
-        <p className={styles.note}>Wi-Fi bağdaştırıcısı yok.</p>
+        <p className={styles.note}>{t("Wi-Fi bağdaştırıcısı yok.")}</p>
       ) : !on ? (
         <p className={styles.note}>
-          {wifi.disabled ? "Wi-Fi donanım anahtarından kapalı." : "Wi-Fi kapalı."}
+          {wifi.disabled ? t("Wi-Fi donanım anahtarından kapalı.") : t("Wi-Fi kapalı.")}
         </p>
       ) : scan.kind === "error" ? (
         <div className={styles.error}>
-          <span>Ağlar okunamadı: {scan.message}</span>
-          <LinkButton onClick={openSettings}>Windows ayarları</LinkButton>
+          <span>
+            {t("Ağlar okunamadı:")} {t(scan.message)}
+          </span>
+          <LinkButton onClick={openSettings}>{t("Windows ayarları")}</LinkButton>
         </div>
       ) : !list ? (
         <Skeleton />
       ) : list.length === 0 ? (
-        <p className={styles.note}>Yakında ağ bulunamadı.</p>
+        <p className={styles.note}>{t("Yakında ağ bulunamadı.")}</p>
       ) : (
         <ul className={styles.list}>
           {list.map((n) => (
@@ -143,7 +146,7 @@ function WifiPanel() {
         </ul>
       )}
       <footer className={styles.footer}>
-        <LinkButton onClick={openSettings}>Daha fazla Wi-Fi ayarı</LinkButton>
+        <LinkButton onClick={openSettings}>{t("Daha fazla Wi-Fi ayarı")}</LinkButton>
       </footer>
     </div>
   );
@@ -172,7 +175,7 @@ function Network({
       .wifiConnect(n.ssid, pw)
       .then(() => setPassword(""))
       .catch((e) => {
-        const msg = String(e);
+        const msg = errText(e);
         if (msg === "password_required") setAskPassword(true);
         else setError(msg);
       })
@@ -180,14 +183,14 @@ function Network({
   };
 
   const state = n.connected
-    ? "Bağlı"
+    ? t("Bağlı")
     : n.saved
-      ? "Kayıtlı"
+      ? t("Kayıtlı")
       : n.enterprise
-        ? "Kurumsal"
+        ? t("Kurumsal")
         : n.secured
-          ? "Güvenli"
-          : "Açık ağ";
+          ? t("Güvenli")
+          : t("Açık ağ");
 
   return (
     <div className={styles.item} data-expanded={expanded || undefined}>
@@ -206,7 +209,7 @@ function Network({
           <span className={styles.sub}>{state}</span>
         </span>
         {(n.secured || n.enterprise) && (
-          <span className={styles.lock} aria-label="Şifreli">
+          <span className={styles.lock} aria-label={t("Şifreli")}>
             <LockIcon size={13} />
           </span>
         )}
@@ -222,15 +225,15 @@ function Network({
                 setBusy(true);
                 commands
                   .wifiDisconnect()
-                  .catch((e) => setError(String(e)))
+                  .catch((e) => setError(errText(e)))
                   .finally(() => setBusy(false));
               }}
             >
-              Bağlantıyı kes
+              {t("Bağlantıyı kes")}
             </button>
           ) : n.enterprise ? (
             <button type="button" className={styles.secondary} onClick={onSettings}>
-              Windows ayarlarında bağlan
+              {t("Windows ayarlarında bağlan")}
             </button>
           ) : askPassword ? (
             <form
@@ -243,13 +246,13 @@ function Network({
               <input
                 type="password"
                 autoFocus
-                placeholder="Ağ şifresi"
-                aria-label={`${n.ssid} şifresi`}
+                placeholder={t("Ağ şifresi")}
+                aria-label={t("{ssid} şifresi", { ssid: n.ssid })}
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
               />
               <button type="submit" className={styles.primary} disabled={busy || !password}>
-                {busy ? "Bağlanıyor…" : "Bağlan"}
+                {busy ? t("Bağlanıyor…") : t("Bağlan")}
               </button>
             </form>
           ) : (
@@ -259,7 +262,7 @@ function Network({
               disabled={busy}
               onClick={() => connect()}
             >
-              {busy ? "Bağlanıyor…" : "Bağlan"}
+              {busy ? t("Bağlanıyor…") : t("Bağlan")}
             </button>
           )}
           {error && <p className={styles.errorText}>{error}</p>}
@@ -297,7 +300,7 @@ function BluetoothPanel() {
           setDevices(d);
           setError(null);
         })
-        .catch((e) => alive && setError(String(e)));
+        .catch((e) => alive && setError(errText(e)));
     load();
     const timer = window.setInterval(load, BT_REFRESH_MS);
     return () => {
@@ -322,15 +325,17 @@ function BluetoothPanel() {
         }
       />
       {!bt ? (
-        <p className={styles.note}>Bluetooth yok.</p>
+        <p className={styles.note}>{t("Bluetooth yok.")}</p>
       ) : !on ? (
-        <p className={styles.note}>Bluetooth kapalı.</p>
+        <p className={styles.note}>{t("Bluetooth kapalı.")}</p>
       ) : error ? (
-        <p className={styles.errorText}>Aygıtlar okunamadı: {error}</p>
+        <p className={styles.errorText}>
+          {t("Aygıtlar okunamadı:")} {error}
+        </p>
       ) : !devices ? (
         <Skeleton rows={3} />
       ) : devices.length === 0 ? (
-        <p className={styles.note}>Eşleşmiş aygıt yok.</p>
+        <p className={styles.note}>{t("Eşleşmiş aygıt yok.")}</p>
       ) : (
         <ul className={styles.list}>
           {devices.map((d) => {
@@ -341,7 +346,7 @@ function BluetoothPanel() {
                   type="button"
                   className={styles.row}
                   data-active={d.connected || undefined}
-                  title="Bağlamak ya da ayırmak için Windows Bluetooth ayarlarını açar"
+                  title={t("Bağlamak ya da ayırmak için Windows Bluetooth ayarlarını açar")}
                   onClick={openSettings}
                 >
                   <span className={styles.icon}>
@@ -349,7 +354,7 @@ function BluetoothPanel() {
                   </span>
                   <span className={styles.text}>
                     <span className={styles.name}>{d.name}</span>
-                    <span className={styles.sub}>{d.connected ? "Bağlı" : "Eşleşmiş"}</span>
+                    <span className={styles.sub}>{d.connected ? t("Bağlı") : t("Eşleşmiş")}</span>
                   </span>
                 </button>
               </li>
@@ -358,7 +363,7 @@ function BluetoothPanel() {
         </ul>
       )}
       <footer className={styles.footer}>
-        <LinkButton onClick={openSettings}>Aygıt ekle / Bluetooth ayarları</LinkButton>
+        <LinkButton onClick={openSettings}>{t("Aygıt ekle / Bluetooth ayarları")}</LinkButton>
       </footer>
     </div>
   );

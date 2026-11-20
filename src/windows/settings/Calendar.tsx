@@ -4,6 +4,7 @@ import { updateConfig } from "../../lib/store";
 import { parse } from "../../widgets/calendar/ics";
 import { Card, Row, Section, Toggle } from "./controls";
 import styles from "./Settings.module.css";
+import { errText, t } from "../../lib/i18n";
 
 /** Google'ın herkese açık Türkiye tatilleri takvimi (gizli değil). */
 const TR_HOLIDAYS =
@@ -11,13 +12,13 @@ const TR_HOLIDAYS =
 
 /** Adresler gizli: ekranda yalnızca sunucu ve dosya adı görünür. */
 function mask(url: string) {
-  if (url === TR_HOLIDAYS) return "Türkiye tatilleri (Google)";
+  if (url === TR_HOLIDAYS) return t("Türkiye tatilleri (Google)");
   try {
     const u = new URL(url.replace(/^webcal:/i, "https:"));
     const file = u.pathname.split("/").filter(Boolean).pop() ?? "";
     return `${u.host} / … / ${file}`;
   } catch {
-    return "Geçersiz adres";
+    return t("Geçersiz adres");
   }
 }
 
@@ -41,37 +42,39 @@ export function Calendar({ config }: { config: Config }) {
   const add = async (raw: string) => {
     const url = raw.trim();
     if (!/^(https?|webcal):\/\//i.test(url)) {
-      setStatus({ kind: "error", text: "Adres https:// ya da webcal:// ile başlamalı." });
+      setStatus({ kind: "error", text: t("Adres https:// ya da webcal:// ile başlamalı.") });
       return;
     }
     if (urls.includes(url)) {
-      setStatus({ kind: "error", text: "Bu takvim zaten ekli." });
+      setStatus({ kind: "error", text: t("Bu takvim zaten ekli.") });
       return;
     }
-    setStatus({ kind: "busy", text: "Takvim indiriliyor…" });
+    setStatus({ kind: "busy", text: t("Takvim indiriliyor…") });
     try {
       const { events } = parse(await commands.fetchIcs(url));
       setUrls((list) => [...list, url]);
       setDraft("");
-      setStatus({ kind: "ok", text: `Eklendi: ${events.length} etkinlik bulundu.` });
+      setStatus({ kind: "ok", text: t("Eklendi: {n} etkinlik bulundu.", { n: events.length }) });
     } catch (e) {
-      console.error("takvim denenemedi:", String(e));
+      console.error(t("takvim denenemedi:"), errText(e));
       setStatus({
         kind: "error",
-        text: "Takvim indirilemedi ya da okunamadı. Adresi kontrol et.",
+        text: t("Takvim indirilemedi ya da okunamadı. Adresi kontrol et."),
       });
     }
   };
 
   return (
     <Section
-      title="Saat ve takvim"
-      intro="Saate tıklayınca açılan takvimde bu aboneliklerin etkinlikleri görünür. Salt okunur; 15 dakikada bir yenilenir."
+      title={t("Saat ve takvim")}
+      intro={t(
+        "Saate tıklayınca açılan takvimde bu aboneliklerin etkinlikleri görünür. Salt okunur; 15 dakikada bir yenilenir.",
+      )}
     >
       <Card>
-        <Row label="Saniyeleri göster" hint="Saatin yanında soluk, küçük saniye.">
+        <Row label={t("Saniyeleri göster")} hint={t("Saatin yanında soluk, küçük saniye.")}>
           <Toggle
-            label="Saniyeleri göster"
+            label={t("Saniyeleri göster")}
             checked={config.widgets.clock?.showSeconds ?? false}
             onChange={(on) =>
               updateConfig((c) => ({
@@ -83,10 +86,10 @@ export function Calendar({ config }: { config: Config }) {
         </Row>
       </Card>
 
-      <h3 className={styles.subTitle}>Takvim abonelikleri</h3>
+      <h3 className={styles.subTitle}>{t("Takvim abonelikleri")}</h3>
       <Card>
         {urls.length === 0 ? (
-          <p className={styles.cardNote}>Henüz takvim eklenmedi.</p>
+          <p className={styles.cardNote}>{t("Henüz takvim eklenmedi.")}</p>
         ) : (
           <ul className={styles.urlList}>
             {urls.map((u) => (
@@ -95,8 +98,8 @@ export function Calendar({ config }: { config: Config }) {
                 <button
                   type="button"
                   className={styles.itemAction}
-                  aria-label="Takvimi kaldır"
-                  title="Kaldır"
+                  aria-label={t("Takvimi kaldır")}
+                  title={t("Kaldır")}
                   onClick={() => setUrls((list) => list.filter((x) => x !== u))}
                 >
                   ×
@@ -117,7 +120,7 @@ export function Calendar({ config }: { config: Config }) {
         <input
           className={styles.input}
           type="password"
-          placeholder="ICS adresini yapıştır"
+          placeholder={t("ICS adresini yapıştır")}
           value={draft}
           spellCheck={false}
           autoComplete="off"
@@ -128,7 +131,7 @@ export function Calendar({ config }: { config: Config }) {
           className={`${styles.button} ${styles.primary}`}
           disabled={!draft.trim() || status?.kind === "busy"}
         >
-          Ekle
+          {t("Ekle")}
         </button>
       </form>
       {status && (
@@ -144,21 +147,22 @@ export function Calendar({ config }: { config: Config }) {
             disabled={status?.kind === "busy"}
             onClick={() => add(TR_HOLIDAYS)}
           >
-            Türkiye tatillerini ekle
+            {t("Türkiye tatillerini ekle")}
           </button>
         </div>
       )}
 
       <div className={styles.help}>
-        <h3 className={styles.subTitle}>Google Takvim adresi nereden alınır?</h3>
+        <h3 className={styles.subTitle}>{t("Google Takvim adresi nereden alınır?")}</h3>
         <ol>
-          <li>Tarayıcıda Google Takvim → sağ üstte ⚙ → Ayarlar.</li>
-          <li>Soldan takviminin adını seç.</li>
-          <li>“iCal biçiminde gizli adres”i kopyalayıp buraya yapıştır.</li>
+          <li>{t("Tarayıcıda Google Takvim → sağ üstte ⚙ → Ayarlar.")}</li>
+          <li>{t("Soldan takviminin adını seç.")}</li>
+          <li>{t("“iCal biçiminde gizli adres”i kopyalayıp buraya yapıştır.")}</li>
         </ol>
         <p>
-          Bu adresi bilen herkes takvimini görebilir. Adres yalnızca bu bilgisayardaki ayar
-          dosyasında saklanır, ekranda kısaltılmış görünür.
+          {t(
+            "Bu adresi bilen herkes takvimini görebilir. Adres yalnızca bu bilgisayardaki ayar dosyasında saklanır, ekranda kısaltılmış görünür.",
+          )}
         </p>
       </div>
     </Section>

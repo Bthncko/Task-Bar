@@ -1225,13 +1225,19 @@ fn handle_callback(mut stream: TcpStream) -> Option<Vec<(String, String)>> {
 }
 
 fn callback_page(ok: bool) -> String {
-    let message = if ok {
-        "Akıllı Dock Spotify'a bağlandı. Bu sekmeyi kapatabilirsin."
-    } else {
-        "Spotify bağlantısı tamamlanmadı. Akıllı Dock ayarlarından yeniden deneyebilirsin."
+    let app = crate::i18n::app_name();
+    let message = match (crate::i18n::english(), ok) {
+        (false, true) => format!("{app} Spotify'a bağlandı. Bu sekmeyi kapatabilirsin."),
+        (false, false) => {
+            format!("Spotify bağlantısı tamamlanmadı. {app} ayarlarından yeniden deneyebilirsin.")
+        }
+        (true, true) => format!("{app} is now connected to Spotify. You can close this tab."),
+        (true, false) => {
+            format!("Spotify wasn't connected. You can try again from the {app} settings.")
+        }
     };
     format!(
-        "<!doctype html><meta charset=utf-8><title>Akıllı Dock</title>\
+        "<!doctype html><meta charset=utf-8><title>{app}</title>\
          <body style=\"margin:0;height:100vh;display:grid;place-items:center;\
          background:#14161c;color:#e8e8ea;font:16px 'Segoe UI',sans-serif\">\
          <p>{message}</p></body>"

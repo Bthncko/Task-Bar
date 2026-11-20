@@ -7,9 +7,10 @@ import { WeatherArt } from "./Art";
 import { describeWeather } from "./wmo";
 import type { WeatherConfig } from "./index";
 import styles from "./Popup.module.css";
+import { dtf, pct, t } from "../../lib/i18n";
 
-const weekday = new Intl.DateTimeFormat("tr-TR", { weekday: "short" });
-const clock = new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" });
+const weekday = () => dtf({ weekday: "short" });
+const clock = () => dtf({ hour: "2-digit", minute: "2-digit" });
 
 /** Yağış olasılığı bu değerin altındaysa gösterme (gürültü). */
 const PRECIP_MIN = 20;
@@ -17,10 +18,10 @@ const PRECIP_MIN = 20;
 const deg = (t: number) => `${Math.round(t)}°`;
 
 function dayLabel(date: string, index: number) {
-  if (index === 0) return "Bugün";
-  if (index === 1) return "Yarın";
+  if (index === 0) return t("Bugün");
+  if (index === 1) return t("Yarın");
   // "2026-11-18" → yerel gece yarısı (UTC olarak okunmasın).
-  return weekday.format(new Date(`${date}T00:00`));
+  return weekday().format(new Date(`${date}T00:00`));
 }
 
 export function WeatherPopup({ config }: { config: WeatherConfig }) {
@@ -60,7 +61,7 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
             close();
           }}
         >
-          Değiştir
+          {t("Değiştir")}
         </LinkButton>
       }
     />
@@ -73,17 +74,17 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
         <div className={styles.empty}>
           {failed ? (
             <>
-              <p>Hava durumu alınamadı. İnternet bağlantını kontrol et.</p>
+              <p>{t("Hava durumu alınamadı. İnternet bağlantını kontrol et.")}</p>
               <button
                 type="button"
                 className={styles.retry}
                 onClick={() => setAttempt((n) => n + 1)}
               >
-                Yeniden dene
+                {t("Yeniden dene")}
               </button>
             </>
           ) : (
-            <p>Yükleniyor…</p>
+            <p>{t("Yükleniyor…")}</p>
           )}
         </div>
       </div>
@@ -105,14 +106,16 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
         <div className={styles.nowRow}>
           <WeatherArt kind={now.kind} night={!current.isDay} size={56} />
           <span className={styles.temp}>{deg(current.temperature)}</span>
-          <span className={styles.feels}>Hissedilen {deg(current.apparent)}</span>
+          <span className={styles.feels}>
+            {t("Hissedilen")} {deg(current.apparent)}
+          </span>
         </div>
         <p className={styles.nowText}>
           {now.text}
           {today && (
             <span className={styles.dim}>
               {" "}
-              · Y {deg(today.max)} D {deg(today.min)}
+              · {t("Y")} {deg(today.max)} {t("D")} {deg(today.min)}
             </span>
           )}
         </p>
@@ -127,10 +130,12 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
       >
         {hourly.map((h, i) => {
           const { text, kind } = describeWeather(h.code);
-          const precip = h.precip !== null && h.precip >= PRECIP_MIN ? `%${h.precip}` : "";
+          const precip = h.precip !== null && h.precip >= PRECIP_MIN ? pct(h.precip) : "";
           return (
             <div key={h.time} className={styles.hour} title={text} data-now={i === 0 || undefined}>
-              <span className={styles.hourLabel}>{i === 0 ? "Şimdi" : h.time.slice(11, 13)}</span>
+              <span className={styles.hourLabel}>
+                {i === 0 ? t("Şimdi") : h.time.slice(11, 13)}
+              </span>
               <WeatherArt kind={kind} night={!h.isDay} size={24} />
               <span className={styles.hourTemp}>{deg(h.temperature)}</span>
               <span className={styles.precip}>{precip}</span>
@@ -147,7 +152,7 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
               <span className={styles.dayName}>{dayLabel(d.date, i)}</span>
               <WeatherArt kind={kind} night={false} size={22} />
               <span className={styles.precip}>
-                {d.precip !== null && d.precip >= PRECIP_MIN ? `%${d.precip}` : ""}
+                {d.precip !== null && d.precip >= PRECIP_MIN ? pct(d.precip) : ""}
               </span>
               <span className={`${styles.dim} ${styles.num}`}>{deg(d.min)}</span>
               <span className={styles.range}>
@@ -166,10 +171,10 @@ export function WeatherPopup({ config }: { config: WeatherConfig }) {
       </ul>
 
       <footer className={styles.footer}>
-        <span>Veri: Open-Meteo.com</span>
+        <span>{t("Veri: Open-Meteo.com")}</span>
         <span>
-          {failed ? "Çevrimdışı · " : ""}
-          {clock.format(current.fetchedAt)}
+          {failed ? t("Çevrimdışı · ") : ""}
+          {clock().format(current.fetchedAt)}
         </span>
       </footer>
     </div>

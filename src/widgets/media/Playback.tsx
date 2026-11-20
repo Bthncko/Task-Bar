@@ -12,6 +12,7 @@ import {
 import { IconButton } from "../ui";
 import { duration, useProgress, useThrottled } from "./spotify";
 import styles from "./Popup.module.css";
+import { pct, t } from "../../lib/i18n";
 
 type Player = NonNullable<SpotifyPlayer>;
 type SetPlayer = (f: (p: SpotifyPlayer) => SpotifyPlayer) => void;
@@ -50,7 +51,7 @@ export function ProgressBar({
         max={total}
         step={1000}
         value={shown}
-        aria-label="Şarkıda konum"
+        aria-label={t("Şarkıda konum")}
         className={styles.seek}
         style={{ "--fill": `${(shown / total) * 100}%` } as CSSProperties}
         onChange={(e) => setDrag(Number(e.currentTarget.value))}
@@ -87,9 +88,9 @@ export function LikeButton({
     <IconButton
       className={styles.like}
       data-on={liked || undefined}
-      aria-label={liked ? "Beğenilenlerden çıkar" : "Beğenilenlere ekle"}
+      aria-label={liked ? t("Beğenilenlerden çıkar") : t("Beğenilenlere ekle")}
       aria-pressed={liked}
-      title={liked ? "Beğenilenlerden çıkar" : "Beğenilenlere ekle"}
+      title={liked ? t("Beğenilenlerden çıkar") : t("Beğenilenlere ekle")}
       onClick={toggle}
     >
       <HeartIcon size={18} filled={liked} />
@@ -133,8 +134,14 @@ export function VolumeRow({
       <div className={styles.volume} data-muted={muted || undefined}>
         <IconButton
           className={styles.mute}
-          aria-label={muted ? "Spotify sesini aç" : "Spotify sesini kapat"}
-          title={canVolume ? (muted ? "Sesi aç" : "Sessize al") : "Bu cihazın sesi ayarlanamıyor"}
+          aria-label={muted ? t("Spotify sesini aç") : t("Spotify sesini kapat")}
+          title={
+            canVolume
+              ? muted
+                ? t("Sesi aç")
+                : t("Sessize al")
+              : t("Bu cihazın sesi ayarlanamıyor")
+          }
           disabled={!canVolume}
           aria-pressed={muted}
           onClick={toggleMute}
@@ -147,7 +154,7 @@ export function VolumeRow({
           max={100}
           value={shown}
           disabled={!canVolume}
-          aria-label="Spotify sesi"
+          aria-label={t("Spotify sesi")}
           className={styles.slider}
           style={{ "--fill": `${shown}%` } as CSSProperties}
           onChange={(e) => {
@@ -161,13 +168,13 @@ export function VolumeRow({
           }}
           onBlur={() => setLocal(null)}
         />
-        <span className={styles.percent}>{canVolume ? `%${shown}` : "—"}</span>
+        <span className={styles.percent}>{canVolume ? pct(shown) : "—"}</span>
         {device && (
           <button
             type="button"
             className={styles.deviceChip}
             aria-expanded={open}
-            title={`Çalan cihaz: ${device.name}`}
+            title={t("Çalan cihaz: {name}", { name: device.name })}
             onClick={() => setOpen((o) => !o)}
           >
             <DeviceIcon kind={device.kind} size={15} />
@@ -222,9 +229,9 @@ function Devices({ onPicked, onError }: { onPicked: () => void; onError: (e: unk
       .finally(() => setBusy(null));
   };
 
-  if (devices === null) return <p className={styles.hint}>Cihazlar aranıyor…</p>;
+  if (devices === null) return <p className={styles.hint}>{t("Cihazlar aranıyor…")}</p>;
   if (devices.length === 0)
-    return <p className={styles.hint}>Açık başka bir Spotify cihazı yok.</p>;
+    return <p className={styles.hint}>{t("Açık başka bir Spotify cihazı yok.")}</p>;
   return (
     <ul className={styles.devices}>
       {devices.map((d) => (

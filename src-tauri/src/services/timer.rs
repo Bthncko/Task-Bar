@@ -128,16 +128,24 @@ fn schedule(end: u64) {
         if let Some(app) = APP.get() {
             super::notifications::show_local(
                 app,
-                "Zamanlayıcı",
-                "Süre doldu",
-                &format!("{} tamamlandı.", minutes(state.total)),
+                crate::i18n::t("Zamanlayıcı"),
+                crate::i18n::t("Süre doldu"),
+                &if crate::i18n::english() {
+                    format!("{} finished.", minutes(state.total))
+                } else {
+                    format!("{} tamamlandı.", minutes(state.total))
+                },
             );
         }
     });
 }
 
 fn minutes(seconds: u32) -> String {
+    let en = crate::i18n::english();
     match (seconds / 60, seconds % 60) {
+        (0, s) if en => format!("{s} sec"),
+        (m, 0) if en => format!("{m} min"),
+        (m, s) if en => format!("{m} min {s} sec"),
         (0, s) => format!("{s} sn"),
         (m, 0) => format!("{m} dakika"),
         (m, s) => format!("{m} dk {s} sn"),

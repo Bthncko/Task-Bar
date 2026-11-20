@@ -32,6 +32,8 @@ pub struct Config {
     pub own_notifications: bool,
     /// Bildirim kartlarının ekrandaki yeri (win/notify.rs).
     pub notify_position: NotifyPosition,
+    /// Arayüz dili: "auto" (Windows'un dili) | "tr" | "en" (i18n.rs).
+    pub language: String,
     /// Otomatik gizlenme (8.10): "never" | "always" | "smart" (win/autohide.rs).
     pub auto_hide: String,
     pub theme: Theme,
@@ -49,6 +51,7 @@ impl Default for Config {
             auto_update: true,
             own_notifications: true,
             notify_position: NotifyPosition::default(),
+            language: "auto".into(),
             auto_hide: "never".into(),
             theme: Theme::default(),
             layout: Layout::default(),

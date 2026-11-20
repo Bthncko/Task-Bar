@@ -11,6 +11,7 @@ import { uiScale } from "../../lib/theme";
 import { Card, Row, Slider } from "./controls";
 import styles from "./NotifyPlacement.module.css";
 import settings from "./Settings.module.css";
+import { t } from "../../lib/i18n";
 
 /** Kart (NotifyWindow → WIDTH) ve tek kartlık yığının yaklaşık boyu (CSS piksel). */
 const CARD_W = 360;
@@ -23,12 +24,24 @@ const DRAG_DELAY_MS = 120;
 const TEST_DELAY_MS = 200;
 
 const NAMES: Record<NotifyAnchor, string> = {
-  topLeft: "Sol üst",
-  topCenter: "Üst orta",
-  topRight: "Sağ üst",
-  bottomLeft: "Sol alt",
-  bottomCenter: "Alt orta",
-  bottomRight: "Sağ alt",
+  get topLeft() {
+    return t("Sol üst");
+  },
+  get topCenter() {
+    return t("Üst orta");
+  },
+  get topRight() {
+    return t("Sağ üst");
+  },
+  get bottomLeft() {
+    return t("Sol alt");
+  },
+  get bottomCenter() {
+    return t("Alt orta");
+  },
+  get bottomRight() {
+    return t("Sağ alt");
+  },
 };
 
 type Screen = { w: number; h: number; card: { w: number; h: number } };
@@ -65,7 +78,7 @@ function clamp(v: number, min: number, max: number) {
   return Math.min(Math.max(v, min), Math.max(min, max));
 }
 
-const pct = (v: number, of: number) => `${(v / of) * 100}%`;
+const percentOf = (v: number, of: number) => `${(v / of) * 100}%`;
 
 /**
  * Ayarlar → Genel: bildirim kartlarının yeri. Ekranın küçük bir kopyası:
@@ -150,28 +163,32 @@ export function NotifyPlacement({ config }: { config: Config }) {
   const at = drag ?? origin(pos, s);
   const ghost = drag ? origin(snap(drag, s, pos.x), s) : null;
   const box = (p: Point): CSSProperties => ({
-    left: pct(p.x, s.w),
-    top: pct(p.y, sh),
-    width: pct(s.card.w, s.w),
-    height: pct(s.card.h, sh),
+    left: percentOf(p.x, s.w),
+    top: percentOf(p.y, sh),
+    width: percentOf(s.card.w, s.w),
+    height: percentOf(s.card.h, sh),
   });
 
   const target = drag ? snap(drag, s, pos.x).anchor : pos.anchor;
 
   return (
     <>
-      <h3 className={settings.subTitle}>Bildirim konumu</h3>
+      <h3 className={settings.subTitle}>{t("Bildirim konumu")}</h3>
       <Card>
         <Row
           label={NAMES[target]}
           hint={
             disabled
-              ? "Yalnızca dock tarzı bildirimlerde; yukarıdan açınca buradan yerini seçebilirsin."
-              : "Kartı sürükle ya da ekranda bir yere tıkla: en yakın köşeye ya da kenarın ortasına oturur, örnek kart gerçek yerinde görünür."
+              ? t(
+                  "Yalnızca dock tarzı bildirimlerde; yukarıdan açınca buradan yerini seçebilirsin.",
+                )
+              : t(
+                  "Kartı sürükle ya da ekranda bir yere tıkla: en yakın köşeye ya da kenarın ortasına oturur, örnek kart gerçek yerinde görünür.",
+                )
           }
         >
           <button type="button" className={settings.button} disabled={disabled} onClick={show}>
-            Göster
+            {t("Göster")}
           </button>
         </Row>
         <div className={styles.stage} data-disabled={disabled || undefined}>
@@ -181,11 +198,11 @@ export function NotifyPlacement({ config }: { config: Config }) {
             style={{ aspectRatio: `${sw} / ${sh}` }}
             onPointerDown={onScreenDown}
             role="group"
-            aria-label="Ekran önizlemesi"
+            aria-label={t("Ekran önizlemesi")}
           >
             <div
               className={styles.dock}
-              style={{ top: pct(s.h + 4 * zoom, sh), bottom: pct(8 * zoom, sh) }}
+              style={{ top: percentOf(s.h + 4 * zoom, sh), bottom: percentOf(8 * zoom, sh) }}
             />
             {ghost && <div className={styles.ghost} style={box(ghost)} />}
             <div
@@ -197,7 +214,7 @@ export function NotifyPlacement({ config }: { config: Config }) {
               onPointerUp={onCardUp}
               onPointerCancel={onCardUp}
               role="img"
-              aria-label={`Bildirim kartı: ${NAMES[pos.anchor]}`}
+              aria-label={t("Bildirim kartı: {name}", { name: NAMES[pos.anchor] })}
             >
               <span className={styles.cardIcon} />
               <span className={styles.cardLines}>
@@ -208,15 +225,17 @@ export function NotifyPlacement({ config }: { config: Config }) {
           </div>
         </div>
         <Row
-          label="Yatay uzaklık"
+          label={t("Yatay uzaklık")}
           hint={
             center
-              ? "Ortadayken kart tam ortalanır."
-              : `Ekranın ${pos.anchor.endsWith("Left") ? "sol" : "sağ"} kenarından.`
+              ? t("Ortadayken kart tam ortalanır.")
+              : pos.anchor.endsWith("Left")
+                ? t("Ekranın sol kenarından.")
+                : t("Ekranın sağ kenarından.")
           }
         >
           <Slider
-            label="Yatay uzaklık"
+            label={t("Yatay uzaklık")}
             min={0}
             max={Math.round(s.w / 2)}
             value={Math.min(pos.x, Math.round(s.w / 2))}
@@ -226,11 +245,11 @@ export function NotifyPlacement({ config }: { config: Config }) {
           />
         </Row>
         <Row
-          label="Dikey uzaklık"
-          hint={bottom ? "Dock'un üst kenarından." : "Ekranın üst kenarından."}
+          label={t("Dikey uzaklık")}
+          hint={bottom ? t("Dock'un üst kenarından.") : t("Ekranın üst kenarından.")}
         >
           <Slider
-            label="Dikey uzaklık"
+            label={t("Dikey uzaklık")}
             min={0}
             max={Math.round(s.h / 2)}
             value={Math.min(pos.y, Math.round(s.h / 2))}

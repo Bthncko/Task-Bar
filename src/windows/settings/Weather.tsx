@@ -4,6 +4,7 @@ import { updateConfig } from "../../lib/store";
 import { searchPlaces, type Place } from "../../widgets/weather/api";
 import { Card, Row, Section, Segmented } from "./controls";
 import styles from "./Settings.module.css";
+import { t } from "../../lib/i18n";
 
 const SEARCH_DELAY_MS = 350;
 
@@ -29,7 +30,7 @@ export function Weather({ config }: { config: Config }) {
       searchPlaces(q)
         .then((places) => alive && setResult({ q, places }))
         .catch((e) => {
-          console.error("şehir arama", e);
+          console.error(t("şehir arama"), e);
           if (alive) setResult({ q, places: null });
         });
     }, SEARCH_DELAY_MS);
@@ -47,30 +48,32 @@ export function Weather({ config }: { config: Config }) {
   };
 
   return (
-    <Section title="Hava durumu">
+    <Section title={t("Hava durumu")}>
       <Card>
         <Row
-          label="Şehir"
+          label={t("Şehir")}
           hint={`${weather.city} · ${weather.lat.toFixed(2)}, ${weather.lon.toFixed(2)}`}
         />
         <div className={styles.search}>
           <input
             className={styles.input}
             type="search"
-            placeholder="Şehir ara…"
+            placeholder={t("Şehir ara…")}
             value={query}
             spellCheck={false}
             onChange={(e) => setQuery(e.currentTarget.value)}
           />
           {q.length >= 2 && (
             <ul className={styles.results}>
-              {!current && <li className={styles.resultNote}>Aranıyor…</li>}
+              {!current && <li className={styles.resultNote}>{t("Aranıyor…")}</li>}
               {current?.places === null && (
                 <li className={styles.resultNote}>
-                  Arama yapılamadı. İnternet bağlantını kontrol et.
+                  {t("Arama yapılamadı. İnternet bağlantını kontrol et.")}
                 </li>
               )}
-              {current?.places?.length === 0 && <li className={styles.resultNote}>Sonuç yok.</li>}
+              {current?.places?.length === 0 && (
+                <li className={styles.resultNote}>{t("Sonuç yok.")}</li>
+              )}
               {current?.places?.map((p) => (
                 <li key={p.id}>
                   <button type="button" className={styles.result} onClick={() => choose(p)}>
@@ -84,9 +87,9 @@ export function Weather({ config }: { config: Config }) {
             </ul>
           )}
         </div>
-        <Row label="Birim">
+        <Row label={t("Birim")}>
           <Segmented
-            label="Sıcaklık birimi"
+            label={t("Sıcaklık birimi")}
             value={weather.unit}
             options={[
               { value: "C", label: "°C" },
@@ -96,7 +99,7 @@ export function Weather({ config }: { config: Config }) {
           />
         </Row>
       </Card>
-      <p className={styles.footnote}>Veri ve şehir arama: Open-Meteo.com (CC BY 4.0)</p>
+      <p className={styles.footnote}>{t("Veri ve şehir arama: Open-Meteo.com (CC BY 4.0)")}</p>
     </Section>
   );
 }

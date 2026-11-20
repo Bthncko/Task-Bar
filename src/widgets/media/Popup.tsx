@@ -28,22 +28,44 @@ import { Search } from "./Search";
 import { useSpotifyPlayer } from "./spotify";
 import { useCoverTint } from "./useCoverTint";
 import styles from "./Popup.module.css";
+import { errText, t } from "../../lib/i18n";
 
 const isSpotify = (app: string) => /spotify/i.test(app);
 
 /** Tekrar düğmesi Spotify'daki sırayla döner: kapalı → liste → tek şarkı. */
 const NEXT_REPEAT: Record<RepeatMode, RepeatMode> = { off: "list", list: "track", track: "off" };
 const REPEAT_LABEL: Record<RepeatMode, string> = {
-  off: "Tekrarla: kapalı",
-  list: "Tekrarla: liste",
-  track: "Tekrarla: bu şarkı",
+  get off() {
+    return t("Tekrarla: kapalı");
+  },
+  get list() {
+    return t("Tekrarla: liste");
+  },
+  get track() {
+    return t("Tekrarla: bu şarkı");
+  },
 };
 
 type Tab = "queue" | "search" | "playlists";
 const TABS: { id: Tab; label: string }[] = [
-  { id: "queue", label: "Sıradakiler" },
-  { id: "search", label: "Ara" },
-  { id: "playlists", label: "Listelerim" },
+  {
+    id: "queue",
+    get label() {
+      return t("Sıradakiler");
+    },
+  },
+  {
+    id: "search",
+    get label() {
+      return t("Ara");
+    },
+  },
+  {
+    id: "playlists",
+    get label() {
+      return t("Listelerim");
+    },
+  },
 ];
 
 /**
@@ -66,17 +88,20 @@ export function MediaPopup() {
   let body;
   if (!media) body = null;
   else if (!fromSpotify)
-    body = <p className={styles.note}>Sıra ve ses ayarı yalnızca Spotify çalarken görünür.</p>;
+    body = (
+      <p className={styles.note}>{t("Sıra ve ses ayarı yalnızca Spotify çalarken görünür.")}</p>
+    );
   else if (!spotify) body = null;
   else if (!spotify.connected)
     body = (
       <div className={styles.connect}>
         <p>
-          Spotify hesabını bağlarsan burada sıradaki şarkıları düzenleyebilir, şarkı arayıp sıraya
-          ekleyebilir, Spotify sesini ve çalan cihazı değiştirebilirsin.
+          {t(
+            "Spotify hesabını bağlarsan burada sıradaki şarkıları düzenleyebilir, şarkı arayıp sıraya ekleyebilir, Spotify sesini ve çalan cihazı değiştirebilirsin.",
+          )}
         </p>
         <button type="button" className={styles.primary} onClick={openSettings}>
-          Spotify'ı bağla
+          {t("Spotify'ı bağla")}
         </button>
       </div>
     );
@@ -85,8 +110,10 @@ export function MediaPopup() {
   return (
     <div className={styles.root}>
       <PanelHeader
-        title="Müzik"
-        actions={linked ? <LinkButton onClick={openSettings}>Spotify</LinkButton> : undefined}
+        title={t("Müzik")}
+        actions={
+          linked ? <LinkButton onClick={openSettings}>{t("Spotify")}</LinkButton> : undefined
+        }
       />
       {media ? (
         linked ? (
@@ -97,13 +124,13 @@ export function MediaPopup() {
       ) : (
         <div className={styles.empty}>
           <MusicIcon size={28} />
-          <p>Şu an bir şey çalmıyor.</p>
+          <p>{t("Şu an bir şey çalmıyor.")}</p>
         </div>
       )}
       {linked && spotify?.needsReconnect && (
         <div className={styles.reconnect}>
-          <span>Beğenme ve çalma listeleri için Spotify'ı bir kez yeniden bağla.</span>
-          <LinkButton onClick={openSettings}>Yeniden bağla</LinkButton>
+          <span>{t("Beğenme ve çalma listeleri için Spotify'ı bir kez yeniden bağla.")}</span>
+          <LinkButton onClick={openSettings}>{t("Yeniden bağla")}</LinkButton>
         </div>
       )}
       {body}
@@ -117,7 +144,7 @@ function SpotifyNow({ media }: { media: NonNullable<MediaState> }) {
   const { player, setPlayer, error, refresh } = useSpotifyPlayer(trackKey, media.playing);
   const [actionError, setActionError] = useState<string | null>(null);
   const onError = (e: unknown) => {
-    setActionError(String(e));
+    setActionError(errText(e));
     refresh();
   };
   // Şarkı değişince eski hata gitsin.
@@ -148,7 +175,7 @@ function SpotifyNow({ media }: { media: NonNullable<MediaState> }) {
               refresh();
             }}
           >
-            Tamam
+            {t("Tamam")}
           </LinkButton>
         </div>
       )}
@@ -184,9 +211,9 @@ function NowPlaying({
             {media.shuffle !== null && (
               <IconButton
                 className={`${styles.control} ${styles.toggle}`}
-                aria-label="Karıştır"
+                aria-label={t("Karıştır")}
                 aria-pressed={media.shuffle}
-                title={media.shuffle ? "Karıştır: açık" : "Karıştır: kapalı"}
+                title={media.shuffle ? t("Karıştır: açık") : t("Karıştır: kapalı")}
                 onClick={() =>
                   commands.mediaSetShuffle(!media.shuffle).catch(report("media_set_shuffle"))
                 }
@@ -196,8 +223,8 @@ function NowPlaying({
             )}
             <IconButton
               className={styles.control}
-              aria-label="Önceki"
-              title="Önceki"
+              aria-label={t("Önceki")}
+              title={t("Önceki")}
               disabled={!media.canPrev}
               onClick={() => commands.mediaPrev().catch(report("media_prev"))}
             >
@@ -205,16 +232,16 @@ function NowPlaying({
             </IconButton>
             <IconButton
               className={`${styles.control} ${styles.play}`}
-              aria-label={media.playing ? "Duraklat" : "Oynat"}
-              title={media.playing ? "Duraklat" : "Oynat"}
+              aria-label={media.playing ? t("Duraklat") : t("Oynat")}
+              title={media.playing ? t("Duraklat") : t("Oynat")}
               onClick={() => commands.mediaToggle().catch(report("media_toggle"))}
             >
               {media.playing ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
             </IconButton>
             <IconButton
               className={styles.control}
-              aria-label="Sonraki"
-              title="Sonraki"
+              aria-label={t("Sonraki")}
+              title={t("Sonraki")}
               disabled={!media.canNext}
               onClick={() => commands.mediaNext().catch(report("media_next"))}
             >

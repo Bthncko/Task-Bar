@@ -3,6 +3,7 @@
 mod commands;
 mod config;
 mod error;
+mod i18n;
 mod services;
 mod win;
 
@@ -27,8 +28,10 @@ struct TrayMenu {
     /// Dock'a sağ tıklayınca da aynı menü açılır: Windows çubuğu gizliyken
     /// tepsi simgesi de onunla birlikte gizlenir.
     menu: Menu<Wry>,
+    settings: MenuItem<Wry>,
     hide_taskbar: CheckMenuItem<Wry>,
     autostart: CheckMenuItem<Wry>,
+    quit: MenuItem<Wry>,
 }
 
 /// Dock'un boş yerine sağ tık: tepsi menüsü imlecin olduğu yerde.
@@ -191,6 +194,7 @@ pub fn run() {
 
             let config_dir = app.path().app_config_dir()?;
             let config = ConfigStore::load(config_dir.clone());
+            i18n::set(&config.get().language);
             config.attach(app.handle().clone());
             let hide_taskbar = config.get().hide_windows_taskbar;
             let minimize_to_dock = config.get().minimize_to_dock;
@@ -269,11 +273,12 @@ pub fn run() {
 
 /// Tepsi (bölüm 11).
 fn create_tray(app: &AppHandle, hide_taskbar: bool) -> tauri::Result<()> {
-    let settings_item = MenuItem::with_id(app, MENU_SETTINGS, "Ayarlar…", true, None::<&str>)?;
+    let settings_item =
+        MenuItem::with_id(app, MENU_SETTINGS, i18n::t("Ayarlar…"), true, None::<&str>)?;
     let hide_item = CheckMenuItem::with_id(
         app,
         MENU_HIDE_TASKBAR,
-        "Windows görev çubuğunu gizle",
+        i18n::t("Windows görev çubuğunu gizle"),
         true,
         hide_taskbar,
         None::<&str>,
@@ -281,16 +286,12 @@ fn create_tray(app: &AppHandle, hide_taskbar: bool) -> tauri::Result<()> {
     let autostart_item = CheckMenuItem::with_id(
         app,
         MENU_AUTOSTART,
-        if AUTOSTART_AVAILABLE {
-            "Açılışta başlat"
-        } else {
-            "Açılışta başlat (yalnızca kurulu sürüm)"
-        },
+        autostart_label(),
         AUTOSTART_AVAILABLE,
         autostart_enabled(app),
         None::<&str>,
     )?;
-    let quit = MenuItem::with_id(app, MENU_QUIT, "Çıkış", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, MENU_QUIT, i18n::t("Çıkış"), true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
@@ -304,12 +305,14 @@ fn create_tray(app: &AppHandle, hide_taskbar: bool) -> tauri::Result<()> {
     )?;
     app.manage(TrayMenu {
         menu: menu.clone(),
+        settings: settings_item,
         hide_taskbar: hide_item,
         autostart: autostart_item,
+        quit: quit.clone(),
     });
 
     let mut tray = TrayIconBuilder::with_id("main")
-        .tooltip("Akıllı Dock")
+        .tooltip(i18n::app_name())
         .menu(&menu)
         .show_menu_on_left_click(true);
     if let Some(icon) = app.default_window_icon() {
@@ -317,6 +320,30 @@ fn create_tray(app: &AppHandle, hide_taskbar: bool) -> tauri::Result<()> {
     }
     tray.build(app)?;
     Ok(())
+}
+
+fn autostart_label() -> &'static str {
+    i18n::t(if AUTOSTART_AVAILABLE {
+        "Açılışta başlat"
+    } else {
+        "Açılışta başlat (yalnızca kurulu sürüm)"
+    })
+}
+
+/// Dil değişince tepsi menüsü, simge ipucu ve açık ayarlar penceresi yeni dile geçer.
+pub(crate) fn apply_language(app: &AppHandle) {
+    if let Some(tray) = app.try_state::<TrayMenu>() {
+        let _ = tray.settings.set_text(i18n::t("Ayarlar…"));
+        let _ = tray
+            .hide_taskbar
+            .set_text(i18n::t("Windows görev çubuğunu gizle"));
+        let _ = tray.autostart.set_text(autostart_label());
+        let _ = tray.quit.set_text(i18n::t("Çıkış"));
+    }
+    if let Some(icon) = app.tray_by_id("main") {
+        let _ = icon.set_tooltip(Some(i18n::app_name()));
+    }
+    win::settings::refresh_title(app);
 }
 
 fn toggle_hide_taskbar(app: &AppHandle) {

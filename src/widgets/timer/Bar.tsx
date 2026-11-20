@@ -5,39 +5,40 @@ import { TimerIcon } from "../icons";
 import { Tile } from "../ui";
 import { format, idle, remainingMs, useNow } from "./clock";
 import styles from "./Bar.module.css";
+import { t } from "../../lib/i18n";
 
 const R = 8;
 const C = 2 * Math.PI * R;
 
 /** Zamanlayıcı karosu (8.8): halka + geri sayım; bitince yanıp söner. */
 export function TimerBar() {
-  const t = useService(commands.timerGet, events.timer);
-  const running = t?.endsAt != null;
+  const timer = useService(commands.timerGet, events.timer);
+  const running = timer?.endsAt != null;
   const now = useNow(running);
-  if (!t) return null;
+  if (!timer) return null;
 
-  const left = remainingMs(t, now);
-  const done = t.total > 0 ? 1 - left / (t.total * 1000) : 0;
-  const resting = idle(t);
+  const left = remainingMs(timer, now);
+  const done = timer.total > 0 ? 1 - left / (timer.total * 1000) : 0;
+  const resting = idle(timer);
 
   return (
     <Tile
       as="button"
-      variant={t.finished ? "solid" : "soft"}
+      variant={timer.finished ? "solid" : "soft"}
       interactive
       className={styles.tile}
-      data-finished={t.finished || undefined}
-      data-paused={(!running && !resting && !t.finished) || undefined}
-      aria-label={t.finished ? "Zamanlayıcı bitti: kapat" : "Zamanlayıcı"}
+      data-finished={timer.finished || undefined}
+      data-paused={(!running && !resting && !timer.finished) || undefined}
+      aria-label={timer.finished ? t("Zamanlayıcı bitti: kapat") : t("Zamanlayıcı")}
       title={
-        t.finished
-          ? "Süre doldu · tıkla: kapat"
+        timer.finished
+          ? t("Süre doldu · tıkla: kapat")
           : resting
-            ? "Zamanlayıcı"
-            : `${running ? "Kalan" : "Duraklatıldı"} ${format(left)}`
+            ? t("Zamanlayıcı")
+            : `${running ? t("Kalan") : t("Duraklatıldı")} ${format(left)}`
       }
       onClick={(e) => {
-        if (t.finished) commands.timerControl("reset").catch(report("timer_control"));
+        if (timer.finished) commands.timerControl("reset").catch(report("timer_control"));
         else togglePopup("timer", e.currentTarget);
       }}
     >
@@ -56,7 +57,7 @@ export function TimerBar() {
               strokeDashoffset={C * (1 - Math.min(Math.max(done, 0), 1))}
             />
           </svg>
-          <span className={styles.time}>{t.finished ? "Bitti" : format(left)}</span>
+          <span className={styles.time}>{timer.finished ? t("Bitti") : format(left)}</span>
         </>
       )}
     </Tile>

@@ -300,14 +300,28 @@ impl AppsService {
             None::<&str>,
         )?)?;
         let pin = if item.pinned {
-            MenuItem::with_id(app, mid("unpin"), "Dock'tan kaldır", true, None::<&str>)?
+            MenuItem::with_id(
+                app,
+                mid("unpin"),
+                crate::i18n::t("Dock'tan kaldır"),
+                true,
+                None::<&str>,
+            )?
         } else {
-            MenuItem::with_id(app, mid("pin"), "Dock'a sabitle", true, None::<&str>)?
+            MenuItem::with_id(
+                app,
+                mid("pin"),
+                crate::i18n::t("Dock'a sabitle"),
+                true,
+                None::<&str>,
+            )?
         };
         menu.append(&pin)?;
         if !item.windows.is_empty() {
             let close_label = if item.windows.len() == 1 {
-                "Pencereyi kapat".to_string()
+                crate::i18n::t("Pencereyi kapat").to_string()
+            } else if crate::i18n::english() {
+                format!("Close all windows ({})", item.windows.len())
             } else {
                 format!("Tüm pencereleri kapat ({})", item.windows.len())
             };

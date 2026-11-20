@@ -1,4 +1,5 @@
 import type { WeatherKind } from "../icons";
+import { t, tc } from "../../lib/i18n";
 
 // WMO hava kodu → Türkçe metin + ikon. Kodlar open-meteo.com/en/docs tablosundan
 // (97 "şiddetli fırtına" dahil; 96/99 yalnızca dolu tahmini yapan modellerde gelir).
@@ -7,7 +8,7 @@ const TABLE: Record<number, [string, WeatherKind]> = {
   0: ["Açık", "clear"],
   1: ["Çoğunlukla açık", "partly"],
   2: ["Parçalı bulutlu", "partly"],
-  3: ["Kapalı", "cloud"],
+  3: ["Kapalı|hava", "cloud"],
   45: ["Sis", "fog"],
   48: ["Kırağılı sis", "fog"],
   51: ["Hafif çisenti", "drizzle"],
@@ -37,5 +38,7 @@ const TABLE: Record<number, [string, WeatherKind]> = {
 
 export function describeWeather(code: number): { text: string; kind: WeatherKind } {
   const entry = TABLE[code];
-  return entry ? { text: entry[0], kind: entry[1] } : { text: "Bilinmiyor", kind: "cloud" };
+  return entry
+    ? { text: tc("hava", entry[0].split("|")[0] ?? ""), kind: entry[1] }
+    : { text: t("Bilinmiyor"), kind: "cloud" };
 }

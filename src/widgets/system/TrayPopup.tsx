@@ -4,6 +4,7 @@ import { useService } from "../../lib/useService";
 import { LinkButton, PanelHeader } from "../ui/panel";
 import { usePopupClose } from "../ui/popupClose";
 import styles from "./TrayPopup.module.css";
+import { t } from "../../lib/i18n";
 
 /**
  * Tepsi (gizli simgeler): uygulamaların bildirim alanı simgeleri dock tarzında.
@@ -26,11 +27,11 @@ export function TrayPopup() {
 
   return (
     <div className={styles.root}>
-      <PanelHeader title="Tepsi" />
+      <PanelHeader title={t("Tepsi")} />
       {tray && !tray.active ? (
-        <p className={styles.note}>Simgeler şu an Windows'un tepsisinde.</p>
+        <p className={styles.note}>{t("Simgeler şu an Windows'un tepsisinde.")}</p>
       ) : tray && icons.length === 0 ? (
-        <p className={styles.note}>Tepside simge yok.</p>
+        <p className={styles.note}>{t("Tepside simge yok.")}</p>
       ) : (
         <ul className={styles.grid} onPointerLeave={() => setHover(null)}>
           {icons.map((icon) => (
@@ -38,7 +39,7 @@ export function TrayPopup() {
               <button
                 type="button"
                 className={styles.icon}
-                aria-label={icon.tip || "Tepsi simgesi"}
+                aria-label={icon.tip || t("Tepsi simgesi")}
                 onPointerEnter={() => setHover(icon)}
                 onFocus={() => setHover(icon)}
                 onClick={() => commands.trayClick(icon.id, "left").catch(report("tray_click"))}
@@ -62,9 +63,11 @@ export function TrayPopup() {
       )}
       <footer className={styles.footer}>
         <span className={styles.tip}>
-          {hovered ? hovered.tip.split("\n")[0] || "Adsız simge" : `${icons.length} simge`}
+          {hovered
+            ? hovered.tip.split("\n")[0] || t("Adsız simge")
+            : t("{n} simge", { n: icons.length })}
         </span>
-        <LinkButton onClick={windowsTray}>Windows tepsisi</LinkButton>
+        <LinkButton onClick={windowsTray}>{t("Windows tepsisi")}</LinkButton>
       </footer>
     </div>
   );

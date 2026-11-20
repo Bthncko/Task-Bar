@@ -5,11 +5,27 @@ import { CATEGORIES, type DockSection, type WidgetCategory } from "../../widgets
 import { Card, Row, Section } from "./controls";
 import { SortableLists, type SortList } from "./SortableLists";
 import styles from "./Settings.module.css";
+import { t } from "../../lib/i18n";
 
 const SECTIONS: { key: DockSection; title: string }[] = [
-  { key: "left", title: "Sol" },
-  { key: "center", title: "Orta" },
-  { key: "right", title: "Sağ" },
+  {
+    key: "left",
+    get title() {
+      return t("Sol");
+    },
+  },
+  {
+    key: "center",
+    get title() {
+      return t("Orta");
+    },
+  },
+  {
+    key: "right",
+    get title() {
+      return t("Sağ");
+    },
+  },
 ];
 const UNUSED = "unused";
 
@@ -27,11 +43,11 @@ export function Widgets({ config }: { config: Config }) {
     })),
     {
       key: UNUSED,
-      title: "Kullanılmayan",
+      title: t("Kullanılmayan"),
       items: Object.keys(registry)
         .filter((id) => !used.has(id))
         .map(item),
-      empty: "Kapatmak için buraya sürükle",
+      empty: t("Kapatmak için buraya sürükle"),
     },
   ];
 
@@ -74,8 +90,10 @@ export function Widgets({ config }: { config: Config }) {
 
   return (
     <Section
-      title="Widget'lar"
-      intro="Sürükleyerek sırala ya da bölümler arasında taşı. Kapatmak için “Kullanılmayan”a sürükle."
+      title={t("Widget'lar")}
+      intro={t(
+        "Sürükleyerek sırala ya da bölümler arasında taşı. Kapatmak için “Kullanılmayan”a sürükle.",
+      )}
     >
       <SortableLists
         lists={lists}
@@ -85,8 +103,8 @@ export function Widgets({ config }: { config: Config }) {
             <button
               type="button"
               className={styles.itemAction}
-              aria-label={`${it.label} kapat`}
-              title="Kapat"
+              aria-label={t("{label} kapat", { label: it.label })}
+              title={t("Kapat")}
               onClick={() => remove(it.id)}
             >
               ×
@@ -95,7 +113,7 @@ export function Widgets({ config }: { config: Config }) {
         }
       />
 
-      {configurable.length > 0 && <h3 className={styles.subTitle}>Widget ayarları</h3>}
+      {configurable.length > 0 && <h3 className={styles.subTitle}>{t("Widget ayarları")}</h3>}
       {configurable.map(({ id, name, Settings, defaultConfig }) => (
         <div key={id} className={styles.listBox}>
           <h4 className={styles.listTitle}>{name}</h4>
@@ -108,7 +126,7 @@ export function Widgets({ config }: { config: Config }) {
         </div>
       ))}
 
-      <h3 className={styles.subTitle}>Widget ekle</h3>
+      <h3 className={styles.subTitle}>{t("Widget ekle")}</h3>
       {groups.map(([cat, defs]) => (
         <div key={cat} className={styles.listBox}>
           <h4 className={styles.listTitle}>{CATEGORIES[cat]}</h4>
@@ -116,10 +134,10 @@ export function Widgets({ config }: { config: Config }) {
             {defs.map((w) => (
               <Row key={w.id} label={w.name} hint={w.description}>
                 {used.has(w.id) ? (
-                  <span className={styles.inUse}>Dock'ta</span>
+                  <span className={styles.inUse}>{t("Dock'ta")}</span>
                 ) : (
                   <button type="button" className={styles.button} onClick={() => add(w.id)}>
-                    Ekle
+                    {t("Ekle")}
                   </button>
                 )}
               </Row>

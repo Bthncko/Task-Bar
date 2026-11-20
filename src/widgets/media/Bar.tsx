@@ -6,6 +6,7 @@ import { NextIcon, PauseIcon, PlayIcon, PrevIcon } from "../icons";
 import { useCoverTint } from "./useCoverTint";
 import { IconButton, Tile } from "../ui";
 import styles from "./Bar.module.css";
+import { errText, t } from "../../lib/i18n";
 
 /** Kayan yazı hızı (px/sn). */
 const MARQUEE_SPEED = 30;
@@ -65,8 +66,8 @@ function useWheelVolume(enabled: boolean) {
     busy.current = true;
     commands
       .spotifyVolumeStep(delta)
-      .then((v) => show(`Spotify sesi %${v}`))
-      .catch((e) => show(String(e)))
+      .then((v) => show(t("Spotify sesi %{v}", { v })))
+      .catch((e) => show(errText(e)))
       .finally(() => {
         busy.current = false;
         flush();
@@ -115,8 +116,8 @@ export function MediaBar() {
       <div className={styles.controls}>
         <IconButton
           className={styles.control}
-          title="Önceki"
-          aria-label="Önceki"
+          title={t("Önceki")}
+          aria-label={t("Önceki")}
           disabled={!media.canPrev}
           onClick={() => commands.mediaPrev().catch(report("media_prev"))}
         >
@@ -124,8 +125,8 @@ export function MediaBar() {
         </IconButton>
         <IconButton
           className={styles.control}
-          title={media.playing ? "Duraklat" : "Oynat"}
-          aria-label={media.playing ? "Duraklat" : "Oynat"}
+          title={media.playing ? t("Duraklat") : t("Oynat")}
+          aria-label={media.playing ? t("Duraklat") : t("Oynat")}
           onClick={() => commands.mediaToggle().catch(report("media_toggle"))}
         >
           {/* Durum değişince simge çapraz geçişle değişir (7.7). */}
@@ -135,8 +136,8 @@ export function MediaBar() {
         </IconButton>
         <IconButton
           className={styles.control}
-          title="Sonraki"
-          aria-label="Sonraki"
+          title={t("Sonraki")}
+          aria-label={t("Sonraki")}
           disabled={!media.canNext}
           onClick={() => commands.mediaNext().catch(report("media_next"))}
         >

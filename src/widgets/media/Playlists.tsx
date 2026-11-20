@@ -3,6 +3,7 @@ import { commands, type SpotifyPlaylist } from "../../lib/ipc";
 import { LinkButton } from "../ui/panel";
 import { ListSkeleton, TrackRow } from "./rows";
 import styles from "./Popup.module.css";
+import { errText, t } from "../../lib/i18n";
 
 type State =
   | { kind: "loading" }
@@ -21,7 +22,7 @@ export function Playlists() {
     commands
       .spotifyPlaylists()
       .then((items) => alive && setState({ kind: "ready", items }))
-      .catch((e) => alive && setState({ kind: "error", message: String(e) }));
+      .catch((e) => alive && setState({ kind: "error", message: errText(e) }));
     return () => {
       alive = false;
     };
@@ -32,7 +33,7 @@ export function Playlists() {
     setStarted(p.uri);
     commands.spotifyPlayContext(p.uri).catch((e) => {
       setStarted(null);
-      setMessage(String(e));
+      setMessage(errText(e));
     });
   };
 
@@ -47,11 +48,11 @@ export function Playlists() {
             setAttempt((n) => n + 1);
           }}
         >
-          Yeniden dene
+          {t("Yeniden dene")}
         </LinkButton>
       </div>
     );
-  if (state.items.length === 0) return <p className={styles.note}>Çalma listen yok.</p>;
+  if (state.items.length === 0) return <p className={styles.note}>{t("Çalma listen yok.")}</p>;
 
   return (
     <>
@@ -66,11 +67,11 @@ export function Playlists() {
             <TrackRow
               image={p.image}
               title={p.name}
-              subtitle={[p.owner, p.total !== null ? `${p.total} şarkı` : null]
+              subtitle={[p.owner, p.total !== null ? t("{n} şarkı", { n: p.total }) : null]
                 .filter(Boolean)
                 .join(" · ")}
               state={started === p.uri ? "next" : undefined}
-              playLabel="baştan çal"
+              playLabel={t("baştan çal")}
               onPlay={() => play(p)}
             />
           </li>

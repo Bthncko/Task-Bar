@@ -6,6 +6,7 @@ import { IconButton } from "../ui";
 import { LinkButton, PanelHeader } from "../ui/panel";
 import { usePopupClose } from "../ui/popupClose";
 import styles from "./Popup.module.css";
+import { pct, t } from "../../lib/i18n";
 
 /**
  * Ses paneli (8.5): ana ses, çıkış aygıtı seçimi, varsayılan mikrofon.
@@ -36,18 +37,20 @@ export function VolumePopup() {
   return (
     <div className={styles.root}>
       <PanelHeader
-        title="Ses"
+        title={t("Ses")}
         actions={
-          <LinkButton onClick={() => openSettings("sound-mixer")}>Ses karıştırıcısı</LinkButton>
+          <LinkButton onClick={() => openSettings("sound-mixer")}>
+            {t("Ses karıştırıcısı")}
+          </LinkButton>
         }
       />
       {!audio ? (
-        <p className={styles.note}>Ses aygıtı bulunamadı.</p>
+        <p className={styles.note}>{t("Ses aygıtı bulunamadı.")}</p>
       ) : (
         <>
           <section className={styles.section}>
             <Level
-              label="Ana ses"
+              label={t("Ana ses")}
               value={audio.volume}
               muted={audio.muted}
               icon={
@@ -58,8 +61,8 @@ export function VolumePopup() {
             />
           </section>
 
-          <section className={styles.section} aria-label="Çıkış aygıtı">
-            <h3 className={styles.title}>Çıkış</h3>
+          <section className={styles.section} aria-label={t("Çıkış aygıtı")}>
+            <h3 className={styles.title}>{t("Çıkış")}</h3>
             <ul className={styles.list}>
               {audio.outputs.map((d) => (
                 <li key={d.id}>
@@ -79,12 +82,14 @@ export function VolumePopup() {
               ))}
             </ul>
             {audio.outputs.length <= 1 && (
-              <p className={styles.hint}>Kulaklık ya da hoparlör takınca burada seçebilirsin.</p>
+              <p className={styles.hint}>
+                {t("Kulaklık ya da hoparlör takınca burada seçebilirsin.")}
+              </p>
             )}
           </section>
 
-          <section className={styles.section} aria-label="Mikrofon">
-            <h3 className={styles.title}>Giriş</h3>
+          <section className={styles.section} aria-label={t("Mikrofon")}>
+            <h3 className={styles.title}>{t("Giriş")}</h3>
             {audio.mic ? (
               <Level
                 label={audio.mic.name}
@@ -95,7 +100,7 @@ export function VolumePopup() {
                 onChange={(v) => commands.setMicVolume(v / 100).catch(report("set_mic_volume"))}
               />
             ) : (
-              <p className={styles.hint}>Mikrofon yok.</p>
+              <p className={styles.hint}>{t("Mikrofon yok.")}</p>
             )}
           </section>
         </>
@@ -133,8 +138,8 @@ function Level({
   return (
     <div className={styles.level} data-muted={muted || undefined}>
       <IconButton
-        aria-label={muted ? `${label}: sesi aç` : `${label}: sessize al`}
-        title={muted ? "Sesi aç" : "Sessize al"}
+        aria-label={t(muted ? t("{label}: sesi aç") : t("{label}: sessize al"), { label })}
+        title={muted ? t("Sesi aç") : t("Sessize al")}
         className={styles.mute}
         aria-pressed={muted}
         onClick={onMute}
@@ -144,7 +149,7 @@ function Level({
       <div className={styles.levelBody}>
         <div className={styles.levelHead}>
           <span className={styles.name}>{label}</span>
-          <span className={styles.percent}>{muted ? "Sessiz" : `%${shown}`}</span>
+          <span className={styles.percent}>{muted ? t("Sessiz") : pct(shown)}</span>
         </div>
         <input
           type="range"

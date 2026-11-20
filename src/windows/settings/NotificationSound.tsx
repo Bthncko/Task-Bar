@@ -4,15 +4,64 @@ import { CheckIcon, PlayIcon } from "../../widgets/icons";
 import { Card } from "./controls";
 import styles from "./NotificationSound.module.css";
 import settings from "./Settings.module.css";
+import { t } from "../../lib/i18n";
 
 /** Sesler `src-tauri/sounds/generate.py` ile sentezlendi (sıfırdan, örnek yok). */
 const SOUNDS = [
-  { id: "damla", name: "Damla", hint: "İki küçük kabarcık" },
-  { id: "esinti", name: "Esinti", hint: "Yükselen iki yumuşak nota" },
-  { id: "cakil", name: "Çakıl", hint: "Tek, kısa dokunuş" },
-  { id: "kristal", name: "Kristal", hint: "Tek cam tınısı" },
-  { id: "can", name: "Çan", hint: "İki notalı çan" },
-  { id: "windows", name: "Windows", hint: "Windows'un kendi sesleri" },
+  {
+    id: "damla",
+    get name() {
+      return t("Damla");
+    },
+    get hint() {
+      return t("İki küçük kabarcık");
+    },
+  },
+  {
+    id: "esinti",
+    get name() {
+      return t("Esinti");
+    },
+    get hint() {
+      return t("Yükselen iki yumuşak nota");
+    },
+  },
+  {
+    id: "cakil",
+    get name() {
+      return t("Çakıl");
+    },
+    get hint() {
+      return t("Tek, kısa dokunuş");
+    },
+  },
+  {
+    id: "kristal",
+    get name() {
+      return t("Kristal");
+    },
+    get hint() {
+      return t("Tek cam tınısı");
+    },
+  },
+  {
+    id: "can",
+    get name() {
+      return t("Çan");
+    },
+    get hint() {
+      return t("İki notalı çan");
+    },
+  },
+  {
+    id: "windows",
+    get name() {
+      return t("Windows");
+    },
+    get hint() {
+      return t("Windows'un kendi sesleri");
+    },
+  },
 ];
 
 /**
@@ -39,9 +88,9 @@ export function NotificationSound() {
 
   return (
     <>
-      <h3 className={settings.subTitle}>Bildirim sesi</h3>
+      <h3 className={settings.subTitle}>{t("Bildirim sesi")}</h3>
       <Card>
-        <div className={styles.grid} role="radiogroup" aria-label="Bildirim sesi">
+        <div className={styles.grid} role="radiogroup" aria-label={t("Bildirim sesi")}>
           {SOUNDS.map((s) => {
             const on = s.id === current;
             return (
@@ -66,10 +115,11 @@ export function NotificationSound() {
         </div>
         <p className={styles.note}>
           {current === "custom"
-            ? "Şu an Windows'tan seçilmiş başka bir ses var; buradan birini seçince o değişir. "
+            ? t("Şu an Windows'tan seçilmiş başka bir ses var; buradan birini seçince o değişir. ")
             : ""}
-          Seçince bir kez çalar. Mesaj, posta ve takvim bildirimleri de bu sesi kullanır; kendi
-          sesini kendisi çalan uygulamalar (Discord gibi) değişmez.
+          {t(
+            "Seçince bir kez çalar. Mesaj, posta ve takvim bildirimleri de bu sesi kullanır; kendi sesini kendisi çalan uygulamalar (Discord gibi) değişmez.",
+          )}
         </p>
       </Card>
     </>

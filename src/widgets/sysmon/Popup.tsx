@@ -6,6 +6,7 @@ import { LinkButton, PanelHeader } from "../ui/panel";
 import { usePopupClose } from "../ui/popupClose";
 import { bytes, HIGH, percent, rate } from "./format";
 import styles from "./Popup.module.css";
+import { nf, pct, t } from "../../lib/i18n";
 
 /** Grafikteki örnek sayısı (sysmon.rs → HISTORY). */
 const SAMPLES = 60;
@@ -30,10 +31,10 @@ export function SysmonPopup() {
   return (
     <div className={styles.root}>
       <PanelHeader
-        title="Sistem"
-        actions={<LinkButton onClick={openTaskManager}>Görev Yöneticisi</LinkButton>}
+        title={t("Sistem")}
+        actions={<LinkButton onClick={openTaskManager}>{t("Görev Yöneticisi")}</LinkButton>}
       />
-      {sys ? <Body sys={sys} /> : <p className={styles.note}>Okunuyor…</p>}
+      {sys ? <Body sys={sys} /> : <p className={styles.note}>{t("Okunuyor…")}</p>}
     </div>
   );
 }
@@ -44,9 +45,9 @@ function Body({ sys }: { sys: NonNullable<SysState> }) {
     <>
       <section className={styles.cpu}>
         <div className={styles.cpuHead}>
-          <span className={styles.label}>İşlemci</span>
+          <span className={styles.label}>{t("İşlemci")}</span>
           <span className={styles.big} data-high={sys.cpu >= HIGH || undefined}>
-            %{sys.cpu}
+            {pct(sys.cpu)}
           </span>
         </div>
         <Graph values={sys.history} />
@@ -54,17 +55,17 @@ function Body({ sys }: { sys: NonNullable<SysState> }) {
 
       <section className={styles.row}>
         <div className={styles.rowHead}>
-          <span className={styles.label}>Bellek</span>
+          <span className={styles.label}>{t("Bellek")}</span>
           <span className={styles.value}>
             {bytes(sys.ramUsed)} / {bytes(sys.ramTotal)}
-            <span className={styles.dim}> · %{ram}</span>
+            <span className={styles.dim}> · {pct(ram)}</span>
           </span>
         </div>
         <Meter value={ram} className={ram >= HIGH ? styles.warnMeter : undefined} />
       </section>
 
       <section className={styles.netRow}>
-        <span className={styles.label}>Ağ</span>
+        <span className={styles.label}>{t("Ağ")}</span>
         <span className={styles.value}>↓ {rate(sys.netDown)}</span>
         <span className={styles.value}>↑ {rate(sys.netUp)}</span>
       </section>
@@ -76,9 +77,11 @@ function Body({ sys }: { sys: NonNullable<SysState> }) {
             return (
               <div key={d.root} className={styles.row}>
                 <div className={styles.rowHead}>
-                  <span className={styles.label}>Disk {d.root}</span>
+                  <span className={styles.label}>
+                    {t("Disk")} {d.root}
+                  </span>
                   <span className={styles.value}>
-                    {bytes(d.total - d.used)} boş
+                    {bytes(d.total - d.used)} {t("boş")}
                     <span className={styles.dim}> / {bytes(d.total)}</span>
                   </span>
                 </div>
@@ -89,21 +92,21 @@ function Body({ sys }: { sys: NonNullable<SysState> }) {
         </section>
       )}
 
-      <section className={styles.procs} aria-label="En çok işlemci kullananlar">
+      <section className={styles.procs} aria-label={t("En çok işlemci kullananlar")}>
         <div className={styles.procHead}>
-          <span>Süreç</span>
-          <span>İşlemci</span>
-          <span>Bellek</span>
+          <span>{t("Süreç")}</span>
+          <span>{t("İşlemci")}</span>
+          <span>{t("Bellek")}</span>
         </div>
         {sys.processes.length === 0 ? (
-          <p className={styles.note}>Ölçülüyor…</p>
+          <p className={styles.note}>{t("Ölçülüyor…")}</p>
         ) : (
           sys.processes.map((p) => (
             <div key={p.name} className={styles.proc}>
               <span className={styles.procName} title={p.name}>
                 {p.name}
               </span>
-              <span>%{p.cpu.toLocaleString("tr-TR", { maximumFractionDigits: 1 })}</span>
+              <span>{pct(nf({ maximumFractionDigits: 1 }).format(p.cpu))}</span>
               <span className={styles.dim}>{bytes(p.memory)}</span>
             </div>
           ))

@@ -7,11 +7,36 @@ import { Meter } from "../ui";
 import { LinkButton, PanelHeader } from "../ui/panel";
 import { usePopupClose } from "../ui/popupClose";
 import styles from "./Popup.module.css";
+import { errText, fmtMinutes, pct, t } from "../../lib/i18n";
 
 const MODES: { value: PowerMode; label: string; hint: string }[] = [
-  { value: "efficiency", label: "Verimlilik", hint: "En uzun pil ömrü" },
-  { value: "balanced", label: "Dengeli", hint: "Varsayılan" },
-  { value: "performance", label: "Performans", hint: "En hızlı, en çok tüketim" },
+  {
+    value: "efficiency",
+    get label() {
+      return t("Verimlilik");
+    },
+    get hint() {
+      return t("En uzun pil ömrü");
+    },
+  },
+  {
+    value: "balanced",
+    get label() {
+      return t("Dengeli");
+    },
+    get hint() {
+      return t("Varsayılan");
+    },
+  },
+  {
+    value: "performance",
+    get label() {
+      return t("Performans");
+    },
+    get hint() {
+      return t("En hızlı, en çok tüketim");
+    },
+  },
 ];
 
 /** Pildeyken ekranı kapat / uyku seçenekleri (sn; 0 = hiçbir zaman). */
@@ -20,10 +45,10 @@ const TIMEOUTS = [60, 120, 180, 300, 600, 900, 1800, 3600, 0];
 function duration(seconds: number) {
   const h = Math.floor(seconds / 3600);
   const m = Math.round((seconds % 3600) / 60);
-  return h > 0 ? (m > 0 ? `${h} sa ${m} dk` : `${h} sa`) : `${m} dk`;
+  return fmtMinutes(h * 60 + m);
 }
 
-const timeoutLabel = (s: number) => (s === 0 ? "Hiçbir zaman" : duration(s));
+const timeoutLabel = (s: number) => (s === 0 ? t("Hiçbir zaman") : duration(s));
 
 /** Pil paneli: yüzde, enerji tasarrufu, güç modu, parlaklık, yenileme hızı, süreler. */
 export function BatteryPopup() {
@@ -41,7 +66,7 @@ export function BatteryPopup() {
 
   const run = (p: Promise<void>) => {
     setError(null);
-    p.catch((e) => setError(String(e))).finally(reload);
+    p.catch((e) => setError(errText(e))).finally(reload);
   };
 
   const openSettings = (page: "battery" | "power") => {
@@ -52,32 +77,32 @@ export function BatteryPopup() {
   if (!power) {
     return (
       <div className={styles.root}>
-        <PanelHeader title="Pil" />
-        <p className={styles.note}>Bu bilgisayarda pil yok.</p>
+        <PanelHeader title={t("Pil")} />
+        <p className={styles.note}>{t("Bu bilgisayarda pil yok.")}</p>
       </div>
     );
   }
 
   const status = power.charging
-    ? "Şarj oluyor"
+    ? t("Şarj oluyor")
     : power.plugged
-      ? "Prizde, dolu"
+      ? t("Prizde, dolu")
       : power.secondsLeft
-        ? `Pilde · yaklaşık ${duration(power.secondsLeft)} kaldı`
-        : "Pilde";
+        ? t("Pilde · yaklaşık {t} kaldı", { t: duration(power.secondsLeft) })
+        : t("Pilde");
   const low = !power.plugged && power.percent <= 20;
 
   return (
     <div className={styles.root}>
       <PanelHeader
-        title="Pil"
-        actions={<LinkButton onClick={() => openSettings("power")}>Güç ayarları</LinkButton>}
+        title={t("Pil")}
+        actions={<LinkButton onClick={() => openSettings("power")}>{t("Güç ayarları")}</LinkButton>}
       />
 
       <section className={styles.summary}>
         <div className={styles.head}>
           <span className={styles.big} data-low={low || undefined}>
-            %{power.percent}
+            {pct(power.percent)}
           </span>
           {power.charging && (
             <span className={styles.bolt}>
@@ -104,19 +129,19 @@ export function BatteryPopup() {
           disabled={power.plugged}
           onClick={() => run(commands.setEnergySaver(!power.saver))}
         >
-          <span>Enerji tasarrufu</span>
+          <span>{t("Enerji tasarrufu")}</span>
           <span className={styles.status}>
             {power.plugged
-              ? "Pildeyken açılabilir"
+              ? t("Pildeyken açılabilir")
               : power.saver
-                ? "Açık · prize takınca kapanır"
+                ? t("Açık · prize takınca kapanır")
                 : settings?.saverThreshold
-                  ? `Kapalı · %${settings.saverThreshold}'de kendiliğinden açılır`
-                  : "Kapalı"}
+                  ? t("Kapalı · %{p}'de kendiliğinden açılır", { p: settings.saverThreshold })
+                  : t("Kapalı")}
           </span>
         </button>
         <Toggle
-          label="Enerji tasarrufu"
+          label={t("Enerji tasarrufu")}
           checked={power.saver}
           disabled={power.plugged}
           onChange={(on) => run(commands.setEnergySaver(on))}
@@ -124,9 +149,9 @@ export function BatteryPopup() {
       </div>
 
       {power.mode && (
-        <section className={styles.section} aria-label="Güç modu">
-          <h3 className={styles.title}>Güç modu</h3>
-          <div className={styles.modes} role="radiogroup" aria-label="Güç modu">
+        <section className={styles.section} aria-label={t("Güç modu")}>
+          <h3 className={styles.title}>{t("Güç modu")}</h3>
+          <div className={styles.modes} role="radiogroup" aria-label={t("Güç modu")}>
             {MODES.map((m) => (
               <button
                 key={m.value}
@@ -147,20 +172,20 @@ export function BatteryPopup() {
       {settings?.brightness != null && (
         <Brightness
           value={settings.brightness}
-          onChange={(v) => commands.setBrightness(v).catch((e) => setError(String(e)))}
+          onChange={(v) => commands.setBrightness(v).catch((e) => setError(errText(e)))}
         />
       )}
 
       {settings?.refresh && settings.refresh.options.length > 1 && (
-        <section className={styles.section} aria-label="Ekran yenileme hızı">
+        <section className={styles.section} aria-label={t("Ekran yenileme hızı")}>
           <h3 className={styles.title}>
-            <MonitorIcon size={14} /> Ekran yenileme hızı
+            <MonitorIcon size={14} /> {t("Ekran yenileme hızı")}
           </h3>
           <div
             className={styles.modes}
             style={{ gridTemplateColumns: `repeat(${settings.refresh.options.length}, 1fr)` }}
             role="radiogroup"
-            aria-label="Ekran yenileme hızı"
+            aria-label={t("Ekran yenileme hızı")}
           >
             {settings.refresh.options.map((hz) => (
               <button
@@ -169,10 +194,10 @@ export function BatteryPopup() {
                 role="radio"
                 aria-checked={settings.refresh?.current === hz}
                 className={styles.mode}
-                title={hz <= 60 ? "Daha az pil tüketir" : "Daha akıcı"}
+                title={hz <= 60 ? t("Daha az pil tüketir") : t("Daha akıcı")}
                 onClick={() => run(commands.setRefreshRate(hz))}
               >
-                {hz} Hz
+                {hz} {t("Hz")}
               </button>
             ))}
           </div>
@@ -180,20 +205,20 @@ export function BatteryPopup() {
       )}
 
       {(settings?.screenOff != null || settings?.sleep != null) && (
-        <section className={styles.section} aria-label="Pildeyken">
+        <section className={styles.section} aria-label={t("Pildeyken")}>
           <h3 className={styles.title}>
-            <MoonIcon size={14} /> Pildeyken
+            <MoonIcon size={14} /> {t("Pildeyken")}
           </h3>
           {settings.screenOff != null && (
             <TimeoutRow
-              label="Ekranı kapat"
+              label={t("Ekranı kapat")}
               value={settings.screenOff}
               onChange={(s) => run(commands.setPowerTimeout("screen", s))}
             />
           )}
           {settings.sleep != null && (
             <TimeoutRow
-              label="Uyku"
+              label={t("Uyku")}
               value={settings.sleep}
               onChange={(s) => run(commands.setPowerTimeout("sleep", s))}
             />
@@ -205,7 +230,7 @@ export function BatteryPopup() {
 
       <footer className={styles.footer}>
         <LinkButton onClick={() => openSettings("battery")}>
-          Pil ve enerji tasarrufu ayarları
+          {t("Pil ve enerji tasarrufu ayarları")}
         </LinkButton>
       </footer>
     </div>
@@ -251,16 +276,16 @@ export function Brightness({
   };
 
   return (
-    <section className={styles.section} aria-label="Parlaklık">
+    <section className={styles.section} aria-label={t("Parlaklık")}>
       <h3 className={styles.title}>
-        <SunIcon size={14} /> Parlaklık <span className={styles.value}>%{shown}</span>
+        <SunIcon size={14} /> {t("Parlaklık")} <span className={styles.value}>{pct(shown)}</span>
       </h3>
       <input
         type="range"
         min={0}
         max={100}
         value={shown}
-        aria-label="Parlaklık"
+        aria-label={t("Parlaklık")}
         className={styles.slider}
         style={{ "--fill": `${shown}%` } as CSSProperties}
         onChange={(e) => push(Number(e.currentTarget.value))}

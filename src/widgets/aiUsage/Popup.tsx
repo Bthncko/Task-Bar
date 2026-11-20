@@ -17,6 +17,8 @@ import {
 } from "./format";
 import styles from "./Popup.module.css";
 
+import { trans } from "../../lib/trans";
+import { dtf, nf, pct, t } from "../../lib/i18n";
 /**
  * AI kullanımı paneli (8.9): hesaptaki oturum ve haftalık limit yüzdeleri,
  * sıfırlanma zamanlarıyla; altta bu bilgisayardaki Claude Code etkinliği.
@@ -33,8 +35,8 @@ export function AiUsagePopup() {
   if (!usage)
     return (
       <div className={styles.root}>
-        <PanelHeader title="AI kullanımı" />
-        <p className={styles.note}>Claude Code oturumu ya da kaydı bulunamadı.</p>
+        <PanelHeader title={t("AI kullanımı")} />
+        <p className={styles.note}>{t("Claude Code oturumu ya da kaydı bulunamadı.")}</p>
       </div>
     );
 
@@ -42,22 +44,22 @@ export function AiUsagePopup() {
 
   return (
     <div className={styles.root}>
-      <PanelHeader title="AI kullanımı" />
+      <PanelHeader title={t("AI kullanımı")} />
 
       <div className={styles.windows}>
         <LimitCard
-          title="Oturum"
-          sub="5 saatlik"
+          title={t("Oturum")}
+          sub={t("5 saatlik")}
           limit={limits?.session}
           now={now}
-          idle="İlk istekle başlar"
+          idle={t("İlk istekle başlar")}
         />
         <LimitCard
-          title="Haftalık"
-          sub="tüm modeller"
+          title={t("Haftalık")}
+          sub={t("tüm modeller")}
           limit={limits?.weekly}
           now={now}
-          idle="İlk istekle başlar"
+          idle={t("İlk istekle başlar")}
         />
       </div>
 
@@ -69,7 +71,7 @@ export function AiUsagePopup() {
               <li key={l.label} className={styles.other} data-high={c?.warning || undefined}>
                 <span className={styles.otherName}>{l.label}</span>
                 <Meter value={c?.percent ?? 0} className={styles.otherMeter} />
-                <span className={styles.otherValue}>%{c?.percent ?? 0}</span>
+                <span className={styles.otherValue}>{pct(c?.percent ?? 0)}</span>
               </li>
             );
           })}
@@ -78,24 +80,24 @@ export function AiUsagePopup() {
 
       {limitsError && (
         <p className={styles.error} role="status">
-          {limits ? `Güncellenemedi: ${limitsError}` : limitsError}
+          {limits ? t("Güncellenemedi: {error}", { error: t(limitsError) }) : t(limitsError)}
         </p>
       )}
 
       {activity && (
         <>
-          <section className={styles.section} aria-label="Günlük etkinlik">
+          <section className={styles.section} aria-label={t("Günlük etkinlik")}>
             <h3 className={styles.title}>
-              Bu bilgisayarda · 7 gün
+              {t("Bu bilgisayarda · 7 gün")}
               <span className={styles.titleSub}>
-                {activity.requests.toLocaleString("tr-TR")} istek
+                {nf().format(activity.requests)} {t("istek")}
               </span>
             </h3>
             <DayChart activity={activity} now={now} />
           </section>
 
           {activity.models.length > 0 && (
-            <section className={styles.section} aria-label="Modeller">
+            <section className={styles.section} aria-label={t("Modeller")}>
               <ul className={styles.models}>
                 {activity.models.map((m) => (
                   <li key={m.name} className={styles.model}>
@@ -108,10 +110,10 @@ export function AiUsagePopup() {
               <p className={styles.tokens}>
                 {/* Her ölçü ("3,4 M çıktı") kendi içinde bölünmez; satır yalnızca " · " yerinde kırılır. */}
                 {[
-                  `${tokens(activity.tokens.output)} çıktı`,
-                  `${tokens(activity.tokens.input)} girdi`,
-                  `${tokens(activity.tokens.cacheRead)} önbellekten`,
-                  `${tokens(activity.tokens.cacheWrite)} önbelleğe`,
+                  t("{n} çıktı", { n: tokens(activity.tokens.output) }),
+                  t("{n} girdi", { n: tokens(activity.tokens.input) }),
+                  t("{n} önbellekten", { n: tokens(activity.tokens.cacheRead) }),
+                  t("{n} önbelleğe", { n: tokens(activity.tokens.cacheWrite) }),
                 ]
                   .map((s) => s.split(" ").join(NBSP))
                   .join(`${NBSP}· `)}
@@ -122,9 +124,15 @@ export function AiUsagePopup() {
       )}
 
       <p className={styles.footnote}>
-        Yüzdeler Claude hesabından (<code>/usage</code> ile aynı)
-        {limits ? `, ${ago(limits.fetchedAt, now)} alındı` : ""}. Grafik ve model payları yalnızca
-        bu bilgisayardaki Claude Code kayıtlarından.
+        {trans(
+          t(
+            "Yüzdeler Claude hesabından ({cmd} ile aynı){fetched}. Grafik ve model payları yalnızca bu bilgisayardaki Claude Code kayıtlarından.",
+          ),
+          {
+            cmd: <code>/usage</code>,
+            fetched: limits ? t(", {ago} alındı", { ago: ago(limits.fetchedAt, now) }) : "",
+          },
+        )}
       </p>
     </div>
   );
@@ -149,15 +157,19 @@ function LimitCard({
       <span className={styles.cardTitle}>
         {title} <span className={styles.cardTitleSub}>{sub}</span>
       </span>
-      <span className={styles.cardValue}>{c ? `%${c.percent}` : "—"}</span>
+      <span className={styles.cardValue}>{c ? pct(c.percent) : "—"}</span>
       <Meter value={c?.percent ?? 0} muted={!c} className={styles.cardMeter} />
       {c?.resetsAt ? (
         <span className={styles.cardDetail}>
-          <span className={styles.cardReset}>Sıfırlanma {resetTime(c.resetsAt, now)}</span>
-          <span>{remaining(c.resetsAt, now)} kaldı</span>
+          <span className={styles.cardReset}>
+            {t("Sıfırlanma")} {resetTime(c.resetsAt, now)}
+          </span>
+          <span>
+            {remaining(c.resetsAt, now)} {t("kaldı")}
+          </span>
         </span>
       ) : (
-        <span className={styles.cardDetail}>{c ? idle : "Bilinmiyor"}</span>
+        <span className={styles.cardDetail}>{c ? idle : t("Bilinmiyor")}</span>
       )}
     </div>
   );
@@ -172,12 +184,15 @@ function DayChart({ activity, now }: { activity: Activity; now: number }) {
         <div
           key={d.label}
           className={styles.day}
-          title={`${d.date.toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}: 7 günün %${d.share}`}
+          title={t("{date}: 7 günün %{share}", {
+            date: dtf({ day: "numeric", month: "long" }).format(d.date),
+            share: d.share,
+          })}
         >
           <span className={styles.barTrack}>
             <span
               className={styles.bar}
-              data-today={d.label === "Bugün" || undefined}
+              data-today={d.label === t("Bugün") || undefined}
               style={{ "--h": `${(d.weight / peak) * 100}%` } as CSSProperties}
             />
           </span>

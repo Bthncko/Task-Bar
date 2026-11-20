@@ -315,6 +315,7 @@ pub fn set_config(app: AppHandle, config: State<ConfigStore>, value: Config) -> 
     let hide_after = value.hide_windows_taskbar;
     let fx_after = value.minimize_to_dock;
     let notify_after = value.own_notifications;
+    let language_after = value.language.clone();
     let auto_hide_after = value.auto_hide.clone();
     let scale_after = value.theme.ui_scale();
     config.update(|c| *c = value).map_err(String::from)?;
@@ -331,6 +332,9 @@ pub fn set_config(app: AppHandle, config: State<ConfigStore>, value: Config) -> 
     }
     if before.minimize_to_dock != fx_after {
         crate::win::window_fx::set_enabled(fx_after);
+    }
+    if before.language != language_after && crate::i18n::set(&language_after) {
+        crate::apply_language(&app);
     }
     if before.own_notifications != notify_after {
         crate::services::notifications::set_enabled(notify_after);
@@ -699,11 +703,12 @@ pub async fn set_power_timeout(kind: String, seconds: u32) -> CmdResult {
 /// Ayarlar → "Dene": örnek bildirim kartı (seçili sesle; `silent` ise sessiz).
 #[tauri::command]
 pub fn notify_test(app: AppHandle, silent: bool) {
+    use crate::i18n::{app_name, t};
     use crate::services::notifications;
     let (name, title, body) = (
-        "Akıllı Dock",
-        "Bildirimler böyle görünür",
-        "Uygulamaların bildirimleri bu kartlarla gelir. Tıklayınca uygulama açılır.",
+        app_name(),
+        t("Bildirimler böyle görünür"),
+        t("Uygulamaların bildirimleri bu kartlarla gelir. Tıklayınca uygulama açılır."),
     );
     if silent {
         notifications::show_card(&app, name, title, body);

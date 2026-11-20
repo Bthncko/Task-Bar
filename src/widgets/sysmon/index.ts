@@ -3,6 +3,7 @@ import type { WidgetDefinition } from "../types";
 import { SysmonBar } from "./Bar";
 import { SysmonPopup } from "./Popup";
 import { SysmonSettings } from "./Settings";
+import { t } from "../../lib/i18n";
 
 export interface SysmonConfig {
   view: SysmonView;
@@ -10,9 +11,13 @@ export interface SysmonConfig {
 
 export const sysmonWidget: WidgetDefinition<SysmonConfig> = {
   id: "sysmon",
-  name: "Sistem izleyici",
+  get name() {
+    return t("Sistem izleyici");
+  },
   category: "system",
-  description: "İşlemci, bellek ve ağ kullanımı; tıklayınca diskler ve süreçler.",
+  get description() {
+    return t("İşlemci, bellek ve ağ kullanımı; tıklayınca diskler ve süreçler.");
+  },
   defaultSection: "right",
   Bar: SysmonBar,
   Popup: SysmonPopup,

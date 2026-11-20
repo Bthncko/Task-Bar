@@ -2,7 +2,7 @@
 
 🇬🇧 English · [🇹🇷 Türkçe](README.md)
 
-**Dockora** (shown in the app as **Akıllı Dock**, "Smart Dock") is a glass-style dock
+**Dockora** (called **Akıllı Dock**, "Smart Dock", in the Turkish interface) is a glass-style dock
 that replaces the Windows 11 taskbar. Open apps, clock and calendar, music (including
 the Spotify queue), weather, volume, battery, Wi-Fi and Bluetooth — all in one bar.
 
@@ -19,6 +19,7 @@ Built with Tauri 2 (Rust) + React + TypeScript. Free and open source (MIT).
 - **Customizable** – color, glass effect, size and widget placement
 - **Auto-updates** – signed updates installed automatically
 - **Lightweight & private** – no telemetry, no server, settings stay on your PC
+- **Two languages** – English and Turkish (see [Languages](#languages))
 
 ## Installation
 
@@ -34,14 +35,27 @@ Built with Tauri 2 (Rust) + React + TypeScript. Free and open source (MIT).
 ## First steps
 
 - **Hide the Windows taskbar:** right-click an empty spot on the dock →
-  **Hide Windows taskbar** (the menu is currently in Turkish: _Windows görev
-  çubuğunu gizle_). The Windows taskbar comes back when the dock closes.
-- **Settings:** same menu → **Settings…** (_Ayarlar…_). Color, glass, size, widget
-  placement, weather city and calendar subscriptions are here.
+  **Hide the Windows taskbar**. The Windows taskbar comes back when the dock closes.
+- **Settings:** same menu → **Settings…**. Color, glass, size, widget placement,
+  weather city, calendar subscriptions and the language are here.
 - **Calendar:** Settings → Clock & calendar → paste Google Calendar's "secret
   address in iCal format". Keep that address private.
 
-> The app UI is currently in Turkish. English UI contributions are welcome!
+## Languages
+
+| Language         | Status      |
+| ---------------- | ----------- |
+| English          | ✅ Complete |
+| Türkçe (Turkish) | ✅ Complete |
+
+The language follows your Windows display language by default (Turkish on a Turkish
+Windows, English otherwise). Change it any time in **Settings → General → Language**;
+the dock, its panels, the tray menu and notifications switch immediately.
+
+Want to add a language? The UI texts live in two places:
+[`src/locales/en.ts`](src/locales/en.ts) (the dock and settings; Turkish is the source
+text, each entry maps it to a translation) and [`src-tauri/src/i18n.rs`](src-tauri/src/i18n.rs)
+(tray menu, right-click menus and notification cards). Pull requests are welcome.
 
 ## Updates
 
@@ -98,7 +112,7 @@ vulnerability** on GitHub instead of a public issue.
 
 ## Contributing
 
-Issues and pull requests are welcome — especially English translations of the UI.
+Issues and pull requests are welcome — translations into new languages too (see [Languages](#languages)).
 
 ```sh
 npm install

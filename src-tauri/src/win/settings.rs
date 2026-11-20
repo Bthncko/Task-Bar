@@ -38,6 +38,21 @@ pub fn open_page(app: &AppHandle, page: Option<String>) -> AppResult<()> {
     Ok(())
 }
 
+fn title() -> String {
+    format!(
+        "{} — {}",
+        crate::i18n::app_name(),
+        crate::i18n::t("Ayarlar")
+    )
+}
+
+/// Dil değişince açık ayarlar penceresinin başlığını yeniler.
+pub fn refresh_title(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window(LABEL) {
+        let _ = window.set_title(&title());
+    }
+}
+
 /// Ana iş parçacığında, eşzamanlı bir işleyicinin içinden çağırmayın (yukarıya bakın).
 pub fn open(app: &AppHandle) -> AppResult<()> {
     let window = match app.get_webview_window(LABEL) {
@@ -49,7 +64,7 @@ pub fn open(app: &AppHandle) -> AppResult<()> {
             window
         }
         None => WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("index.html".into()))
-            .title("Akıllı Dock — Ayarlar")
+            .title(title())
             .inner_size(860.0, 620.0)
             .min_inner_size(720.0, 500.0)
             .center()

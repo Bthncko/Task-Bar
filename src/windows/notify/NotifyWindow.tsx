@@ -14,6 +14,7 @@ import { applyTheme, glassAlpha, uiScale } from "../../lib/theme";
 import { useService } from "../../lib/useService";
 import { BellIcon, CloseIcon } from "../../widgets/icons";
 import styles from "./NotifyWindow.module.css";
+import { t } from "../../lib/i18n";
 
 startConfigSync();
 
@@ -180,7 +181,7 @@ export function NotifyWindow() {
           onPointerLeave={() => setHover(false)}
         >
           {cards.map((c) => {
-            const title = c.title || c.app || "Bildirim";
+            const title = c.title || c.app || t("Bildirim");
             const body = c.title ? c.body : c.body || "";
             return (
               <article
@@ -200,7 +201,7 @@ export function NotifyWindow() {
                 <button
                   type="button"
                   className={styles.close}
-                  aria-label="Kapat"
+                  aria-label={t("Kapat")}
                   onClick={(e) => {
                     e.stopPropagation();
                     dismiss(c.id);
@@ -218,7 +219,7 @@ export function NotifyWindow() {
                 <div className={styles.content}>
                   <div className={styles.row}>
                     <span className={styles.title}>{title}</span>
-                    <span className={styles.time}>şimdi</span>
+                    <span className={styles.time}>{t("şimdi")}</span>
                   </div>
                   {c.title && c.app && c.app !== title && <div className={styles.app}>{c.app}</div>}
                   {body && <div className={styles.body}>{body}</div>}

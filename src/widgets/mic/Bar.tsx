@@ -3,6 +3,7 @@ import { useService } from "../../lib/useService";
 import { MicIcon } from "../icons";
 import { Tile } from "../ui";
 import styles from "./Bar.module.css";
+import { t } from "../../lib/i18n";
 
 /** Mikrofon (8.5): tek düğme; sessizken kırmızı. Sağ tık: ses ayarları. */
 export function MicBar() {
@@ -17,8 +18,11 @@ export function MicBar() {
       className={styles.mic}
       data-muted={mic.muted || undefined}
       aria-pressed={mic.muted}
-      aria-label={mic.muted ? "Mikrofonu aç" : "Mikrofonu kapat"}
-      title={`${mic.name} — ${mic.muted ? "kapalı" : `açık, %${mic.volume}`}\nSağ tık: ses ayarları`}
+      aria-label={mic.muted ? t("Mikrofonu aç") : t("Mikrofonu kapat")}
+      title={t("{name} — {state}\nSağ tık: ses ayarları", {
+        name: mic.name,
+        state: mic.muted ? t("kapalı") : t("açık, %{v}", { v: mic.volume }),
+      })}
       onClick={() => commands.setMicMute(!mic.muted).catch(report("set_mic_mute"))}
       onContextMenu={(e) => {
         e.preventDefault();

@@ -1,3 +1,4 @@
+import { t } from "../../lib/i18n";
 // Open-Meteo (bölüm 6.3). Ticari olmayan kullanımda anahtarsız; sınır günde
 // 10.000 istek (open-meteo.com/en/pricing). Yanıtta CORS başlığı var (denendi),
 // bu yüzden istek doğrudan frontend'den.
@@ -31,7 +32,7 @@ export async function fetchCurrent(p: WeatherParams): Promise<CurrentWeather> {
   const json = await res.json();
   const c = json?.current;
   if (typeof c?.temperature_2m !== "number" || typeof c?.weather_code !== "number") {
-    throw new Error("beklenmeyen yanıt");
+    throw new Error(t("beklenmeyen yanıt"));
   }
   const weather: CurrentWeather = {
     temperature: c.temperature_2m,
@@ -97,7 +98,7 @@ export async function fetchForecast(p: WeatherParams): Promise<Forecast> {
   const json = await res.json();
   const { current: c, hourly: h, daily: d } = json ?? {};
   if (typeof c?.temperature_2m !== "number" || !Array.isArray(h?.time) || !Array.isArray(d?.time)) {
-    throw new Error("beklenmeyen yanıt");
+    throw new Error(t("beklenmeyen yanıt"));
   }
 
   // Saatlik dizi günün başından başlar; şimdiki saatten itibaren 24 saat.
