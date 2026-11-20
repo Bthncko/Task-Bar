@@ -1,14 +1,14 @@
-# Akıllı Dock
+# Dockora
 
 🇹🇷 Türkçe · [🇬🇧 English](README.en.md)
 
-Windows 11 görev çubuğunun yerine geçen, cam görünümlü bir dock. Açık uygulamalar,
-saat ve takvim, müzik (Spotify sıradakiler dahil), hava durumu, ses, pil, Wi-Fi ve
-Bluetooth tek çubukta.
+**Dockora** (uygulamadaki adıyla **Akıllı Dock**), Windows 11 görev çubuğunun yerine
+geçen, cam görünümlü bir dock. Açık uygulamalar, saat ve takvim, müzik (Spotify
+sıradakiler dahil), hava durumu, ses, pil, Wi-Fi ve Bluetooth tek çubukta.
 
 ## Kurulum
 
-1. [Releases](https://github.com/Bthncko/Task-Bar/releases/latest) sayfasından
+1. [Releases](https://github.com/Bthncko/dockora/releases/latest) sayfasından
    `Akilli.Dock_…_x64-setup.exe` dosyasını indir ve çalıştır. Yönetici izni istemez.
 2. Windows "Bilgisayarınız korundu" (SmartScreen) uyarısı gösterirse
    **Ek bilgi → Yine de çalıştır**'a tıkla. Uygulama ücretli bir kod imzası

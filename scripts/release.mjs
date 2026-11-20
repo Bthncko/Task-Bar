@@ -59,5 +59,5 @@ run(`git tag v${version}`);
 run("git push");
 run(`git push origin v${version}`);
 console.log(
-  `\nv${version} gönderildi. Derleme ~15 dk sürer: https://github.com/Bthncko/Task-Bar/actions`,
+  `\nv${version} gönderildi. Derleme ~15 dk sürer: https://github.com/Bthncko/dockora/actions`,
 );

@@ -1,10 +1,10 @@
-# Akıllı Dock (Smart Dock)
+# Dockora
 
 🇬🇧 English · [🇹🇷 Türkçe](README.md)
 
-A glass-style dock that replaces the Windows 11 taskbar. Open apps, clock and
-calendar, music (including the Spotify queue), weather, volume, battery, Wi-Fi and
-Bluetooth — all in one bar.
+**Dockora** (shown in the app as **Akıllı Dock**, "Smart Dock") is a glass-style dock
+that replaces the Windows 11 taskbar. Open apps, clock and calendar, music (including
+the Spotify queue), weather, volume, battery, Wi-Fi and Bluetooth — all in one bar.
 
 Built with Tauri 2 (Rust) + React + TypeScript. Free and open source (MIT).
 
@@ -23,7 +23,7 @@ Built with Tauri 2 (Rust) + React + TypeScript. Free and open source (MIT).
 ## Installation
 
 1. Download `Akilli.Dock_…_x64-setup.exe` from the
-   [latest release](https://github.com/Bthncko/Task-Bar/releases/latest) and run it.
+   [latest release](https://github.com/Bthncko/dockora/releases/latest) and run it.
    No admin rights required.
 2. If Windows SmartScreen shows "Windows protected your PC", click
    **More info → Run anyway**. This appears because the app is not signed with a
@@ -34,9 +34,9 @@ Built with Tauri 2 (Rust) + React + TypeScript. Free and open source (MIT).
 ## First steps
 
 - **Hide the Windows taskbar:** right-click an empty spot on the dock →
-  **Hide Windows taskbar** (the menu is currently in Turkish: *Windows görev
-  çubuğunu gizle*). The Windows taskbar comes back when the dock closes.
-- **Settings:** same menu → **Settings…** (*Ayarlar…*). Color, glass, size, widget
+  **Hide Windows taskbar** (the menu is currently in Turkish: _Windows görev
+  çubuğunu gizle_). The Windows taskbar comes back when the dock closes.
+- **Settings:** same menu → **Settings…** (_Ayarlar…_). Color, glass, size, widget
   placement, weather city and calendar subscriptions are here.
 - **Calendar:** Settings → Clock & calendar → paste Google Calendar's "secret
   address in iCal format". Keep that address private.
@@ -74,14 +74,14 @@ The dock collects no usage data or statistics and has no server of its own.
 Settings and logins stay on this computer in `%APPDATA%\com.proxd.akillidock`.
 The only outbound connections are:
 
-| Purpose                 | Destination                               | What is sent                           |
-| ----------------------- | ----------------------------------------- | -------------------------------------- |
-| Weather                 | `api.open-meteo.com`                      | Coordinates of the selected city       |
-| City search             | `geocoding-api.open-meteo.com`            | The city name you type                 |
-| Calendar                | The iCal addresses you paste              | Only the address itself (download)     |
-| Spotify (optional)      | `accounts.spotify.com`, `api.spotify.com` | Your Client ID and Spotify login       |
-| AI usage (optional)     | `api.anthropic.com`                       | Claude Code's session token            |
-| Updates                 | `github.com` (this repo)                  | Nothing; only the release file is read |
+| Purpose             | Destination                               | What is sent                           |
+| ------------------- | ----------------------------------------- | -------------------------------------- |
+| Weather             | `api.open-meteo.com`                      | Coordinates of the selected city       |
+| City search         | `geocoding-api.open-meteo.com`            | The city name you type                 |
+| Calendar            | The iCal addresses you paste              | Only the address itself (download)     |
+| Spotify (optional)  | `accounts.spotify.com`, `api.spotify.com` | Your Client ID and Spotify login       |
+| AI usage (optional) | `api.anthropic.com`                       | Claude Code's session token            |
+| Updates             | `github.com` (this repo)                  | Nothing; only the release file is read |
 
 - **AI usage widget (optional):** if Claude Code is installed, the widget **only
   reads** the session token in `~/.claude/.credentials.json` and sends it only to

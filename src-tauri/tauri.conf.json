@@ -109,7 +109,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU5MDExMjNDNkY2MzNFQ0MKUldUTVBtTnZQQklCV2RCN2tOSlUwT2Q2N2JmWU1rWkxOWDVsM01DdGV4M0JBU2QzMGduc3NDdncK",
       "endpoints": [
-        "https://github.com/Bthncko/Task-Bar/releases/latest/download/latest.json"
+        "https://github.com/Bthncko/dockora/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

@@ -41,7 +41,7 @@ Kontrol: `node -v`, `cargo -V`, `rustc -V`.
 Repo boş değil (bu dosya var), bu yüzden geçici klasöre kurup taşı:
 
 ```powershell
-git clone <repo> ; cd Task-Bar
+git clone <repo> ; cd dockora
 git checkout claude/windows-vscode-project-plan-ggrjt9
 npm create tauri-app@latest app-tmp     # React + TypeScript + npm seç
 # app-tmp içindeki her şeyi (gizli dosyalar dahil) repo köküne taşı, app-tmp'yi sil
